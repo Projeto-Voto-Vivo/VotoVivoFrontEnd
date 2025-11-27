@@ -1,7 +1,7 @@
 # VotoVivoFrontEnd
 Necessário: Node.js (versão LTS)
 
-O projeto usa Next.js TypeScript e Tailwind CSS
+O projeto usa React.js, Next.js TypeScript e Tailwind CSS
 
 # Como rodar em http://localhost:3000: 
 npm install
