@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'https://dadosabertos.camara.leg.br/api/v2', 
+  baseURL: process.env.NEXT_PUBLIC_API_URL,
   headers: {
     'Accept': 'application/json'
   }

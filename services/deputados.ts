@@ -1,60 +1,61 @@
 import api from './api';
-import { Deputado, Despesa, Proposicao, Partido, UFs } from '@/types'; 
+import { Deputado, DeputadoDetalhe, Despesa, GastoResumo, Partido } from '@/types'; 
 
-export async function getDeputadoById(id: number) {
+export async function getDeputadoById(id: number): Promise<DeputadoDetalhe | null> {
   try {
     const res = await api.get(`/deputados/${id}`);
-    return res.data.dados; 
+    return res.data as DeputadoDetalhe; 
   } catch (error) {
     console.error("Erro ao buscar deputado", error);
     return null;
   }
 }
 
-export async function getDeputadosLista(itens: number = 8): Promise<Deputado[]> {
+export async function getDeputadosLista(
+  page: number = 1, 
+  nome?: string, 
+  uf?: string, 
+  partido?: string
+): Promise<{ data: Deputado[], meta: any }> {
     try {
-        const res = await api.get(`/deputados?ordem=ASC&ordenarPor=nome&itens=${itens}`);
-        return res.data.dados as Deputado[]; 
+        const params = new URLSearchParams();
+        params.append('pagina', page.toString());
+        if (nome) params.append('nome', nome);
+        if (uf) params.append('uf', uf);
+        if (partido) params.append('partido', partido);
+
+        const res = await api.get(`/deputados?${params.toString()}`);
+        return res.data; 
     } catch (error) {
         console.error("Erro ao buscar lista de deputados", error);
-        return [];
+        return { data: [], meta: { total: 0 } };
     }
 }
 
-export async function getDespesasDeputado(id: number) {
+export async function getResumoGastos(id: number): Promise<GastoResumo[]> {
   try {
-    const res = await api.get(`/deputados/${id}/despesas?ordem=DESC&ordenarPor=dataDocumento&itens=15`);
-    return res.data.dados as Despesa[]; 
+    const res = await api.get(`/deputados/${id}/gastos/resumo`);
+    return res.data as GastoResumo[];
   } catch (error) {
-    return [];
-  }
-}
-export async function getProposicoesDeputado(id: number) {
-  try {
-    const res = await api.get(`/proposicoes?idDeputadoAutor=${id}&ordem=DESC&ordenarPor=id&itens=5`);
-    return res.data.dados as Proposicao[];
-  } catch (error) {
+    console.error("Erro ao buscar resumo de gastos", error);
     return [];
   }
 }
 
-export async function getVotacoesDeputado(id: number) {
+export async function getDespesasDeputado(id: number, page: number = 1): Promise<Despesa[]> {
   try {
-    const res = await api.get(`/votacoes?dataInicio=2024-01-01&dataFim=2024-12-31&idDeputado=${id}&itens=5`);
-    return res.data.dados; 
+    const res = await api.get(`/deputados/${id}/gastos?pagina=${page}`);
+    return res.data as Despesa[]; 
   } catch (error) {
     return [];
   }
 }
 
-export async function getPartidos(): Promise<Partido[]> {
-    try {
-        const res = await api.get(`/partidos?ordem=ASC&ordenarPor=sigla`);
-        return res.data.dados as Partido[];
-    } catch (error) {
-        console.error("Erro ao buscar partidos", error);
-        return [];
-    }
+// Mocks para funcionalidades ainda não implementadas no Backend MVP
+export async function getProposicoesMock(id: number) {
+  return [];
 }
 
-export { UFs };
+export async function getVotacoesMock(id: number) {
+  return { presenca: 95, ausencias: 5 };
+}

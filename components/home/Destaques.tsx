@@ -3,12 +3,11 @@ import { Deputado } from '@/types';
 import Link from 'next/link';
 import { DeputadoCard } from './DeputadoCard'; 
 
-async function getDeputados() {
-    return await getDeputadosLista(8); 
-}
-
 export async function Destaques() {
-  const deputados = await getDeputados();
+  // A API retorna 10 itens por página por padrão. 
+  // Pegamos a página 1 e cortamos (slice) para 8 itens para manter o layout 4x2 simétrico.
+  const { data } = await getDeputadosLista(1);
+  const deputados = data ? data.slice(0, 8) : [];
 
   return (
     <section className="py-16 bg-white">
@@ -20,7 +19,7 @@ export async function Destaques() {
             <p className="text-slate-500 mt-1">Acesse o perfil completo e fiscalize o mandato.</p>
           </div>
           <Link 
-            href="/busca" 
+            href="/deputados" 
             className="text-brasil-blue font-semibold hover:underline flex items-center gap-1 text-sm"
           >
             Ver todos &rarr;

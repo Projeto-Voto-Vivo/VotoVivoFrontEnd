@@ -1,32 +1,43 @@
 export interface Deputado {
   id: number;
-  uri: string;
-  nome: string;
+  nomeParlamentar: string;
   siglaPartido: string;
-  uriPartido: string;
-  siglaUf: string;
+  uf: string;
   urlFoto: string;
 }
 
+export interface Gabinete {
+  sala: string;
+  predio: string;
+  telefone: string;
+  email: string;
+}
+
+export interface RedeSocial {
+  rede: string;
+  url: string;
+}
+
+export interface DeputadoDetalhe extends Deputado {
+  nomeCivil: string;
+  dataNascimento: string;
+  email: string;
+  situacao: string;
+  gabinete: Gabinete;
+  redesSociais: RedeSocial[];
+}
+
 export interface Despesa {
-  mes: number;
+  data: string;
+  tipo: string;
+  fornecedor: string;
+  valor: number;
+  urlDocumento: string;
+}
+
+export interface GastoResumo {
   tipoDespesa: string;
-  valorLiquido: number;
-  dataDocumento: string;
-}
-
-export interface Proposicao {
-  id: number;
-  siglaTipo: string;
-  numero: number;
-  ano: number;
-  ementa: string;
-}
-
-export interface Partido {
-  id: number;
-  sigla: string;
-  nome: string;
+  total: number;
 }
 
 export const UFs = [
