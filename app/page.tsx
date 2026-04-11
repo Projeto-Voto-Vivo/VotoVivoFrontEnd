@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { Header } from "@/components/layout/HeaderLayout";
 import { HeroSearch } from "@/components/home/HeroSearch";
 import { Destaques } from "@/components/home/Destaques"; 

@@ -1,41 +1,41 @@
-import { getDeputadosLista } from '@/services/deputados';
-import { Deputado } from '@/types'; 
 import Link from 'next/link';
-import { DeputadoCard } from './DeputadoCard'; 
+import { DeputadoCard } from './DeputadoCard';
+import { getDeputadosLista } from '@/services/deputados';
+import { Deputado } from '@/types';
 
 export async function Destaques() {
-  // A API retorna 10 itens por página por padrão. 
-  // Pegamos a página 1 e cortamos (slice) para 8 itens para manter o layout 4x2 simétrico.
-  const { data } = await getDeputadosLista(1);
+  const { data, meta } = await getDeputadosLista(1);
   const deputados = data ? data.slice(0, 8) : [];
 
   return (
-    <section className="py-16 bg-white">
+    <section className="bg-white py-16">
       <div className="container mx-auto px-4">
-        
-        <div className="flex items-center justify-between mb-10">
+        <div className="mb-10 flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-bold text-slate-900">Parlamentares em Exercício</h2>
-            <p className="text-slate-500 mt-1">Acesse o perfil completo e fiscalize o mandato.</p>
+            <h2 className="text-2xl font-bold text-slate-900">Parlamentares em exercício</h2>
+            <p className="mt-1 text-slate-500">Acesse o perfil completo e fiscalize o mandato.</p>
           </div>
-          <Link 
-            href="/deputados" 
-            className="text-brasil-blue font-semibold hover:underline flex items-center gap-1 text-sm"
-          >
+          <Link href="/parlamentares" className="flex items-center gap-1 text-sm font-semibold text-brasil-blue hover:underline">
             Ver todos &rarr;
           </Link>
         </div>
 
+        {meta.aviso && (
+          <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-800">
+            {meta.aviso}
+          </div>
+        )}
+
         {deputados.length === 0 ? (
-             <div className="p-10 text-center text-slate-500 border border-dashed border-slate-300 rounded-xl">
-                 Não foi possível carregar a lista de deputados. Verifique sua conexão ou a API.
-             </div>
+          <div className="rounded-xl border border-dashed border-slate-300 p-10 text-center text-slate-500">
+            Não foi possível carregar a lista de parlamentares. Verifique sua conexão ou a API.
+          </div>
         ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                {deputados.map((deputado: Deputado) => (
-                    <DeputadoCard key={deputado.id} deputado={deputado} />
-                ))}
-            </div>
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+            {deputados.map((deputado: Deputado) => (
+              <DeputadoCard key={deputado.id} deputado={deputado} />
+            ))}
+          </div>
         )}
       </div>
     </section>
