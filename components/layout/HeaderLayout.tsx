@@ -29,6 +29,9 @@ export function Header() {
               </Link>
             </div>
           </div>
+          <Link href="/educacao" className="py-2 font-medium text-gray-700 transition-colors hover:text-brasil-blue">
+            Educação Política
+          </Link>
         </nav>
       </div>
     </header>
