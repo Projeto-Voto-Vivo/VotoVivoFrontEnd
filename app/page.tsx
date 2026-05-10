@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import { Header } from "@/components/layout/HeaderLayout";
 import { HeroSearch } from "@/components/home/HeroSearch";
 import { Destaques } from "@/components/home/Destaques"; 
+import { ProjetoSection } from "@/components/home/ProjetoSection";
 
 export default function Home() {
   return (
@@ -12,6 +13,8 @@ export default function Home() {
       <HeroSearch />
       
       <Destaques />
+
+      <ProjetoSection />
       
     </main>
   );
