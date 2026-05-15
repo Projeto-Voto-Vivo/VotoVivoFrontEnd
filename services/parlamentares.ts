@@ -1,6 +1,9 @@
 import { getDeputadoById, getDespesasDeputado, getResumoGastos } from './deputados';
 import {
   CategoriaDespesaPerfil,
+  DocumentoEmendaPerfil,
+  EmendaResumoPerfil,
+  EmendasPerfil,
   ItemDespesaPerfil,
   ParlamentarDetalhe,
   ParlamentarPerfil,
@@ -254,6 +257,59 @@ function buildItensDespesaMock(seed: number): ItemDespesaPerfil[] {
   }));
 }
 
+function buildEmendasMock(seed: number, temas: string[]): EmendasPerfil {
+  const tipos = ['Individual', 'Bancada', 'Comissão'];
+  const localidades = ['RJ', 'SP', 'MG', 'BA', 'PE', 'CE'];
+
+  const destaques: EmendaResumoPerfil[] = Array.from({ length: 3 }, (_, index) => {
+    const valorEmpenhado = 950000 + (seed % 7) * 120000 + index * 430000;
+    const valorLiquidado = Math.round(valorEmpenhado * (0.48 + index * 0.08));
+    const valorPago = Math.round(valorLiquidado * 0.72);
+
+    return {
+      codigoEmenda: `2025${String(seed).padStart(4, '0')}${index + 1}`,
+      ano: 2025,
+      tipoEmenda: tipos[(seed + index) % tipos.length],
+      nomeAutor: `Parlamentar ${seed}`,
+      numeroEmenda: String(1000 + seed + index),
+      localidadeDoGasto: localidades[(seed + index) % localidades.length],
+      funcao: temas[index] || 'Desenvolvimento regional',
+      subfuncao: index === 0 ? 'Atenção básica' : index === 1 ? 'Infraestrutura urbana' : 'Apoio administrativo',
+      valorEmpenhado,
+      valorLiquidado,
+      valorPago,
+    };
+  });
+
+  const documentosRecentes: DocumentoEmendaPerfil[] = destaques.map((emenda, index) => ({
+    id: seed * 10 + index,
+    data: `2025-0${index + 3}-1${index + 2}`,
+    fase: index === 0 ? 'Empenho' : index === 1 ? 'Liquidação' : 'Pagamento',
+    codigoDocumento: `2025${index === 0 ? 'NE' : index === 1 ? 'NL' : 'OB'}${String(seed + index).padStart(6, '0')}`,
+    codigoDocumentoResumido: `${index === 0 ? 'NE' : index === 1 ? 'NL' : 'OB'}-${String(seed + index).padStart(4, '0')}`,
+    especieTipo: index === 0 ? 'Nota de Empenho' : index === 1 ? 'Nota de Liquidação' : 'Ordem Bancária',
+    tipoEmenda: emenda.tipoEmenda,
+  }));
+
+  const totalEmpenhado = destaques.reduce((acc, item) => acc + item.valorEmpenhado, 0);
+  const totalLiquidado = destaques.reduce((acc, item) => acc + item.valorLiquidado, 0);
+  const totalPago = destaques.reduce((acc, item) => acc + item.valorPago, 0);
+
+  return {
+    quantidade: destaques.length,
+    totalEmpenhado,
+    totalLiquidado,
+    totalPago,
+    totalRestoInscrito: totalEmpenhado - totalLiquidado,
+    principalTipo: destaques[0].tipoEmenda,
+    principalLocalidade: destaques[0].localidadeDoGasto,
+    destaques,
+    documentosRecentes,
+    leituraRapida:
+      'Este resumo usa campos do endpoint de emendas para mostrar volume financeiro, tipo da emenda, localidade do gasto e estágio geral da execução. Os documentos ficam como apoio para uma tela detalhada futura.',
+  };
+}
+
 function buildCategoriasFromBackend(summary: { tipoDespesa: string; total: number }[]): CategoriaDespesaPerfil[] {
   return summary.map((item) => ({
     categoria: item.tipoDespesa,
@@ -287,17 +343,12 @@ export async function getParlamentarProfile(id: number): Promise<ParlamentarPerf
   const alinhamento = 71 + (seed % 12);
   const proposicoes = buildProposicoes(seed, temasPrioritarios);
   const votacoes = buildVotacoes(seed, temasPrioritarios);
+  const emendas = buildEmendasMock(seed, temasPrioritarios);
 
   const categorias = resumoGastos.length > 0 ? buildCategoriasFromBackend(resumoGastos) : buildCategoriasMock(168000 + (seed % 9) * 8700);
   const itensRecentes = despesasApi.length > 0 ? buildItensFromBackend(despesasApi) : buildItensDespesaMock(seed);
   const totalAno = categorias.reduce((acc, item) => acc + item.valor, 0) || 168000 + (seed % 9) * 8700;
   const maiorReembolso = Math.max(...itensRecentes.map((item) => item.valor));
-  const fontesReais = [
-    detalheApi ? 'detalhe do parlamentar' : null,
-    resumoGastos.length > 0 ? 'resumo de gastos' : null,
-    despesasApi.length > 0 ? 'despesas detalhadas' : null,
-  ].filter(Boolean) as string[];
-
   const indicadores: PerfilIndicador[] = [
     {
       titulo: 'Presença em votações',
@@ -312,9 +363,9 @@ export async function getParlamentarProfile(id: number): Promise<ParlamentarPerf
       destaque: 'neutro',
     },
     {
-      titulo: 'Votações nominais',
-      valor: `${146 + (seed % 54)}`,
-      apoio: 'com leitura resumida para o usuário',
+      titulo: 'Emendas empenhadas',
+      valor: shortCurrency(emendas.totalEmpenhado),
+      apoio: `${emendas.quantidade} emendas mockadas até integração do backend`,
       destaque: 'neutro',
     },
     {
@@ -349,12 +400,6 @@ export async function getParlamentarProfile(id: number): Promise<ParlamentarPerf
       categorias,
       itensRecentes,
     },
-    observacoesMock: [
-      fontesReais.length > 0
-        ? `Dados reais consumidos do backend: ${fontesReais.join(', ')}.`
-        : 'A instância atual da API não trouxe registros úteis, então o perfil foi preenchido com dados de demonstração para não travar a navegação.',
-      'Os blocos de proposições e votações continuam mockados porque o backend enviado ainda não expõe essas rotas por HTTP.',
-      'O layout já está preparado para trocar os mocks por dados reais assim que novos endpoints forem disponibilizados.',
-    ],
+    emendas,
   };
 }

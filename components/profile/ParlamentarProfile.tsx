@@ -25,7 +25,7 @@ interface ParlamentarProfileProps {
   profile: ParlamentarPerfil;
 }
 
-type PanelKey = 'visao-geral' | 'proposicoes' | 'votacoes' | 'despesas';
+type PanelKey = 'visao-geral' | 'proposicoes' | 'emendas' | 'votacoes' | 'despesas';
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat('pt-BR', {
@@ -124,7 +124,7 @@ function MicroInfoCard({ label, value }: { label: string; value: ReactNode }) {
 }
 
 export function ParlamentarProfile({ profile }: ParlamentarProfileProps) {
-  const { parlamentar, despesas, proposicoes, votacoes } = profile;
+  const { parlamentar, despesas, proposicoes, votacoes, emendas } = profile;
   const [activePanel, setActivePanel] = useState<PanelKey>('visao-geral');
 
   const panelOptions = useMemo(
@@ -132,7 +132,7 @@ export function ParlamentarProfile({ profile }: ParlamentarProfileProps) {
       {
         key: 'visao-geral' as const,
         label: 'Visão geral',
-        supporting: 'Resumo institucional e foco do mandato.',
+        supporting: 'Síntese da atuação e dos dados principais.',
         icon: <Landmark className="h-5 w-5" />,
       },
       {
@@ -140,6 +140,12 @@ export function ParlamentarProfile({ profile }: ParlamentarProfileProps) {
         label: 'Proposições',
         supporting: 'Matérias destacadas com leitura didática.',
         icon: <FileText className="h-5 w-5" />,
+      },
+      {
+        key: 'emendas' as const,
+        label: 'Emendas',
+        supporting: 'Resumo de recursos destinados e executados.',
+        icon: <Receipt className="h-5 w-5" />,
       },
       {
         key: 'votacoes' as const,
@@ -159,49 +165,96 @@ export function ParlamentarProfile({ profile }: ParlamentarProfileProps) {
 
   function renderActivePanel() {
     if (activePanel === 'visao-geral') {
+      const principalProposicao = proposicoes[0];
+      const principalVotacao = votacoes.destaques[0];
+      const principalCategoriaDespesa = despesas.categorias[0];
+
       return (
-        <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+        <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
           <SectionShell
             icon={<Landmark className="h-6 w-6" />}
-            title="Visão geral do mandato"
-            description="Contexto institucional e elementos essenciais para apresentar quem é o parlamentar e como o mandato está estruturado."
+            title="Resumo da atuação parlamentar"
+            description="Uma leitura rápida sobre produção legislativa, votações, despesas e participação institucional."
           >
-            <p className="text-base leading-8 text-slate-600">{profile.biografia}</p>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+                <p className="text-sm font-semibold text-brasil-blue">Produção legislativa</p>
+                <h3 className="mt-2 text-lg font-bold text-slate-900">
+                  {principalProposicao?.tema ?? 'Tema em acompanhamento'}
+                </h3>
+                <p className="mt-2 text-sm leading-6 text-slate-600">
+                  {principalProposicao?.resumo ?? 'Resumo das proposições acompanhadas pelo mandato.'}
+                </p>
+              </div>
 
-            <div className="mt-6 grid gap-3 md:grid-cols-2">
-              <MicroInfoCard label="Casa legislativa" value={parlamentar.casaLegislativa ?? 'Poder Legislativo'} />
-              <MicroInfoCard label="Situação" value={parlamentar.situacaoMandato ?? parlamentar.situacao} />
-              <MicroInfoCard label="Data de nascimento" value={formatDate(parlamentar.dataNascimento)} />
-              <MicroInfoCard label="Contato de gabinete" value={parlamentar.gabinete.email} />
+              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+                <p className="text-sm font-semibold text-brasil-blue">Votação recente</p>
+                <h3 className="mt-2 text-lg font-bold text-slate-900">
+                  {principalVotacao?.titulo ?? 'Votação em destaque'}
+                </h3>
+                <p className="mt-2 text-sm leading-6 text-slate-600">
+                  Voto registrado: <strong>{principalVotacao?.voto ?? 'Não informado'}</strong>. Resultado:{' '}
+                  <strong>{principalVotacao?.resultado ?? 'Não informado'}</strong>.
+                </p>
+              </div>
+
+              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+                <p className="text-sm font-semibold text-brasil-blue">Uso de recursos</p>
+                <h3 className="mt-2 text-lg font-bold text-slate-900">{formatCurrency(despesas.totalAno)}</h3>
+                <p className="mt-2 text-sm leading-6 text-slate-600">
+                  Total registrado no ano. A maior concentração está em{' '}
+                  <strong>{principalCategoriaDespesa?.categoria ?? 'categoria não informada'}</strong>.
+                </p>
+              </div>
+
+              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+                <p className="text-sm font-semibold text-brasil-blue">Participação institucional</p>
+                <h3 className="mt-2 text-lg font-bold text-slate-900">{profile.comissoes.length} espaços mapeados</h3>
+                <p className="mt-2 text-sm leading-6 text-slate-600">
+                  Comissões, frentes ou áreas institucionais associadas ao mandato.
+                </p>
+              </div>
             </div>
           </SectionShell>
 
           <SectionShell
             icon={<ShieldCheck className="h-6 w-6" />}
-            title="Atuação em foco"
-            description="Resumo dos temas e espaços institucionais que ajudam o usuário a contextualizar o mandato antes de mergulhar nos dados."
+            title="Principais sinais do perfil"
+            description="Indicadores resumidos para entender rapidamente como o mandato aparece nos dados disponíveis."
           >
-            <div className="flex flex-wrap gap-2">
-              {profile.temasPrioritarios.map((tema) => (
-                <span
-                  key={tema}
-                  className="rounded-full border border-brasil-green/20 bg-brasil-green/10 px-3 py-1 text-sm font-medium text-brasil-green"
-                >
-                  {tema}
-                </span>
-              ))}
+            <div className="space-y-4">
+              <div>
+                <div className="mb-2 flex items-center justify-between text-sm font-medium text-slate-600">
+                  <span>Presença em votações</span>
+                  <span>{votacoes.presenca}%</span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+                  <div className="h-full rounded-full bg-brasil-green" style={{ width: `${votacoes.presenca}%` }} />
+                </div>
+              </div>
+
+              <div>
+                <div className="mb-2 flex items-center justify-between text-sm font-medium text-slate-600">
+                  <span>Alinhamento em votações</span>
+                  <span>{votacoes.alinhamento}%</span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+                  <div className="h-full rounded-full bg-brasil-blue" style={{ width: `${votacoes.alinhamento}%` }} />
+                </div>
+              </div>
             </div>
 
-            <div className="mt-6 grid gap-3">
-              {profile.comissoes.map((comissao) => (
-                <div key={comissao} className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm font-medium text-slate-700">
+            <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-600">
+              Este painel resume os principais blocos do perfil sem repetir todos os detalhes das abas específicas.
+              Para aprofundar, use os painéis de proposições, votações, despesas e emendas.
+            </div>
+
+            <div className="mt-5 grid gap-3">
+              {profile.comissoes.slice(0, 3).map((comissao) => (
+                <div key={comissao} className="rounded-2xl border border-slate-200 bg-white p-4 text-sm font-medium text-slate-700">
                   {comissao}
                 </div>
               ))}
-            </div>
-
-            <div className="mt-6 rounded-2xl border border-slate-200 bg-brasil-blue/5 p-4 text-sm leading-6 text-slate-600">
-              O bloco de atuação funciona como um resumo editorial do mandato e ajuda o usuário a entender quais pautas aparecem com mais frequência no restante do perfil.
             </div>
           </SectionShell>
         </div>
@@ -269,6 +322,82 @@ export function ParlamentarProfile({ profile }: ParlamentarProfileProps) {
                 <MicroInfoCard label="Itens na vitrine" value={`${proposicoes.length} proposições`} />
                 <MicroInfoCard label="Tema mais forte" value={profile.temasPrioritarios[0]} />
               </div>
+            </div>
+          </SectionShell>
+        </div>
+      );
+    }
+
+    if (activePanel === 'emendas') {
+      return (
+        <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+          <SectionShell
+            icon={<Receipt className="h-6 w-6" />}
+            title="Emendas parlamentares"
+            description="Visão resumida dos recursos vinculados ao parlamentar, usando os campos já previstos na API de emendas."
+          >
+            <div className="grid gap-3 md:grid-cols-3">
+              <MicroInfoCard label="Empenhado" value={formatCurrency(emendas.totalEmpenhado)} />
+              <MicroInfoCard label="Liquidado" value={formatCurrency(emendas.totalLiquidado)} />
+              <MicroInfoCard label="Pago" value={formatCurrency(emendas.totalPago)} />
+            </div>
+
+            <div className="mt-6 space-y-4">
+              {emendas.destaques.map((emenda) => (
+                <article key={emenda.codigoEmenda} className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-brasil-blue">Emenda {emenda.numeroEmenda}</p>
+                      <h3 className="mt-1 text-lg font-bold text-slate-900">{emenda.funcao}</h3>
+                      <p className="mt-1 text-sm text-slate-500">{emenda.subfuncao}</p>
+                    </div>
+                    <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600">
+                      {emenda.tipoEmenda} · {emenda.localidadeDoGasto}
+                    </span>
+                  </div>
+
+                  <div className="mt-4 grid gap-3 md:grid-cols-3">
+                    <MicroInfoCard label="Empenhado" value={formatCurrency(emenda.valorEmpenhado)} />
+                    <MicroInfoCard label="Liquidado" value={formatCurrency(emenda.valorLiquidado)} />
+                    <MicroInfoCard label="Pago" value={formatCurrency(emenda.valorPago)} />
+                  </div>
+                </article>
+              ))}
+            </div>
+          </SectionShell>
+
+          <SectionShell
+            icon={<CircleHelp className="h-6 w-6" />}
+            title="Leitura do resumo"
+            description="Apoio para entender a diferença entre o dado resumido da emenda e os documentos que serão usados na tela detalhada."
+          >
+            <div className="grid gap-3 md:grid-cols-2">
+              <MicroInfoCard label="Quantidade" value={`${emendas.quantidade} emendas`} />
+              <MicroInfoCard label="Tipo principal" value={emendas.principalTipo} />
+              <MicroInfoCard label="Localidade" value={emendas.principalLocalidade} />
+              <MicroInfoCard label="Restos inscritos" value={formatCurrency(emendas.totalRestoInscrito)} />
+            </div>
+
+            <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-600">
+              {emendas.leituraRapida}
+            </div>
+
+            <div className="mt-6 space-y-3">
+              <p className="text-sm font-semibold text-slate-900">Documentos recentes</p>
+              {emendas.documentosRecentes.map((documento) => (
+                <div key={documento.codigoDocumento} className="rounded-2xl border border-slate-200 bg-white p-4 text-sm leading-6 text-slate-600">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-semibold text-slate-900">{documento.codigoDocumentoResumido}</p>
+                      <p>{documento.especieTipo}</p>
+                    </div>
+                    <span className="rounded-full bg-brasil-green/10 px-3 py-1 text-xs font-semibold text-brasil-green">
+                      {documento.fase}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-xs text-slate-500">{formatDate(documento.data)}</p>
+                </div>
+              ))}
             </div>
           </SectionShell>
         </div>
@@ -347,12 +476,15 @@ export function ParlamentarProfile({ profile }: ParlamentarProfileProps) {
       );
     }
 
+    const maiorCategoria = despesas.categorias[0];
+    const totalCategorias = despesas.categorias.reduce((acc, categoria) => acc + categoria.valor, 0) || despesas.totalAno;
+
     return (
-      <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+      <div className="space-y-6">
         <SectionShell
           icon={<Wallet className="h-6 w-6" />}
-          title="Despesas do mandato"
-          description="Resumo com total anual, categorias de gasto e itens recentes apresentados em formato mais amigável para o cidadão."
+          title="Resumo das despesas"
+          description="Antes da listagem detalhada, esta área resume o total gasto, as maiores categorias e a distribuição dos recursos."
         >
           <div className="grid gap-3 md:grid-cols-3">
             <MicroInfoCard label="Total no ano" value={formatCurrency(despesas.totalAno)} />
@@ -360,69 +492,123 @@ export function ParlamentarProfile({ profile }: ParlamentarProfileProps) {
             <MicroInfoCard label="Maior reembolso" value={formatCurrency(despesas.maiorReembolso)} />
           </div>
 
-          <div className="mt-6 overflow-hidden rounded-3xl border border-slate-200">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-slate-200 text-sm">
-                <thead className="bg-slate-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left font-semibold text-slate-500">Data</th>
-                    <th className="px-4 py-3 text-left font-semibold text-slate-500">Tipo</th>
-                    <th className="px-4 py-3 text-left font-semibold text-slate-500">Fornecedor</th>
-                    <th className="px-4 py-3 text-left font-semibold text-slate-500">Valor</th>
-                    <th className="px-4 py-3 text-left font-semibold text-slate-500">Documento</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 bg-white">
-                  {despesas.itensRecentes.map((item) => (
-                    <tr key={`${item.data}-${item.fornecedor}-${item.tipo}`} className="align-top">
-                      <td className="px-4 py-4 text-slate-600">{formatDate(item.data)}</td>
-                      <td className="px-4 py-4 font-medium text-slate-700">{item.tipo}</td>
-                      <td className="px-4 py-4 text-slate-600">{item.fornecedor}</td>
-                      <td className="px-4 py-4 font-semibold text-slate-900">{formatCurrency(item.valor)}</td>
-                      <td className="px-4 py-4">
-                        <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-600">
-                          <Receipt size={14} />
-                          {item.documentoLabel}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+          <div className="mt-6 rounded-3xl border border-slate-200 bg-slate-50 p-5">
+            <p className="text-sm font-semibold text-slate-900">Leitura rápida</p>
+            <p className="mt-2 text-sm leading-7 text-slate-600">
+              A maior parte das despesas registradas está concentrada em{' '}
+              <strong>{maiorCategoria?.categoria ?? 'categoria não informada'}</strong>, com valor aproximado de{' '}
+              <strong>{formatCurrency(maiorCategoria?.valor ?? 0)}</strong>. A listagem detalhada aparece mais abaixo,
+              para deixar a primeira leitura do painel menos poluída.
+            </p>
           </div>
         </SectionShell>
 
-        <SectionShell
-          icon={<Building2 className="h-6 w-6" />}
-          title="Leitura por categoria"
-          description="Visual simples para mostrar onde o recurso se concentra e o que cada categoria representa para o usuário final."
-        >
-          <div className="space-y-4">
-            {despesas.categorias.map((categoria) => {
-              const percentual = Math.round((categoria.valor / despesas.totalAno) * 100);
-              return (
-                <div key={categoria.categoria} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p className="font-semibold text-slate-900">{categoria.categoria}</p>
-                      <p className="mt-1 text-sm leading-6 text-slate-600">{categoria.descricao}</p>
+        <div className="grid gap-6 xl:grid-cols-[0.8fr_1.2fr]">
+          <SectionShell
+            icon={<Building2 className="h-6 w-6" />}
+            title="Distribuição por categoria"
+            description="Gráfico de pizza simplificado com base nas categorias de despesa."
+          >
+            <div className="flex flex-col items-center gap-6 md:flex-row">
+              <div
+                className="h-44 w-44 shrink-0 rounded-full border border-slate-200 shadow-inner"
+                style={{
+                  background: `conic-gradient(
+                    #002776 0deg 122deg,
+                    #009c3b 122deg 219deg,
+                    #ffdf00 219deg 287deg,
+                    #94a3b8 287deg 360deg
+                  )`,
+                }}
+              />
+
+              <div className="w-full space-y-3">
+                {despesas.categorias.map((categoria, index) => {
+                  const percentual = Math.round((categoria.valor / totalCategorias) * 100);
+
+                  return (
+                    <div key={categoria.categoria} className="flex items-center justify-between gap-4 text-sm">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`h-3 w-3 rounded-full ${
+                            index === 0
+                              ? 'bg-brasil-blue'
+                              : index === 1
+                                ? 'bg-brasil-green'
+                                : index === 2
+                                  ? 'bg-brasil-yellow'
+                                  : 'bg-slate-400'
+                          }`}
+                        />
+                        <span className="font-medium text-slate-700">{categoria.categoria}</span>
+                      </div>
+                      <span className="font-semibold text-slate-900">{percentual}%</span>
                     </div>
-                    <div className="text-right">
-                      <p className="font-semibold text-slate-900">{formatCurrency(categoria.valor)}</p>
-                      <p className="text-xs font-medium uppercase tracking-[0.16em] text-slate-400">{percentual}%</p>
+                  );
+                })}
+              </div>
+            </div>
+          </SectionShell>
+
+          <SectionShell
+            icon={<Receipt className="h-6 w-6" />}
+            title="Maiores categorias"
+            description="Barras horizontais para comparar rapidamente onde os recursos se concentram."
+          >
+            <div className="space-y-4">
+              {despesas.categorias.map((categoria) => {
+                const percentual = Math.round((categoria.valor / totalCategorias) * 100);
+
+                return (
+                  <div key={categoria.categoria} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="font-semibold text-slate-900">{categoria.categoria}</p>
+                        <p className="mt-1 text-sm leading-6 text-slate-600">{categoria.descricao}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold text-slate-900">{formatCurrency(categoria.valor)}</p>
+                        <p className="text-xs font-medium uppercase tracking-[0.16em] text-slate-400">{percentual}%</p>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-200">
+                      <div className="h-full rounded-full bg-brasil-blue" style={{ width: `${percentual}%` }} />
                     </div>
                   </div>
-                  <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-200">
-                    <div className="h-full rounded-full bg-brasil-blue" style={{ width: `${percentual}%` }} />
+                );
+              })}
+            </div>
+          </SectionShell>
+        </div>
+
+        <SectionShell
+          icon={<Receipt className="h-6 w-6" />}
+          title="Despesas recentes"
+          description="Listagem simplificada dos registros mais recentes."
+        >
+          <div className="grid gap-3">
+            {despesas.itensRecentes.map((item) => (
+              <div key={`${item.data}-${item.fornecedor}-${item.tipo}`} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                  <div>
+                    <p className="font-semibold text-slate-900">{item.tipo}</p>
+                    <p className="mt-1 text-sm text-slate-600">{item.fornecedor}</p>
+                    <p className="mt-1 text-xs font-medium uppercase tracking-[0.16em] text-slate-400">
+                      {formatDate(item.data)}
+                    </p>
+                  </div>
+
+                  <div className="text-left md:text-right">
+                    <p className="text-lg font-bold text-slate-900">{formatCurrency(item.valor)}</p>
+                    <span className="mt-2 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600">
+                      <Receipt size={14} />
+                      {item.documentoLabel}
+                    </span>
                   </div>
                 </div>
-              );
-            })}
-          </div>
-
-          <div className="mt-6 rounded-2xl border border-slate-200 bg-brasil-blue/5 p-4 text-sm leading-6 text-slate-600">
-            Este bloco foi pensado para reduzir o esforço de leitura. Em vez de mostrar apenas uma tabela de recibos, a interface exibe primeiro a visão consolidada e depois o detalhe operacional.
+              </div>
+            ))}
           </div>
         </SectionShell>
       </div>
@@ -501,26 +687,6 @@ export function ParlamentarProfile({ profile }: ParlamentarProfileProps) {
 
                 <p className="max-w-3xl text-base leading-7 text-slate-600">{profile.resumo}</p>
 
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                    <CircleHelp size={16} className="text-brasil-blue" />
-                    Como ler este perfil
-                  </div>
-                  <p className="mt-2 text-sm leading-6 text-slate-600">
-                    Em vez de te mandar para vários trechos da página, os painéis abaixo trocam o conteúdo principal no mesmo lugar. Assim fica mais fácil comparar visão geral, proposições, votações e despesas sem perder o contexto.
-                  </p>
-                </div>
-
-                <div className="flex flex-wrap gap-2">
-                  {profile.temasPrioritarios.map((tema) => (
-                    <span
-                      key={tema}
-                      className="rounded-full border border-brasil-blue/10 bg-brasil-blue/5 px-3 py-1 text-sm font-medium text-brasil-blue"
-                    >
-                      {tema}
-                    </span>
-                  ))}
-                </div>
               </div>
             </div>
           </div>
@@ -579,17 +745,6 @@ export function ParlamentarProfile({ profile }: ParlamentarProfileProps) {
               </div>
             )}
           </div>
-
-          <div className="rounded-3xl border border-slate-200 bg-slate-900 p-6 text-white shadow-sm">
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-300">Observações do protótipo</p>
-            <div className="mt-4 space-y-3">
-              {profile.observacoesMock.map((item) => (
-                <div key={item} className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm leading-6 text-slate-200">
-                  {item}
-                </div>
-              ))}
-            </div>
-          </div>
         </aside>
       </section>
 
@@ -617,7 +772,7 @@ export function ParlamentarProfile({ profile }: ParlamentarProfileProps) {
           </div>
         </div>
 
-        <div className="mt-5 grid gap-3 lg:grid-cols-4">
+        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
           {panelOptions.map((panel) => (
             <PanelButton
               key={panel.key}

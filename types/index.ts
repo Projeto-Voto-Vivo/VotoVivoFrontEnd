@@ -121,6 +121,43 @@ export interface DespesasPerfil {
   itensRecentes: ItemDespesaPerfil[];
 }
 
+export interface EmendaResumoPerfil {
+  codigoEmenda: string;
+  ano: number;
+  tipoEmenda: string;
+  nomeAutor: string;
+  numeroEmenda: string;
+  localidadeDoGasto: string;
+  funcao: string;
+  subfuncao: string;
+  valorEmpenhado: number;
+  valorLiquidado: number;
+  valorPago: number;
+}
+
+export interface DocumentoEmendaPerfil {
+  id: number;
+  data: string;
+  fase: string;
+  codigoDocumento: string;
+  codigoDocumentoResumido: string;
+  especieTipo: string;
+  tipoEmenda: string;
+}
+
+export interface EmendasPerfil {
+  quantidade: number;
+  totalEmpenhado: number;
+  totalLiquidado: number;
+  totalPago: number;
+  totalRestoInscrito: number;
+  principalTipo: string;
+  principalLocalidade: string;
+  destaques: EmendaResumoPerfil[];
+  documentosRecentes: DocumentoEmendaPerfil[];
+  leituraRapida: string;
+}
+
 export interface ParlamentarPerfil {
   parlamentar: ParlamentarDetalhe;
   subtitulo: string;
@@ -137,7 +174,7 @@ export interface ParlamentarPerfil {
     leituraRapida: string;
   };
   despesas: DespesasPerfil;
-  observacoesMock: string[];
+  emendas: EmendasPerfil;
 }
 
 export const UFs = [
