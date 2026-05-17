@@ -4,6 +4,7 @@ import { ParlamentarPerfil } from '@/types';
 import { ParlamentarHero } from './ParlamentarHero';
 import { ParlamentarIndicators } from './ParlamentarIndicators';
 import { ParlamentarPanels } from './ParlamentarPanels';
+import { EmendasPanel } from './panels/EmendasPanel';
 
 interface ParlamentarProfilePageProps {
   profile: ParlamentarPerfil;
@@ -25,6 +26,7 @@ export function ParlamentarProfilePage({ profile }: ParlamentarProfilePageProps)
       <ParlamentarIndicators indicadores={profile.indicadores} />
 
       <ParlamentarPanels profile={profile} />
+
     </div>
   );
 }

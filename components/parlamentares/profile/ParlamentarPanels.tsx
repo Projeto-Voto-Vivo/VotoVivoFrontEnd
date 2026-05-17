@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { FileText, Landmark, Receipt, Vote, Wallet } from 'lucide-react';
 import { ParlamentarPerfil } from '@/types';
 import { PanelButton } from './shared/PanelButton';
-import { DespesasPanel } from './panels/DespesasPanel';
+import { DespesasPanel } from './panels/DespesasPanel'
 import { EmendasPanel } from './panels/EmendasPanel';
 import { ProposicoesPanel } from './panels/ProposicoesPanel';
 import { VisaoGeralPanel } from './panels/VisaoGeralPanel';
@@ -101,7 +101,7 @@ export function ParlamentarPanels({ profile }: ParlamentarPanelsProps) {
 
       {activePanel === 'visao-geral' && <VisaoGeralPanel profile={profile} />}
       {activePanel === 'proposicoes' && <ProposicoesPanel profile={profile} />}
-      {activePanel === 'emendas' && <EmendasPanel profile={profile} />}
+      {activePanel === 'emendas' && (<EmendasPanel profile={profile} parlamentarId={profile.parlamentar.id} />)}
       {activePanel === 'votacoes' && <VotacoesPanel profile={profile} />}
       {activePanel === 'despesas' && <DespesasPanel profile={profile} />}
     </>

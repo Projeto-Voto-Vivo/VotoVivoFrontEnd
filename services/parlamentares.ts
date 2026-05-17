@@ -3,6 +3,7 @@ import {
   CategoriaDespesaPerfil,
   Despesa,
   DocumentoEmendaPerfil,
+  EmendaDetalhe,
   EmendaResumoPerfil,
   EmendasPerfil,
   GastoResumo,
@@ -901,5 +902,127 @@ export async function getParlamentarProfile(id: number): Promise<ParlamentarPerf
       itensRecentes,
     },
     emendas,
+  };
+}
+
+function parseMoney(value?: string | number | null) {
+  if (typeof value === 'number') return value;
+  if (!value) return 0;
+
+  const normalized = String(value)
+    .replace(/\./g, '')
+    .replace(',', '.')
+    .trim();
+
+  const parsed = Number(normalized);
+  return Number.isNaN(parsed) ? 0 : parsed;
+}
+type BackendEmendaDetalhe = {
+  codigoEmenda: string;
+  ano: number;
+  tipoEmenda: string;
+  autor: string;
+  nomeAutor: string;
+  numeroEmenda: string;
+  localidadeDoGasto: string;
+  funcao: string;
+  subfuncao: string;
+  valorEmpenhado: string;
+  valorLiquidado: string;
+  valorPago: string;
+  valorRestoInscrito: string;
+  valorRestoCancelado: string;
+  valorRestoPago: string;
+};
+
+export async function getEmendaDetalhe(
+  parlamentarId: number,
+  codigoEmenda: string,
+): Promise<EmendaDetalhe | null> {
+  try {
+    const [emendasRes, documentosRes] = await Promise.all([
+      api.get(`/api-de-dados/emendas?codigoEmenda=${codigoEmenda}`),
+      api.get(`/api-de-dados/emendas/documentos/${codigoEmenda}`),
+    ]);
+
+    const emendas = Array.isArray(emendasRes.data)
+      ? (emendasRes.data as BackendEmendaDetalhe[])
+      : [];
+
+    const documentos = Array.isArray(documentosRes.data)
+      ? (documentosRes.data as DocumentoEmendaPerfil[])
+      : [];
+
+    const emenda = emendas.find((item) => item.codigoEmenda === codigoEmenda);
+
+    if (emenda) {
+      return {
+        codigoEmenda: emenda.codigoEmenda,
+        ano: emenda.ano,
+        tipoEmenda: emenda.tipoEmenda,
+        autor: emenda.autor,
+        nomeAutor: emenda.nomeAutor,
+        numeroEmenda: emenda.numeroEmenda,
+        localidadeDoGasto: emenda.localidadeDoGasto,
+        funcao: emenda.funcao,
+        subfuncao: emenda.subfuncao,
+        valorEmpenhado: parseMoney(emenda.valorEmpenhado),
+        valorLiquidado: parseMoney(emenda.valorLiquidado),
+        valorPago: parseMoney(emenda.valorPago),
+        valorRestoInscrito: parseMoney(emenda.valorRestoInscrito),
+        valorRestoCancelado: parseMoney(emenda.valorRestoCancelado),
+        valorRestoPago: parseMoney(emenda.valorRestoPago),
+        documentos,
+        parlamentarId,
+        nomeParlamentar: emenda.nomeAutor,
+      };
+    }
+  } catch (error) {
+    console.error('Erro ao buscar detalhe da emenda na API, usando mock', error);
+  }
+
+  const profile = await getParlamentarProfile(parlamentarId);
+
+  console.log('DEBUG getEmendaDetalhe', {
+    parlamentarId,
+    codigoEmendaRecebido: codigoEmenda,
+    codigosMockDisponiveis: profile.emendas.destaques.map((item) => item.codigoEmenda),
+  });
+
+  const emenda = profile.emendas.destaques.find(
+    (item) => item.codigoEmenda === codigoEmenda,
+  );
+  console.log('DEBUG resultado find', {
+    encontrou: Boolean(emenda),
+    emendaEncontrada: emenda,
+  });
+
+  if (!emenda) {
+    return null;
+  }
+
+  const documentos = profile.emendas.documentosRecentes.filter(
+    (documento) => documento.tipoEmenda === emenda.tipoEmenda,
+  );
+
+  return {
+    codigoEmenda: emenda.codigoEmenda,
+    ano: emenda.ano,
+    tipoEmenda: emenda.tipoEmenda,
+    autor: String(parlamentarId),
+    nomeAutor: emenda.nomeAutor || profile.parlamentar.nomeParlamentar,
+    numeroEmenda: emenda.numeroEmenda,
+    localidadeDoGasto: emenda.localidadeDoGasto,
+    funcao: emenda.funcao,
+    subfuncao: emenda.subfuncao,
+    valorEmpenhado: emenda.valorEmpenhado,
+    valorLiquidado: emenda.valorLiquidado,
+    valorPago: emenda.valorPago,
+    valorRestoInscrito: profile.emendas.totalRestoInscrito ?? 0,
+    valorRestoCancelado: 0,
+    valorRestoPago: 0,
+    documentos,
+    parlamentarId,
+    nomeParlamentar: profile.parlamentar.nomeParlamentar,
   };
 }

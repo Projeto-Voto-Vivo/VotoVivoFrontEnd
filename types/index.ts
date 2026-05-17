@@ -180,6 +180,36 @@ export interface ParlamentarPerfil {
   despesas: DespesasPerfil;
   emendas: EmendasPerfil;
 }
+export interface DocumentoEmendaPerfil {
+  id: number;
+  data: string;
+  fase: string;
+  codigoDocumento: string;
+  codigoDocumentoResumido: string;
+  especieTipo: string;
+  tipoEmenda: string;
+}
+
+export interface EmendaDetalhe {
+  codigoEmenda: string;
+  ano: number;
+  tipoEmenda: string;
+  autor: string;
+  nomeAutor: string;
+  numeroEmenda: string;
+  localidadeDoGasto: string;
+  funcao: string;
+  subfuncao: string;
+  valorEmpenhado: number;
+  valorLiquidado: number;
+  valorPago: number;
+  valorRestoInscrito: number;
+  valorRestoCancelado: number;
+  valorRestoPago: number;
+  documentos: DocumentoEmendaPerfil[];
+  parlamentarId: number;
+  nomeParlamentar: string;
+}
 
 export const UFs = [
   'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA',

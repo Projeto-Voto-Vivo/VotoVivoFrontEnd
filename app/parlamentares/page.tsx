@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { getParlamentaresLista } from '@/services/parlamentares';
 import { ParlamentarCard } from '@/components/home/ParlamentarCard';
+import { Header } from '@/components/layout/HeaderLayout';
 
 type ParlamentaresPageProps = {
   searchParams?: Promise<{
@@ -35,6 +36,8 @@ export default async function ParlamentaresPage({
   };
 
   return (
+    <>
+    <Header />
     <main className="min-h-screen bg-slate-50 py-10">
       <div className="container mx-auto px-4">
         <header className="mb-8">
@@ -137,5 +140,6 @@ export default async function ParlamentaresPage({
         </nav>
       </div>
     </main>
+    </>
   );
 }

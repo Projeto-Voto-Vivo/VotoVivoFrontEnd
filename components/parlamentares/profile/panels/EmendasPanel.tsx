@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { CircleHelp, Receipt } from 'lucide-react';
 import { ParlamentarPerfil } from '@/types';
 import { MicroInfoCard } from '../shared/MicroInfoCard';
@@ -5,10 +6,11 @@ import { SectionShell } from '../shared/SectionShell';
 import { formatCurrency, formatDate } from '../shared/formatters';
 
 interface EmendasPanelProps {
+  parlamentarId: number;
   profile: ParlamentarPerfil;
 }
 
-export function EmendasPanel({ profile }: EmendasPanelProps) {
+export function EmendasPanel({ parlamentarId, profile }: EmendasPanelProps) {
   const { emendas } = profile;
 
   return (
@@ -38,6 +40,7 @@ export function EmendasPanel({ profile }: EmendasPanelProps) {
                   <h3 className="mt-1 text-lg font-bold text-slate-900">{emenda.funcao}</h3>
                   <p className="mt-1 text-sm text-slate-500">{emenda.subfuncao}</p>
                 </div>
+
                 <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600">
                   {emenda.tipoEmenda} · {emenda.localidadeDoGasto}
                 </span>
@@ -47,6 +50,15 @@ export function EmendasPanel({ profile }: EmendasPanelProps) {
                 <MicroInfoCard label="Empenhado" value={formatCurrency(emenda.valorEmpenhado)} />
                 <MicroInfoCard label="Liquidado" value={formatCurrency(emenda.valorLiquidado)} />
                 <MicroInfoCard label="Pago" value={formatCurrency(emenda.valorPago)} />
+              </div>
+
+              <div className="mt-5 flex justify-end">
+                <Link
+                  href={`/parlamentares/${parlamentarId}/emendas/${emenda.codigoEmenda}`}
+                  className="inline-flex items-center rounded-xl bg-brasil-blue px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
+                >
+                  Ver detalhes da emenda
+                </Link>
               </div>
             </article>
           ))}
@@ -86,10 +98,12 @@ export function EmendasPanel({ profile }: EmendasPanelProps) {
                   </p>
                   <p>{documento.especieTipo}</p>
                 </div>
+
                 <span className="rounded-full bg-brasil-green/10 px-3 py-1 text-xs font-semibold text-brasil-green">
                   {documento.fase}
                 </span>
               </div>
+
               <p className="mt-2 text-xs text-slate-500">{formatDate(documento.data)}</p>
             </div>
           ))}
