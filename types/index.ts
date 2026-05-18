@@ -8,6 +8,7 @@ export interface Parlamentar {
   casaLegislativa?: string;
   legislatura?: string;
   situacaoMandato?: string;
+  situacao?: string;
 }
 
 export type Deputado = Parlamentar;
@@ -54,7 +55,7 @@ export interface GastoResumo {
   total: number;
 }
 
-export interface ListaDeputadosMeta {
+export interface ListaParlamentaresMeta {
   total: number;
   totalPaginas: number;
   pagina: number;
@@ -62,10 +63,13 @@ export interface ListaDeputadosMeta {
   aviso?: string;
 }
 
-export interface ListaDeputadosResponse {
-  data: Deputado[];
-  meta: ListaDeputadosMeta;
+export interface ListaParlamentaresResponse {
+  data: Parlamentar[];
+  meta: ListaParlamentaresMeta;
 }
+
+export type ListaDeputadosMeta = ListaParlamentaresMeta;
+export type ListaDeputadosResponse = ListaParlamentaresResponse;
 
 export interface PerfilIndicador {
   titulo: string;
@@ -176,9 +180,41 @@ export interface ParlamentarPerfil {
   despesas: DespesasPerfil;
   emendas: EmendasPerfil;
 }
+export interface DocumentoEmendaPerfil {
+  id: number;
+  data: string;
+  fase: string;
+  codigoDocumento: string;
+  codigoDocumentoResumido: string;
+  especieTipo: string;
+  tipoEmenda: string;
+}
+
+export interface EmendaDetalhe {
+  codigoEmenda: string;
+  ano: number;
+  tipoEmenda: string;
+  autor: string;
+  nomeAutor: string;
+  numeroEmenda: string;
+  localidadeDoGasto: string;
+  funcao: string;
+  subfuncao: string;
+  valorEmpenhado: number;
+  valorLiquidado: number;
+  valorPago: number;
+  valorRestoInscrito: number;
+  valorRestoCancelado: number;
+  valorRestoPago: number;
+  documentos: DocumentoEmendaPerfil[];
+  parlamentarId: number;
+  nomeParlamentar: string;
+}
 
 export const UFs = [
   'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA',
   'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN',
   'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO',
-];
+] as const;
+
+export type UF = (typeof UFs)[number];
