@@ -1,9 +1,12 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import { Header } from '@/components/layout/HeaderLayout';
+import { Footer } from '@/components/layout/FooterLayout';
 
 export const metadata: Metadata = {
   title: 'VotoVivo.leg',
-  description: 'Painel para acompanhar parlamentares, votações, proposições e despesas do Poder Legislativo.',
+  description:
+    'Dados públicos organizados para transparência e educação cívica.',
 };
 
 export default function RootLayout({
@@ -13,7 +16,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR">
-      <body className="antialiased">{children}</body>
+      <body className="min-h-screen antialiased">
+        <div className="flex min-h-screen flex-col">
+          <Header />
+          <main className="flex-1">{children}</main>
+          <Footer />
+        </div>
+      </body>
     </html>
   );
 }

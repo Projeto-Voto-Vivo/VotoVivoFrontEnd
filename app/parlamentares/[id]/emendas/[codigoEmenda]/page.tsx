@@ -1,5 +1,4 @@
 import { notFound } from 'next/navigation';
-import { Header } from '@/components/layout/HeaderLayout';
 import { EmendaDetailPage } from '@/components/parlamentares/emendas/EmendaDetailPage';
 import { getEmendaDetalhe } from '@/services/parlamentares';
 
@@ -28,7 +27,6 @@ export default async function EmendaPage({ params }: EmendaPageProps) {
 
   return (
     <main className="min-h-screen bg-slate-50 pb-20">
-        <Header />
         <EmendaDetailPage emenda={emenda} />;
     </main>);
       

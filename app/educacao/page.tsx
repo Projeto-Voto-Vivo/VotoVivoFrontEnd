@@ -1,6 +1,5 @@
 "use client";
 import { useState } from 'react';
-import { Header } from '@/components/layout/HeaderLayout';
 import Image from "next/image";
 import { 
   Globe, Landmark, Building2, Users, 
@@ -26,7 +25,6 @@ export default function EducativoPage() {
 
   return (
     <>
-      <Header />
       <main className="bg-[#F8FAFC] min-h-screen pb-20 selection:bg-blue-100">
         
         {/* HERO SECTION */}

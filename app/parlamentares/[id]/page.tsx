@@ -2,7 +2,6 @@
 export const dynamic = 'force-dynamic';
 
 import { notFound } from 'next/navigation';
-import { Header } from '@/components/layout/HeaderLayout';
 import { ParlamentarProfilePage } from '@/components/parlamentares/profile/ParlamentarProfilePage';
 import { getParlamentarProfile } from '@/services/parlamentares';
 
@@ -22,7 +21,6 @@ export default async function PerfilParlamentar({
 
   return (
     <main className="min-h-screen bg-slate-50 pb-20">
-      <Header />
       <ParlamentarProfilePage profile={profile} />
     </main>
   );
