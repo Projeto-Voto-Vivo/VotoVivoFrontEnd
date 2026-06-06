@@ -25,7 +25,7 @@ export default function EducativoPage() {
 
   return (
     <>
-      <main className="bg-[#F8FAFC] min-h-screen pb-20 selection:bg-blue-100">
+      <main className="scroll-mt-32 bg-[#F8FAFC] min-h-screen pb-20 selection:bg-blue-100">
         
         {/* HERO SECTION */}
         <section className="relative overflow-hidden bg-white border-b border-slate-200 py-16 md:py-24">

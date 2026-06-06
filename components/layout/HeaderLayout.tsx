@@ -30,10 +30,10 @@ export function Header() {
             </div>
           </div>
           <Link href="/educacao" className="py-2 font-medium text-gray-700 transition-colors hover:text-brasil-blue">
-            Educação Política
+            Educação
           </Link>
           <Link href="/projeto" className="py-2 font-medium text-gray-700 transition-colors hover:text-brasil-blue">
-            O projeto
+            Sobre
           </Link>
         </nav>
       </div>

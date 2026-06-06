@@ -4,13 +4,13 @@ const navigationLinks = [
   { href: '/', label: 'Início' },
   { href: '/parlamentares', label: 'Parlamentares' },
   { href: '/educacao', label: 'Educação Política' },
-  { href: '/projeto', label: 'O projeto' },
+  
 ];
 
 const infoLinks = [
-  { href: '/fontes', label: 'Fontes dos dados' },
-  { href: '/metodologia', label: 'Metodologia' },
-  { href: '/contato', label: 'Contato' },
+  { href: '/projeto', label: 'Sobre o projeto' },
+  { href: '/projeto#fontes', label: 'Fontes dos dados' },
+  { href: '/projeto#contato', label: 'Contato' },
 ];
 
 export function Footer() {
@@ -97,7 +97,7 @@ export function Footer() {
             </p>
 
             <Link
-              href="/fontes"
+              href='/projeto#fontes'
               className="inline-flex font-semibold text-brasil-blue transition-colors hover:text-blue-800"
             >
               Consultar fontes e metodologia

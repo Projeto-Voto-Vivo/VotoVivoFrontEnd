@@ -36,7 +36,7 @@ export default async function ParlamentaresPage({
 
   return (
     <>
-    <main className="min-h-screen bg-slate-50 py-10">
+    <main className="scroll-mt-32 min-h-screen bg-slate-50 py-10">
       <div className="container mx-auto px-4">
         <header className="mb-8">
           <h1 className="text-3xl font-bold text-slate-900">Parlamentares</h1>
