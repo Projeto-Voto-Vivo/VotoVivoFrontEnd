@@ -6,10 +6,23 @@ export function formatCurrency(value: number) {
   }).format(value);
 }
 
-export function formatDate(value: string) {
+export function formatDate(value?: string | Date | null) {
+  if (!value) return 'Data não informada';
+
+  const date =
+    value instanceof Date
+      ? value
+      : value.includes('T')
+        ? new Date(value)
+        : new Date(`${value}T12:00:00`);
+
+  if (Number.isNaN(date.getTime())) {
+    return 'Data inválida';
+  }
+
   return new Intl.DateTimeFormat('pt-BR', {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
-  }).format(new Date(`${value}T12:00:00`));
+  }).format(date);
 }

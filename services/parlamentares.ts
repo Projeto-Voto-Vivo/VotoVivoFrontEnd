@@ -811,10 +811,63 @@ export async function getDespesasParlamentar(
   }
 }
 
+type BackendProposicaoPerfil = {
+  id?: number;
+  apiId?: number;
+  idTipoProposicao?: number;
+  numero?: string | null;
+  ano?: number | null;
+  summary?: string | null;
+  currentStatus?: string | null;
+};
+
+export async function getProposicoesParlamentar(
+  id: number,
+): Promise<ProposicaoPerfil[]> {
+  try {
+    const res = await api.get(`/parlamentares/${id}/proposicoes`);
+
+    console.log('PROPOSIÇÕES RECEBIDAS DA API:', res.data);
+
+    const list = Array.isArray(res.data)
+      ? (res.data as BackendProposicaoPerfil[])
+      : [];
+
+    return list.map((item, index) => {
+      const propositionId = item.id ?? item.apiId ?? index;
+      const numero = item.numero ?? 'S/N';
+      const ano = item.ano ? String(item.ano) : 'Ano não informado';
+      const resumo = item.summary ?? 'Resumo não informado';
+      const situacao = item.currentStatus ?? 'Situação não informada';
+      const tipo = `Tipo ${item.idTipoProposicao ?? 'não informado'}`;
+
+      return {
+        id: String(propositionId),
+        sigla: tipo,
+        numero,
+        ano,
+        titulo: `Proposição ${numero}/${ano}`,
+        resumo,
+        papel: 'Autor',
+        situacao,
+        tema: tipo,
+        impactoCidadao:
+          'Esta proposição está vinculada à atuação parlamentar registrada no banco de dados.',
+        data: '',
+      };
+    });
+  } catch (error) {
+    console.error('Erro ao buscar proposições do parlamentar', error);
+    return [];
+  }
+}
 export async function getParlamentarProfile(id: number): Promise<ParlamentarPerfil> {
-  const detalheApi = await getParlamentarById(id);
-  const resumoGastos = await getResumoGastos(id);
-  const despesasApi = await getDespesasParlamentar(id);
+  const [detalheApi, resumoGastos, despesasApi, proposicoesApi] = await Promise.all([
+    getParlamentarById(id),
+    getResumoGastos(id),
+    getDespesasParlamentar(id),
+    getProposicoesParlamentar(id),
+  ]);
 
   const parlamentar = createFallbackParlamentar(id, detalheApi);
   const seed = Math.abs(id);
@@ -825,7 +878,7 @@ export async function getParlamentarProfile(id: number): Promise<ParlamentarPerf
   );
   const presenca = 92 + (seed % 6);
   const alinhamento = 71 + (seed % 12);
-  const proposicoes = buildProposicoes(seed, temasPrioritarios);
+  const proposicoes = proposicoesApi;
   const votacoes = buildVotacoes(seed, temasPrioritarios);
   const emendas = buildEmendasMock(seed, temasPrioritarios);
 
