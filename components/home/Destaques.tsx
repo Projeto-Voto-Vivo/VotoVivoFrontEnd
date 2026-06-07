@@ -8,7 +8,7 @@ export async function Destaques() {
   const parlamentares = data ? data.slice(0, 8) : [];
 
   return (
-    <section className="bg-white py-16">
+    <section id="destaques" className="bg-white py-16">
       <div className="container mx-auto px-4">
         <div className="mb-10 flex items-center justify-between">
           <div>
