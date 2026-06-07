@@ -13,7 +13,7 @@ function formatCurrency(value: number) {
   }).format(value);
 }
 
-function formatDate(value: string) {
+function formatDate(value: string | null) {
   if (!value) return '—';
 
   const date = new Date(value);
@@ -22,9 +22,14 @@ function formatDate(value: string) {
   return new Intl.DateTimeFormat('pt-BR').format(date);
 }
 
+function display(value?: string | number | null) {
+  if (value === null || value === undefined || value === '') return '—';
+  return String(value);
+}
+
 export function EmendaDetailPage({ emenda }: EmendaDetailPageProps) {
   return (
-    <main className="min-h-screen bg-slate-50 py-10">
+    <section className="min-h-screen bg-slate-50 py-10">
       <div className="mx-auto w-full max-w-7xl px-4">
         <div className="mb-6">
           <Link
@@ -43,7 +48,7 @@ export function EmendaDetailPage({ emenda }: EmendaDetailPageProps) {
               </p>
 
               <h1 className="mt-2 text-2xl font-bold text-slate-900 md:text-4xl">
-                {emenda.nomeAutor} / Emenda {emenda.numeroEmenda}
+                {display(emenda.nomeAutor)} / Emenda {display(emenda.numeroEmenda)}
               </h1>
 
               <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-600">
@@ -53,31 +58,34 @@ export function EmendaDetailPage({ emenda }: EmendaDetailPageProps) {
             </div>
 
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              <InfoItem
-                label="Tipo de Emenda"
-                value={emenda.tipoEmenda}
-              />
-              <InfoItem
-                label="Localidade da Emenda"
-                value={emenda.localidadeDoGasto}
-              />
-              <InfoItem
-                label="Ano da Emenda"
-                value={String(emenda.ano)}
-              />
-              <InfoItem
-                label="Código da Emenda"
-                value={emenda.codigoEmenda}
-              />
-              <InfoItem
-                label="Função"
-                value={emenda.funcao}
-              />
-              <InfoItem
-                label="Subfunção"
-                value={emenda.subfuncao}
-              />
+              <InfoItem label="Tipo de Emenda" value={display(emenda.tipoEmenda)} />
+              <InfoItem label="Localidade da Emenda" value={display(emenda.localidadeDoGasto)} />
+              <InfoItem label="Ano da Emenda" value={display(emenda.ano)} />
+              <InfoItem label="Código da Emenda" value={display(emenda.codigoEmenda)} />
+              <InfoItem label="Função" value={display(emenda.funcao)} />
+              <InfoItem label="Subfunção" value={display(emenda.subfuncao)} />
             </div>
+
+            {emenda.parlamentares.length > 0 && (
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Parlamentar(es) vinculado(s)
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {emenda.parlamentares.map((parlamentar) => (
+                    <span
+                      key={`${parlamentar.id}-${parlamentar.nomeCivil ?? parlamentar.nomeUrna}`}
+                      className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700"
+                    >
+                      {parlamentar.nomeCivil || parlamentar.nomeUrna || 'Parlamentar'}
+                      {parlamentar.partidoAtual && parlamentar.uf
+                        ? ` · ${parlamentar.partidoAtual}/${parlamentar.uf}`
+                        : ''}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               <MetricCard
@@ -136,6 +144,7 @@ export function EmendaDetailPage({ emenda }: EmendaDetailPageProps) {
                         <th className="px-4 py-4 font-semibold">Documento</th>
                         <th className="px-4 py-4 font-semibold">Código completo</th>
                         <th className="px-4 py-4 font-semibold">Espécie / Tipo</th>
+                        <th className="px-4 py-4 font-semibold">Ação</th>
                       </tr>
                     </thead>
 
@@ -149,16 +158,30 @@ export function EmendaDetailPage({ emenda }: EmendaDetailPageProps) {
                             {formatDate(documento.data)}
                           </td>
                           <td className="px-4 py-4 whitespace-nowrap">
-                            {documento.fase}
+                            {display(documento.fase)}
                           </td>
                           <td className="px-4 py-4 whitespace-nowrap font-medium text-brasil-blue">
-                            {documento.codigoDocumentoResumido}
+                            {display(documento.codigoDocumentoResumido)}
                           </td>
                           <td className="px-4 py-4 whitespace-nowrap">
-                            {documento.codigoDocumento}
+                            {display(documento.codigoDocumento)}
                           </td>
                           <td className="px-4 py-4">
-                            {documento.especieTipo}
+                            {display(documento.especieTipo)}
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap">
+                            {documento.urlPortal ? (
+                              <Link
+                                href={documento.urlPortal}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex rounded-xl border border-brasil-blue px-3 py-2 text-xs font-semibold text-brasil-blue transition hover:bg-brasil-blue hover:text-white"
+                              >
+                                Abrir no Portal
+                              </Link>
+                            ) : (
+                              <span className="text-slate-400">—</span>
+                            )}
                           </td>
                         </tr>
                       ))}
@@ -170,7 +193,7 @@ export function EmendaDetailPage({ emenda }: EmendaDetailPageProps) {
           </details>
         </section>
       </div>
-    </main>
+    </section>
   );
 }
 

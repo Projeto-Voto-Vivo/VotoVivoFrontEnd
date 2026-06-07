@@ -19,6 +19,10 @@ export default async function PerfilParlamentar({
 
   const profile = await getParlamentarProfile(parlamentarId);
 
+  if (!profile) {
+    notFound();
+  }
+
   return (
     <main className="min-h-screen bg-slate-50 pb-20">
       <ParlamentarProfilePage profile={profile} />

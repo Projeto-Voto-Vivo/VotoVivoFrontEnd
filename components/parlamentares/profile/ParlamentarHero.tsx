@@ -46,10 +46,6 @@ export function ParlamentarHero({ profile }: ParlamentarHeroProps) {
                 <span className="rounded-full border border-brasil-green/10 bg-brasil-green/10 px-3 py-1 text-xs font-medium text-brasil-green">
                   {parlamentar.situacaoMandato ?? parlamentar.situacao}
                 </span>
-
-                <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700">
-                  Dados híbridos: backend + mock
-                </span>
               </div>
 
               <div>
@@ -91,9 +87,13 @@ export function ParlamentarHero({ profile }: ParlamentarHeroProps) {
               <Mail className="mt-0.5 h-4 w-4 text-brasil-blue" />
               <div>
                 <p className="font-semibold text-slate-900">E-mail institucional</p>
-                <a href={`mailto:${parlamentar.email}`} className="hover:text-brasil-blue">
-                  {parlamentar.email}
-                </a>
+                {parlamentar.email ? (
+                  <a href={`mailto:${parlamentar.email}`} className="hover:text-brasil-blue">
+                    {parlamentar.email}
+                  </a>
+                ) : (
+                  <p>Não informado</p>
+                )}
               </div>
             </div>
 
@@ -101,7 +101,7 @@ export function ParlamentarHero({ profile }: ParlamentarHeroProps) {
               <Phone className="mt-0.5 h-4 w-4 text-brasil-blue" />
               <div>
                 <p className="font-semibold text-slate-900">Telefone do gabinete</p>
-                <p>{parlamentar.gabinete.telefone}</p>
+                <p>{parlamentar.gabinete.telefone || 'Não informado'}</p>
               </div>
             </div>
 
@@ -110,7 +110,7 @@ export function ParlamentarHero({ profile }: ParlamentarHeroProps) {
               <div>
                 <p className="font-semibold text-slate-900">Gabinete</p>
                 <p>
-                  {parlamentar.gabinete.predio} · Sala {parlamentar.gabinete.sala}
+                  {parlamentar.gabinete.endereco || `${parlamentar.gabinete.predio} · Sala ${parlamentar.gabinete.sala}`}
                 </p>
               </div>
             </div>
