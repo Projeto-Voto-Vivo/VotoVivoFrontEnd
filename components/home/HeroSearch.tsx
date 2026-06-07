@@ -45,21 +45,6 @@ export function HeroSearch() {
               </p>
             </header>
 
-            <div
-              className="inline-flex items-center gap-3 rounded-full border border-gray-200 bg-white px-5 py-2.5 shadow-sm transition-all duration-300 hover:scale-105 hover:shadow-md"
-              role="status"
-              aria-label="Estatística de parlamentares monitorados">
-              <span
-                className="text-2xl font-bold text-brasil-green"
-                aria-label="513 parlamentares"
-              >
-                513
-              </span>
-              <div className="h-5 w-px bg-gray-300" aria-hidden="true"></div>
-              <span className="text-xs font-bold uppercase tracking-widest text-gray-500">
-                Parlamentares monitorados
-              </span>
-            </div>
 
             <form
               onSubmit={handleSearch}

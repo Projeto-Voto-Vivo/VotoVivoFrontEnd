@@ -18,6 +18,10 @@ import {
   VotacaoPerfil,
 } from '@/types';
 
+const PAGE_SIZE = 20;
+
+type TipoParlamentarFiltro = 'deputados' | 'senadores';
+
 type BackendParlamentarResumo = {
   id: number;
   nomeParlamentar?: string | null;
@@ -297,6 +301,41 @@ function mapResumo(item: BackendParlamentarResumo): Parlamentar {
     casaLegislativa: getCasaLegislativa(cargo),
     situacaoMandato: 'Em exercício',
     situacao: 'Em exercício',
+  };
+}
+
+function matchesTipoParlamentar(
+  parlamentar: Parlamentar,
+  tipo?: TipoParlamentarFiltro,
+) {
+  if (!tipo) return true;
+
+  const cargo = parlamentar.cargo?.toLowerCase() ?? '';
+
+  if (tipo === 'senadores') {
+    return cargo.includes('senador');
+  }
+
+  return cargo.includes('deputado');
+}
+
+function paginateParlamentares(
+  list: Parlamentar[],
+  page: number,
+): ListaParlamentaresResponse {
+  const total = list.length;
+  const totalPaginas = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const pagina = Math.min(Math.max(page, 1), totalPaginas);
+  const inicio = (pagina - 1) * PAGE_SIZE;
+
+  return {
+    data: list.slice(inicio, inicio + PAGE_SIZE),
+    meta: {
+      total,
+      totalPaginas,
+      pagina,
+      fonte: 'api',
+    },
   };
 }
 
@@ -596,20 +635,63 @@ export async function getParlamentaresLista(
   nome?: string,
   uf?: string,
   partido?: string,
+  tipo?: TipoParlamentarFiltro,
 ): Promise<ListaParlamentaresResponse> {
   try {
-    const params = new URLSearchParams();
+    const buildParams = (pagina: number) => {
+      const params = new URLSearchParams();
 
-    params.append('pagina', String(page));
-    if (nome) params.append('nome', nome);
-    if (uf) params.append('uf', uf);
-    if (partido) params.append('partido', partido);
+      params.append('pagina', String(pagina));
+      if (nome) params.append('nome', nome);
+      if (uf) params.append('uf', uf);
+      if (partido) params.append('partido', partido);
 
-    const res = await api.get(`/parlamentares?${params.toString()}`);
+      return params;
+    };
+
+    const res = await api.get(`/parlamentares?${buildParams(tipo ? 1 : page).toString()}`);
     const payload = res.data as BackendPaginated<BackendParlamentarResumo> | BackendParlamentarResumo[];
 
     const itens = Array.isArray(payload) ? payload : Array.isArray(payload?.data) ? payload.data : [];
     const meta = Array.isArray(payload) ? undefined : payload.meta;
+
+    if (tipo) {
+      const lastPage = Number(meta?.lastPage ?? 1);
+      const remainingPages = Array.from(
+        { length: Math.max(0, lastPage - 1) },
+        (_, index) => index + 2,
+      );
+
+      const remainingResponses = await Promise.all(
+        remainingPages.map((pagina) => api.get(`/parlamentares?${buildParams(pagina).toString()}`)),
+      );
+
+      const allItems = [
+        ...itens,
+        ...remainingResponses.flatMap((response) => {
+          const pagePayload = response.data as BackendPaginated<BackendParlamentarResumo> | BackendParlamentarResumo[];
+          return Array.isArray(pagePayload)
+            ? pagePayload
+            : Array.isArray(pagePayload?.data)
+              ? pagePayload.data
+              : [];
+        }),
+      ];
+
+      const filtered = allItems.map(mapResumo).filter((item) => matchesTipoParlamentar(item, tipo));
+      const paginated = paginateParlamentares(filtered, page);
+
+      return {
+        ...paginated,
+        meta: {
+          ...paginated.meta,
+          aviso:
+            filtered.length === 0
+              ? 'Nenhum parlamentar foi retornado pelo backend para os filtros informados.'
+              : undefined,
+        },
+      };
+    }
 
     return {
       data: itens.map(mapResumo),
@@ -742,7 +824,7 @@ export async function getParlamentarProfile(
     ),
     principalTipo: emendasLista[0]?.tipoEmenda || '—',
     principalLocalidade: emendasLista[0]?.localidadeDoGasto || '—',
-    destaques: emendasLista.slice(0, 5),
+    destaques: emendasLista,
     documentosRecentes: [],
     leituraRapida:
       resumoEmendas.totalEmendas > 0
@@ -801,9 +883,10 @@ export async function getParlamentarProfile(
   return {
     parlamentar,
     subtitulo:
-      'Perfil didático para acompanhar atuação legislativa, votações e uso de recursos do mandato.',
-    resumo:
-      'Painel pensado para leitura rápida: o usuário entende quem é o parlamentar, quais temas prioriza e como se posiciona nas votações mais relevantes.',
+      'Acompanhe a atuação legislativa, as votações e o uso de recursos do mandato.',
+    resumo: `${parlamentar.cargo ?? 'Parlamentar'} em exercício pela bancada de ${
+      parlamentar.uf
+    }. Use as abas abaixo para consultar emendas, proposições, votações e despesas vinculadas ao mandato.`,
     biografia: `${parlamentar.nomeParlamentar} atua na ${
       parlamentar.casaLegislativa ?? 'casa legislativa'
     } representando ${parlamentar.uf}. Neste protótipo, a narrativa do perfil foi desenhada para traduzir atividade parlamentar em blocos simples de entender, com foco em ${temasPrioritarios[0].toLowerCase()}, ${temasPrioritarios[1].toLowerCase()} e ${temasPrioritarios[2].toLowerCase()}.`,

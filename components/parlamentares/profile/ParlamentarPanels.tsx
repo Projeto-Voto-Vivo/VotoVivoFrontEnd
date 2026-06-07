@@ -35,7 +35,7 @@ export function ParlamentarPanels({ profile }: ParlamentarPanelsProps) {
       {
         key: 'proposicoes' as const,
         label: 'Proposições',
-        supporting: 'Matérias destacadas com leitura didática.',
+        supporting: 'Matérias vinculadas ao mandato.',
         icon: <FileText className="h-5 w-5" />,
       },
       {
@@ -72,11 +72,10 @@ export function ParlamentarPanels({ profile }: ParlamentarPanelsProps) {
               Painéis do perfil
             </p>
             <h2 className="mt-2 text-2xl font-bold text-slate-900">
-              Tudo no mesmo lugar, só trocando a camada principal
+              Dados do mandato
             </h2>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
-              Clique em um painel para atualizar a área principal do perfil sem sair da
-              página. A lógica de dados continua a mesma; mudamos apenas a navegação visual.
+              Veja os principais dados do parlamentar e aprofunde a consulta por tema: emendas, proposições, votações e despesas.
             </p>
           </div>
 

@@ -2,7 +2,6 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { ParlamentarPerfil } from '@/types';
 import { ParlamentarHero } from './ParlamentarHero';
-import { ParlamentarIndicators } from './ParlamentarIndicators';
 import { ParlamentarPanels } from './ParlamentarPanels';
 
 interface ParlamentarProfilePageProps {
@@ -21,8 +20,6 @@ export function ParlamentarProfilePage({ profile }: ParlamentarProfilePageProps)
       </Link>
 
       <ParlamentarHero profile={profile} />
-
-      <ParlamentarIndicators indicadores={profile.indicadores} />
 
       <ParlamentarPanels profile={profile} />
 

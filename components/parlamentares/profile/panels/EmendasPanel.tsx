@@ -17,7 +17,7 @@ export function EmendasPanel({ parlamentarId, profile }: EmendasPanelProps) {
     <SectionShell
       icon={<Receipt className="h-6 w-6" />}
       title="Emendas parlamentares"
-      description="Recursos vinculados ao parlamentar a partir dos dados consolidados no backend."
+      description={`${emendas.quantidade} emenda${emendas.quantidade === 1 ? '' : 's'} vinculada${emendas.quantidade === 1 ? '' : 's'} ao parlamentar.`}
     >
       <div className="grid gap-3 md:grid-cols-3">
         <MicroInfoCard label="Empenhado" value={formatCurrency(emendas.totalEmpenhado)} />

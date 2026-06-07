@@ -23,9 +23,15 @@ export function Header() {
             <div className="flex items-center gap-1 font-medium text-gray-700 transition-colors group-hover:text-brasil-blue">
               Parlamentares <ChevronDown size={16} />
             </div>
-            <div className="invisible absolute left-0 top-full mt-1 w-48 rounded-md border border-gray-100 bg-white opacity-0 shadow-xl transition-all duration-200 group-hover:visible group-hover:opacity-100">
+            <div className="invisible absolute left-0 top-full mt-1 w-56 rounded-md border border-gray-100 bg-white opacity-0 shadow-xl transition-all duration-200 group-hover:visible group-hover:opacity-100">
               <Link href="/parlamentares" className="block px-4 py-3 text-sm text-gray-600 hover:bg-blue-50 hover:text-brasil-blue">
                 Lista completa
+              </Link>
+              <Link href="/parlamentares?tipo=deputados" className="block px-4 py-3 text-sm text-gray-600 hover:bg-blue-50 hover:text-brasil-blue">
+                Deputados federais
+              </Link>
+              <Link href="/parlamentares?tipo=senadores" className="block px-4 py-3 text-sm text-gray-600 hover:bg-blue-50 hover:text-brasil-blue">
+                Senadores
               </Link>
             </div>
           </div>
