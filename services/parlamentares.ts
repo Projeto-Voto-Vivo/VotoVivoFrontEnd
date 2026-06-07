@@ -749,19 +749,18 @@ export async function getParlamentaresLista(
   try {
     const params = new URLSearchParams();
 
+    params.append('pagina', String(page));
     if (nome) params.append('nome', nome);
     if (uf) params.append('uf', uf);
     if (partido) params.append('partido', partido);
 
-    const query = params.toString();
-    const endpoint = query ? `/parlamentar?${query}` : '/parlamentar';
+    const endpoint = `/parlamentares?${params.toString()}`;
     const res = await api.get(endpoint);
 
-    const lista = Array.isArray(res.data)
-      ? (res.data as BackendParlamentarResumo[]).map(mapResumo)
-      : [];
+    const payload = res.data as { data?: BackendParlamentarResumo[]; meta?: { total: number; page: number; lastPage: number } };
+    const itens = Array.isArray(payload?.data) ? payload.data : [];
 
-    if (lista.length === 0) {
+    if (itens.length === 0) {
       return buildMockListResponse(
         page,
         nome,
@@ -771,12 +770,14 @@ export async function getParlamentaresLista(
       );
     }
 
-    const paginated = paginate(lista, page);
+    const meta = payload.meta;
 
     return {
-      ...paginated,
+      data: itens.map(mapResumo),
       meta: {
-        ...paginated.meta,
+        total: meta?.total ?? itens.length,
+        totalPaginas: meta?.lastPage ?? 1,
+        pagina: meta?.page ?? page,
         fonte: 'api',
       },
     };
@@ -788,7 +789,7 @@ export async function getParlamentaresLista(
 
 export async function getResumoGastos(id: number): Promise<GastoResumo[]> {
   try {
-    const res = await api.get(`/parlamentares/${id}/gastos/resumo`);
+    const res = await api.get(`/parlamentares/${id}/despesas/resumo`);
     const list = Array.isArray(res.data) ? (res.data as GastoResumo[]) : [];
     return list.length > 0 ? list : MOCK_RESUMO_GASTOS[id] || [];
   } catch (error) {
@@ -802,7 +803,7 @@ export async function getDespesasParlamentar(
   page: number = 1,
 ): Promise<Despesa[]> {
   try {
-    const res = await api.get(`/parlamentares/${id}/gastos?pagina=${page}`);
+    const res = await api.get(`/parlamentares/${id}/despesas?pagina=${page}`);
     const list = Array.isArray(res.data) ? (res.data as Despesa[]) : [];
     return list.length > 0 ? list : MOCK_DESPESAS[id] || [];
   } catch (error) {
