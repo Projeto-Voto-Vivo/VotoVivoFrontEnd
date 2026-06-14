@@ -31,3 +31,18 @@ body {
 .animate-pulse-slow {
   animation: pulse-slow 4s infinite ease-in-out;
 }
+
+
+@keyframes loading-bar {
+  0% {
+    transform: translateX(-120%);
+  }
+
+  50% {
+    transform: translateX(120%);
+  }
+
+  100% {
+    transform: translateX(320%);
+  }
+}

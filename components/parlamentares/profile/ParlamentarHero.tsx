@@ -72,7 +72,9 @@ export function ParlamentarHero({ profile }: ParlamentarHeroProps) {
                 </span>
               </div>
 
-              <p className="max-w-3xl text-base leading-7 text-slate-600">{profile.resumo}</p>
+              {profile.resumo ? (
+                <p className="max-w-3xl text-base leading-7 text-slate-600">{profile.resumo}</p>
+              ) : null}
             </div>
           </div>
         </div>

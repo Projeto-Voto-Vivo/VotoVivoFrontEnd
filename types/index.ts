@@ -115,6 +115,7 @@ export interface ItemDespesaPerfil {
   fornecedor: string;
   valor: number;
   documentoLabel: string;
+  urlDocumento?: string | null;
 }
 
 export interface DespesasPerfil {
@@ -123,6 +124,10 @@ export interface DespesasPerfil {
   maiorReembolso: number;
   categorias: CategoriaDespesaPerfil[];
   itensRecentes: ItemDespesaPerfil[];
+  totalRegistros: number;
+  paginaAtual: number;
+  totalPaginas: number;
+  anoReferencia?: number | null;
 }
 
 export interface EmendaResumoPerfil {

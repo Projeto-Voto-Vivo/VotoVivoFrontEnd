@@ -2,12 +2,12 @@ import api from './api';
 import {
   CategoriaDespesaPerfil,
   Despesa,
+  DespesasPerfil,
   DocumentoEmendaPerfil,
   EmendaDetalhe,
   EmendaParlamentarVinculado,
   EmendaResumoPerfil,
   EmendasPerfil,
-  GastoResumo,
   ItemDespesaPerfil,
   ListaParlamentaresResponse,
   Parlamentar,
@@ -19,6 +19,7 @@ import {
 } from '@/types';
 
 const PAGE_SIZE = 20;
+const DESPESAS_PAGE_SIZE = 5;
 
 type TipoParlamentarFiltro = 'deputados' | 'senadores';
 
@@ -50,6 +51,29 @@ type BackendPaginated<T> = {
     lastPage?: number;
     limit?: number;
   };
+};
+
+type ListaDespesasResponse = {
+  data: Despesa[];
+  meta: {
+    total: number;
+    page: number;
+    lastPage: number;
+    limit: number;
+  };
+};
+
+type BackendDespesaCategoria = {
+  tipoDespesa?: string | null;
+  total?: string | number | null;
+};
+
+type BackendDespesaResumo = {
+  totalAno?: string | number | null;
+  mediaMensal?: string | number | null;
+  maiorReembolso?: string | number | null;
+  anoReferencia?: string | number | null;
+  categorias?: BackendDespesaCategoria[] | null;
 };
 
 type BackendEmendaResumo = {
@@ -101,60 +125,6 @@ type BackendEmendaParlamentar = {
 type BackendEmendaDetalhe = BackendEmendaResumo & {
   documentos?: BackendDocumentoEmenda[] | null;
   parlamentares?: BackendEmendaParlamentar[] | null;
-};
-
-const MOCK_RESUMO_GASTOS: Record<number, GastoResumo[]> = {
-  1001: [
-    { tipoDespesa: 'Emissão de Bilhete Aéreo', total: 1200.5 },
-    { tipoDespesa: 'Hospedagem', total: 850 },
-    { tipoDespesa: 'Divulgação da Atividade Parlamentar', total: 430.75 },
-  ],
-  1002: [
-    { tipoDespesa: 'Combustíveis e Lubrificantes', total: 300 },
-    { tipoDespesa: 'Divulgação da Atividade Parlamentar', total: 980.9 },
-  ],
-};
-
-const MOCK_DESPESAS: Record<number, Despesa[]> = {
-  1001: [
-    {
-      data: '2024-02-20',
-      tipo: 'Divulgação da Atividade Parlamentar',
-      fornecedor: 'Gráfica Nacional',
-      valor: 430.75,
-      urlDocumento: 'https://example.com/invoices/expense-3.pdf',
-    },
-    {
-      data: '2024-02-10',
-      tipo: 'Hospedagem',
-      fornecedor: 'Hotel Brasília',
-      valor: 850,
-      urlDocumento: 'https://example.com/invoices/expense-2.pdf',
-    },
-    {
-      data: '2024-01-15',
-      tipo: 'Emissão de Bilhete Aéreo',
-      fornecedor: 'Companhia Aérea Brasil',
-      valor: 1200.5,
-      urlDocumento: 'https://example.com/invoices/expense-1.pdf',
-    },
-  ],
-  1002: [
-    {
-      data: '2024-03-01',
-      tipo: 'Divulgação da Atividade Parlamentar',
-      fornecedor: 'Agência de Comunicação BR',
-      valor: 980.9,
-      urlDocumento: 'https://example.com/invoices/expense-5.pdf',
-    },
-    {
-      data: '2024-01-05',
-      tipo: 'Combustíveis e Lubrificantes',
-      fornecedor: 'Posto Central',
-      valor: 300,
-      urlDocumento: 'https://example.com/invoices/expense-4.pdf',
-    },
-  ],
 };
 
 const TEMAS = [
@@ -474,91 +444,37 @@ function buildVotacoes(seed: number, temas: string[]): VotacaoPerfil[] {
   ];
 }
 
-function buildCategoriasMock(totalAno: number): CategoriaDespesaPerfil[] {
-  const primeira = Math.round(totalAno * 0.34);
-  const segunda = Math.round(totalAno * 0.27);
-  const terceira = Math.round(totalAno * 0.22);
-  const quarta = Math.round(totalAno * 0.17);
-
-  return [
-    {
-      categoria: 'Serviços de TI',
-      valor: primeira,
-      descricao: 'Investimentos em infraestrutura digital e software.',
-    },
-    {
-      categoria: 'Educação',
-      valor: segunda,
-      descricao: 'Recursos para melhoria da qualidade educacional.',
-    },
-    {
-      categoria: 'Saúde',
-      valor: terceira,
-      descricao: 'Financiamento para programas de saúde pública.',
-    },
-    {
-      categoria: 'Infraestrutura',
-      valor: quarta,
-      descricao: 'Projetos de melhoria da infraestrutura urbana.',
-    },
-  ];
-}
-
-function buildItensDespesaMock(seed: number): ItemDespesaPerfil[] {
-  const itens: Array<Omit<ItemDespesaPerfil, 'documentoLabel'>> = [
-    {
-      data: '2026-03-14',
-      tipo: 'Passagem aérea',
-      fornecedor: 'Viagens Brasil Turismo',
-      valor: 2840 + (seed % 5) * 120,
-    },
-    {
-      data: '2026-03-07',
-      tipo: 'Divulgação da atividade parlamentar',
-      fornecedor: 'Agência Cidadania Digital',
-      valor: 4150 + (seed % 4) * 160,
-    },
-    {
-      data: '2026-02-26',
-      tipo: 'Locação de veículo',
-      fornecedor: 'Mobilidade Executiva LTDA',
-      valor: 1980 + (seed % 6) * 80,
-    },
-    {
-      data: '2026-02-11',
-      tipo: 'Consultoria técnica',
-      fornecedor: 'Instituto de Estudos Legislativos',
-      valor: 5620 + (seed % 3) * 240,
-    },
-  ];
-
-  return itens.map((item, index) => ({
-    ...item,
-    documentoLabel: `Recibo ${String(seed).padStart(4, '0')}-${index + 1}`,
-  }));
-}
-
 function buildCategoriasFromBackend(
-  summary: { tipoDespesa: string; total: number }[],
+  summary: BackendDespesaCategoria[] | undefined | null,
 ): CategoriaDespesaPerfil[] {
-  return summary.map((item) => ({
-    categoria: item.tipoDespesa,
-    valor: item.total,
-    descricao:
-      DESPESA_DESCRICOES[item.tipoDespesa] ||
-      `Categoria de despesa registrada na API do backend: ${toCapitalizedCategory(
-        item.tipoDespesa,
-      )}.`,
-  }));
+  return (summary ?? [])
+    .map((item) => {
+      const categoria = item.tipoDespesa || 'Não informado';
+
+      return {
+        categoria,
+        valor: parseMoney(item.total),
+        descricao:
+          DESPESA_DESCRICOES[categoria] || toCapitalizedCategory(categoria),
+      };
+    })
+    .filter((item) => item.valor > 0)
+    .sort((a, b) => b.valor - a.valor);
 }
 
-function buildItensFromBackend(items: Despesa[]): ItemDespesaPerfil[] {
+function buildItensFromBackend(
+  items: Despesa[],
+  offset: number = 0,
+): ItemDespesaPerfil[] {
   return items.map((item, index) => ({
-    data: item.data || '2024-01-01',
-    tipo: item.tipo,
-    fornecedor: item.fornecedor,
-    valor: item.valor,
-    documentoLabel: item.urlDocumento ? `Documento ${index + 1}` : `Registro ${index + 1}`,
+    data: item.data || '',
+    tipo: item.tipo || 'Tipo não informado',
+    fornecedor: item.fornecedor || 'Fornecedor não informado',
+    valor: Number(item.valor ?? 0),
+    documentoLabel: item.urlDocumento
+      ? `Documento ${offset + index + 1}`
+      : `Registro ${offset + index + 1}`,
+    urlDocumento: item.urlDocumento || null,
   }));
 }
 
@@ -722,30 +638,110 @@ export async function getParlamentaresLista(
   }
 }
 
-export async function getResumoGastos(id: number): Promise<GastoResumo[]> {
+function buildExpenseQuery(page: number, ano?: number | null) {
+  const params = new URLSearchParams();
+  params.append('pagina', String(page));
+  params.append('limit', String(DESPESAS_PAGE_SIZE));
+  params.append('limite', String(DESPESAS_PAGE_SIZE));
+
+  if (ano) {
+    params.append('ano', String(ano));
+  }
+
+  return params.toString();
+}
+
+function buildExpenseSummaryQuery(ano?: number | null) {
+  const params = new URLSearchParams();
+
+  if (ano) {
+    params.append('ano', String(ano));
+  }
+
+  const query = params.toString();
+  return query ? `?${query}` : '';
+}
+
+export async function getResumoDespesas(
+  id: number,
+  ano?: number | null,
+): Promise<BackendDespesaResumo> {
   try {
-    const res = await api.get(`/parlamentares/${id}/despesas/resumo`);
-    const list = Array.isArray(res.data) ? (res.data as GastoResumo[]) : [];
-    return list.length > 0 ? list : MOCK_RESUMO_GASTOS[id] || [];
+    const res = await api.get(
+      `/parlamentares/${id}/despesas/resumo${buildExpenseSummaryQuery(ano)}`,
+    );
+    return (res.data ?? {}) as BackendDespesaResumo;
   } catch {
-    console.warn('Não foi possível carregar resumo de despesas; mantendo fallback temporário.');
-    return MOCK_RESUMO_GASTOS[id] || [];
+    console.warn('Não foi possível carregar resumo de despesas do backend.');
+    return {};
   }
 }
 
 export async function getDespesasParlamentar(
   id: number,
   page: number = 1,
-): Promise<Despesa[]> {
+  ano?: number | null,
+): Promise<ListaDespesasResponse> {
   try {
-    const res = await api.get(`/parlamentares/${id}/despesas?pagina=${page}`);
+    const res = await api.get(
+      `/parlamentares/${id}/despesas?${buildExpenseQuery(page, ano)}`,
+    );
     const payload = res.data as BackendPaginated<Despesa> | Despesa[];
     const list = Array.isArray(payload) ? payload : Array.isArray(payload?.data) ? payload.data : [];
-    return list.length > 0 ? list : MOCK_DESPESAS[id] || [];
+    const meta = Array.isArray(payload) ? undefined : payload.meta;
+
+    return {
+      data: list,
+      meta: {
+        total: Number(meta?.total ?? list.length),
+        page: Number(meta?.page ?? page),
+        lastPage: Number(meta?.lastPage ?? 1),
+        limit: Number(meta?.limit ?? DESPESAS_PAGE_SIZE),
+      },
+    };
   } catch {
-    console.warn('Não foi possível carregar despesas; mantendo fallback temporário.');
-    return MOCK_DESPESAS[id] || [];
+    console.warn('Não foi possível carregar despesas do backend.');
+    return {
+      data: [],
+      meta: {
+        total: 0,
+        page,
+        lastPage: 1,
+        limit: DESPESAS_PAGE_SIZE,
+      },
+    };
   }
+}
+
+export async function getDespesasPerfil(
+  id: number,
+  ano?: number | null,
+): Promise<DespesasPerfil> {
+  const [resumoDespesas, despesasResponse] = await Promise.all([
+    getResumoDespesas(id, ano),
+    getDespesasParlamentar(id, 1, ano),
+  ]);
+
+  const categorias = buildCategoriasFromBackend(resumoDespesas.categorias);
+  const totalCategorias = categorias.reduce((acc, item) => acc + item.valor, 0);
+  const totalAno = parseMoney(resumoDespesas.totalAno) || totalCategorias;
+  const mediaMensal = parseMoney(resumoDespesas.mediaMensal) || (totalAno > 0 ? totalAno / 12 : 0);
+  const maiorReembolso = parseMoney(resumoDespesas.maiorReembolso);
+
+  return {
+    totalAno,
+    mediaMensal,
+    maiorReembolso,
+    categorias,
+    itensRecentes: buildItensFromBackend(despesasResponse.data),
+    totalRegistros: despesasResponse.meta.total,
+    paginaAtual: despesasResponse.meta.page,
+    totalPaginas: despesasResponse.meta.lastPage,
+    anoReferencia:
+      resumoDespesas.anoReferencia === null || resumoDespesas.anoReferencia === undefined
+        ? ano ?? null
+        : Number(resumoDespesas.anoReferencia),
+  };
 }
 
 export async function getEmendasParlamentar(
@@ -794,9 +790,8 @@ export async function getParlamentarProfile(
     return null;
   }
 
-  const [resumoGastos, despesasApi, emendasLista, resumoEmendas] = await Promise.all([
-    getResumoGastos(id),
-    getDespesasParlamentar(id),
+  const [despesas, emendasLista, resumoEmendas] = await Promise.all([
+    getDespesasPerfil(id),
     getEmendasParlamentar(id),
     getResumoEmendasParlamentar(id),
   ]);
@@ -828,24 +823,11 @@ export async function getParlamentarProfile(
     documentosRecentes: [],
     leituraRapida:
       resumoEmendas.totalEmendas > 0
-        ? 'Resumo carregado a partir das emendas vinculadas ao parlamentar no backend.'
-        : 'Nenhuma emenda vinculada foi encontrada para este parlamentar no backend.',
+        ? 'Emendas vinculadas ao parlamentar.'
+        : 'Nenhuma emenda vinculada foi encontrada para este parlamentar.',
   };
 
-  const categorias =
-    resumoGastos.length > 0
-      ? buildCategoriasFromBackend(resumoGastos)
-      : buildCategoriasMock(168000 + (seed % 9) * 8700);
-
-  const itensRecentes =
-    despesasApi.length > 0 ? buildItensFromBackend(despesasApi) : buildItensDespesaMock(seed);
-
-  const totalAno =
-    categorias.reduce((acc, item) => acc + item.valor, 0) ||
-    168000 + (seed % 9) * 8700;
-
-  const maiorReembolso =
-    itensRecentes.length > 0 ? Math.max(...itensRecentes.map((item) => item.valor)) : 0;
+  const totalDespesas = despesas.totalAno;
 
   const indicadores: PerfilIndicador[] = [
     {
@@ -870,12 +852,14 @@ export async function getParlamentarProfile(
       destaque: 'neutro',
     },
     {
-      titulo: 'Despesas no ano',
-      valor: shortCurrency(totalAno),
+      titulo: despesas.anoReferencia
+        ? `Despesas de ${despesas.anoReferencia}`
+        : 'Despesas no período',
+      valor: shortCurrency(totalDespesas),
       apoio:
-        resumoGastos.length > 0
-          ? 'valor consolidado a partir da API do backend'
-          : 'valor demonstrativo com detalhamento por categoria',
+        despesas.totalRegistros > 0
+          ? `${despesas.totalRegistros} registros encontrados`
+          : 'nenhuma despesa encontrada',
       destaque: 'atencao',
     },
   ];
@@ -884,9 +868,7 @@ export async function getParlamentarProfile(
     parlamentar,
     subtitulo:
       'Acompanhe a atuação legislativa, as votações e o uso de recursos do mandato.',
-    resumo: `${parlamentar.cargo ?? 'Parlamentar'} em exercício pela bancada de ${
-      parlamentar.uf
-    }. Use as abas abaixo para consultar emendas, proposições, votações e despesas vinculadas ao mandato.`,
+    resumo: '',
     biografia: `${parlamentar.nomeParlamentar} atua na ${
       parlamentar.casaLegislativa ?? 'casa legislativa'
     } representando ${parlamentar.uf}. Neste protótipo, a narrativa do perfil foi desenhada para traduzir atividade parlamentar em blocos simples de entender, com foco em ${temasPrioritarios[0].toLowerCase()}, ${temasPrioritarios[1].toLowerCase()} e ${temasPrioritarios[2].toLowerCase()}.`,
@@ -901,13 +883,7 @@ export async function getParlamentarProfile(
       leituraRapida:
         'As votações aparecem com contexto, resultado final e o voto registrado, para reduzir a distância entre o dado bruto e o entendimento do cidadão.',
     },
-    despesas: {
-      totalAno,
-      mediaMensal: Math.round(totalAno / 12),
-      maiorReembolso,
-      categorias,
-      itensRecentes,
-    },
+    despesas,
     emendas,
   };
 }
