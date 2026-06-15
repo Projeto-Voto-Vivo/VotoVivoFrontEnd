@@ -33,7 +33,7 @@ export function Footer() {
             className="inline-flex items-center gap-2 text-3xl font-extrabold tracking-tighter text-brasil-blue transition-opacity hover:opacity-90"
             aria-label="Ir para a página inicial do VotoVivo.leg"
           >
-            VotoVivo<span className="text-brasil-yellow">.</span>leg
+            VotoVivo
           </Link>
 
           <p className="mt-4 max-w-sm text-sm leading-6 text-gray-600">
@@ -85,14 +85,10 @@ export function Footer() {
             Transparência
           </h2>
 
-          <div className="mt-4 space-y-4 text-sm leading-6 text-gray-600">
+          <div className="mt-2 space-y-2 text-xs leading-5 text-gray-600">
             <p>
               Este projeto utiliza dados abertos do Poder Legislativo para fins
-              informativos, acompanhamento público e educação política.
-            </p>
-
-            <p>
-              As informações podem sofrer atualização conforme a publicação nas
+              informativos. As informações podem sofrer atualização conforme a publicação nas
               bases oficiais.
             </p>
 
@@ -105,13 +101,11 @@ export function Footer() {
           </div>
         </section>
       </div>
-
-      <div className="border-t border-gray-200 bg-neutral-50">
-        <div className="container mx-auto gap-3 px-4 py-4 text-xs text-gray-500 text-center">
+      <section aria-label="footer-direitos">
+          <div className="container mx-auto gap-3 px-4 py-4 text-xs text-gray-500 text-center">
           <p>© {currentYear} VotoVivo Todos os direitos reservados.</p>
-
         </div>
-      </div>
+        </section>
     </footer>
   );
 }

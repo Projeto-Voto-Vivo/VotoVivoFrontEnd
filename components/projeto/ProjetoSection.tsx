@@ -68,7 +68,7 @@ export function ProjetoSection() {
                       <Compass className="h-5 w-5" />
                     </div>
                     <h3 className="text-lg font-bold text-slate-900">
-                      Por que foi desenvolvido
+                      Por que foi desenvolvido?
                     </h3>
                   </div>
                   <p className="mt-4 text-sm leading-7 text-slate-600 md:text-base">
@@ -349,7 +349,7 @@ export function ProjetoSection() {
                   className="mt-2 inline-flex text-sm font-semibold text-brasil-blue hover:underline md:text-base"
                   aria-label="Enviar e-mail para contato arroba votovivo ponto leg ponto br"
                 >
-                  contatovotovivo@gmail.com
+                  votovivoleg@gmail.com
                 </a>
               </div>
             </section>

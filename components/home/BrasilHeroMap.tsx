@@ -52,9 +52,9 @@ export function BrasilHeroMap() {
               [&_.estado:hover_.estado-path]:fill-[#003399]
               [&_.estado-text]:fill-white
               [&_.estado-text]:text-[12px]
+              [&_.estado-text-small]:text-[10px]
               [&_.estado-text]:font-bold
-              [&_.estado-circle]:fill-[#66ccff]
-              [&_.estado:hover_.estado-circle]:fill-[#003399]
+              [&_.estado-circle]:hidden
             "
           >
             <g className="estado" data-name="Tocantins">
@@ -101,7 +101,7 @@ export function BrasilHeroMap() {
                 d="M417.324,182.854c6.214,0,11.266,5.035,11.266,11.262c0,6.208-5.052,11.261-11.266,11.261
                 c-6.238,0-11.258-5.053-11.258-11.261C406.063,187.89,411.084,182.854,417.324,182.854z"
               />
-              <text x="408.9121" y="198.6689" className="estado-text">SE</text>
+              <text x="411.3" y="194.2" className="estado-text estado-text-small">SE</text>
             </g>
 
             <g className="estado" data-name="Pernambuco">
@@ -135,7 +135,7 @@ export function BrasilHeroMap() {
                 d="M436.423,168.763c6.236,0,11.258,5.054,11.258,11.278c0,6.207-5.02,11.259-11.258,11.259
                 c-6.241,0-11.263-5.052-11.263-11.259C425.16,173.816,430.182,168.763,436.423,168.763z"
               />
-              <text x="429.7891" y="183.895" className="estado-text">AL</text>
+              <text x="420.7891" y="181.895" className="estado-text estado-text-small">AL</text>
             </g>
 
             <g className="estado" data-name="Rio Grande do Norte">
@@ -153,7 +153,7 @@ export function BrasilHeroMap() {
                 d="M430.827,107.798c6.241,0,11.261,5.039,11.261,11.261c0,6.224-5.02,11.261-11.261,11.261
                 c-6.209,0-11.26-5.037-11.26-11.261C419.567,112.837,424.618,107.798,430.827,107.798z"
               />
-              <text x="422.541" y="123.9009" className="estado-text">RN</text>
+              <text x="422.541" y="123.9009" className="estado-text estado-text-small">RN</text>
             </g>
 
             <g className="estado" data-name="Ceará">
@@ -489,7 +489,7 @@ export function BrasilHeroMap() {
                 d="M355.094,318.613c6.209,0,11.263,5.021,11.263,11.259c0,6.208-5.056,11.264-11.263,11.264
                 c-6.211,0-11.263-5.054-11.263-11.264C343.831,323.634,348.883,318.613,355.094,318.613z"
               />
-              <text x="347.4648" y="334.6807" className="estado-text">RJ</text>
+              <text x="353.4648" y="330.6807" className="estado-text estado-text-small">RJ</text>
             </g>
 
             <g className="estado" data-name="Espírito Santo">
@@ -509,7 +509,7 @@ export function BrasilHeroMap() {
                 d="M381.917,284.723c6.21,0,11.261,5.055,11.261,11.262c0,6.212-5.051,11.261-11.261,11.261
                 c-6.212,0-11.263-5.049-11.263-11.261C370.654,289.777,375.705,284.723,381.917,284.723z"
               />
-              <text x="373.3047" y="300.4971" className="estado-text">ES</text>
+              <text x="377.3047" y="298.4971" className="estado-text estado-text-small">ES</text>
             </g>
 
             <g className="estado" data-name="Distrito Federal">
@@ -526,7 +526,7 @@ export function BrasilHeroMap() {
                 d="M300.735,238.34c6.212,0,11.26,5.035,11.26,11.258c0,6.21-5.048,11.263-11.26,11.263
                 c-6.209,0-11.261-5.053-11.261-11.263C289.475,243.377,294.523,238.34,300.735,238.34z"
               />
-              <text x="292.4141" y="254.2139" className="estado-text">DF</text>
+              <text x="292.4141" y="254.2139" className="estado-text estado-text-small">DF</text>
             </g>
 
             <g className="estado" data-name="Paraíba">
@@ -546,7 +546,7 @@ export function BrasilHeroMap() {
                 d="M433.797,133.597c6.237,0,11.26,5.051,11.26,11.261c0,6.226-5.022,11.262-11.26,11.262
                 c-6.208,0-11.257-5.036-11.257-11.262C422.54,138.647,427.589,133.597,433.797,133.597z"
               />
-              <text x="425.2129" y="148.9893" className="estado-text">PB</text>
+              <text x="423.2129" y="151.9893" className="estado-text">PB</text>
             </g>
           </g>
         </svg>

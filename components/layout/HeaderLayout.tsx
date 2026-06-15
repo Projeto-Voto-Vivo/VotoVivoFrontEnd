@@ -11,7 +11,7 @@ export function Header() {
 
       <div className="container mx-auto flex h-20 items-center justify-between px-4">
         <Link href="/" className="flex items-center gap-2 text-3xl font-extrabold tracking-tighter text-brasil-blue">
-          VotoVivo<span className="text-brasil-yellow">.</span>leg
+          VotoVivo
         </Link>
 
         <nav className="hidden gap-8 md:flex">
