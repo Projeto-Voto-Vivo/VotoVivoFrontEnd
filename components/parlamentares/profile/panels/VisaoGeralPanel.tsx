@@ -11,7 +11,9 @@ interface VisaoGeralPanelProps {
 export function VisaoGeralPanel({ profile }: VisaoGeralPanelProps) {
   const { emendas, proposicoes, votacoes } = profile;
 
-  const emendaDestaque = emendas.destaques[0];
+  const emendaDestaque = emendas.destaques.length
+    ? [...emendas.destaques].sort((a, b) => b.valorEmpenhado - a.valorEmpenhado)[0]
+    : undefined;
   const proposicaoDestaque = proposicoes[0];
   const votacaoDestaque = votacoes.destaques[0];
 
@@ -21,8 +23,7 @@ export function VisaoGeralPanel({ profile }: VisaoGeralPanelProps) {
 
       <SectionShell
         icon={<Landmark className="h-6 w-6" />}
-        title="Destaques recentes"
-        description="Resumo de movimentos recentes e informações de maior interesse nas áreas do perfil."
+        title="Destaques do perfil"
       >
         <div className="grid gap-4 lg:grid-cols-3">
           <article className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
@@ -32,22 +33,27 @@ export function VisaoGeralPanel({ profile }: VisaoGeralPanelProps) {
               </span>
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-                  Emenda em destaque
+                  Maior emenda empenhada
                 </p>
                 <h3 className="mt-1 text-lg font-bold text-slate-900">
-                  {emendaDestaque?.codigoEmenda ?? 'Nenhuma emenda vinculada'}
+                  {emendaDestaque?.codigoEmenda ?? 'Sem emenda vinculada'}
                 </h3>
               </div>
             </div>
 
             {emendaDestaque ? (
               <div className="mt-4 space-y-3 text-sm leading-6 text-slate-600">
-                <p>
-                  {emendaDestaque.funcao || 'Função não informada'}
-                  {emendaDestaque.localidadeDoGasto
-                    ? ` · ${emendaDestaque.localidadeDoGasto}`
-                    : ''}
-                </p>
+                <div className="flex flex-wrap gap-2">
+                  <span className="rounded-full bg-brasil-blue/10 px-3 py-1 text-xs font-bold text-brasil-blue">
+                    Maior valor empenhado
+                  </span>
+                  {emendaDestaque.localidadeDoGasto ? (
+                    <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-500">
+                      {emendaDestaque.localidadeDoGasto}
+                    </span>
+                  ) : null}
+                </div>
+                <p>{emendaDestaque.funcao || 'Função não informada'}</p>
                 <div className="rounded-2xl bg-white p-4">
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
                     Valor empenhado
@@ -59,7 +65,7 @@ export function VisaoGeralPanel({ profile }: VisaoGeralPanelProps) {
               </div>
             ) : (
               <p className="mt-4 text-sm leading-6 text-slate-500">
-                Nenhuma emenda vinculada foi encontrada para este parlamentar.
+                Nenhuma emenda vinculada nesta base.
               </p>
             )}
           </article>
@@ -71,17 +77,16 @@ export function VisaoGeralPanel({ profile }: VisaoGeralPanelProps) {
               </span>
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-                  Proposição recente
+                  Proposição em destaque
                 </p>
                 <h3 className="mt-1 text-lg font-bold text-slate-900">
-                  {proposicaoDestaque?.titulo ?? 'Sem proposição destacada'}
+                  {proposicaoDestaque?.titulo ?? 'Sem proposição vinculada'}
                 </h3>
               </div>
             </div>
 
             <p className="mt-4 text-sm leading-6 text-slate-600">
-              {proposicaoDestaque?.resumo ??
-                'As proposições vinculadas ao parlamentar serão exibidas aqui conforme a integração avançar.'}
+              {proposicaoDestaque?.resumo ?? 'Nenhuma proposição vinculada nesta base.'}
             </p>
 
             {proposicaoDestaque && (
@@ -103,10 +108,10 @@ export function VisaoGeralPanel({ profile }: VisaoGeralPanelProps) {
               </span>
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-                  Votação recente
+                  Votação mais recente
                 </p>
                 <h3 className="mt-1 text-lg font-bold text-slate-900">
-                  {votacaoDestaque?.titulo ?? 'Sem votação destacada'}
+                  {votacaoDestaque?.titulo ?? 'Sem votação registrada'}
                 </h3>
               </div>
             </div>
@@ -133,7 +138,7 @@ export function VisaoGeralPanel({ profile }: VisaoGeralPanelProps) {
               </div>
             ) : (
               <p className="mt-4 text-sm leading-6 text-slate-500">
-                As votações serão exibidas aqui quando os dados estiverem disponíveis.
+                Nenhuma votação nominal registrada nesta base.
               </p>
             )}
           </article>

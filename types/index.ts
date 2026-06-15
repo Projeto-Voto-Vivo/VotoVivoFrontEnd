@@ -130,6 +130,16 @@ export interface DespesasPerfil {
   anoReferencia?: number | null;
 }
 
+export interface VotacoesPerfil {
+  presenca: number;
+  alinhamento: number | null;
+  destaques: VotacaoPerfil[];
+  leituraRapida: string;
+  totalRegistros: number;
+  paginaAtual: number;
+  totalPaginas: number;
+}
+
 export interface EmendaResumoPerfil {
   id: number;
   codigoEmenda: string;
@@ -197,12 +207,7 @@ export interface ParlamentarPerfil {
   comissoes: string[];
   indicadores: PerfilIndicador[];
   proposicoes: ProposicaoPerfil[];
-  votacoes: {
-    presenca: number;
-    alinhamento: number;
-    destaques: VotacaoPerfil[];
-    leituraRapida: string;
-  };
+  votacoes: VotacoesPerfil;
   despesas: DespesasPerfil;
   emendas: EmendasPerfil;
 }

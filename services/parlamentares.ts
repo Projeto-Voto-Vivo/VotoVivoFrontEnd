@@ -16,10 +16,12 @@ import {
   PerfilIndicador,
   ProposicaoPerfil,
   VotacaoPerfil,
+  VotacoesPerfil,
 } from '@/types';
 
 const PAGE_SIZE = 20;
 const DESPESAS_PAGE_SIZE = 5;
+const VOTACOES_PAGE_SIZE = 5;
 
 type TipoParlamentarFiltro = 'deputados' | 'senadores';
 
@@ -74,6 +76,35 @@ type BackendDespesaResumo = {
   maiorReembolso?: string | number | null;
   anoReferencia?: string | number | null;
   categorias?: BackendDespesaCategoria[] | null;
+};
+
+type BackendVotacaoResumo = {
+  id?: string | number | null;
+  data?: string | null;
+  resumo?: string | null;
+  voto?: string | null;
+  resultado?: string | null;
+  tipo?: string | null;
+};
+
+type ListaVotacoesResponse = {
+  data: VotacaoPerfil[];
+  meta: {
+    total: number;
+    page: number;
+    lastPage: number;
+    limit: number;
+  };
+};
+
+type BackendPresencaResponse = {
+  presenca?: {
+    sessoesDeliberativas?: {
+      taxa?: string | number | null;
+      totalEventos?: string | number | null;
+      faltas?: string | number | null;
+    } | null;
+  } | null;
 };
 
 type BackendEmendaResumo = {
@@ -444,6 +475,82 @@ function buildVotacoes(seed: number, temas: string[]): VotacaoPerfil[] {
   ];
 }
 
+
+function formatVotingChoice(choice?: string | null) {
+  const normalized = (choice ?? '').trim().toUpperCase();
+
+  const labels: Record<string, string> = {
+    YES: 'Sim',
+    SIM: 'Sim',
+    NO: 'Não',
+    NAO: 'Não',
+    NÃO: 'Não',
+    ABSTENTION: 'Abstenção',
+    ABSTENCAO: 'Abstenção',
+    ABSTENÇÃO: 'Abstenção',
+    ABSENT: 'Ausente',
+    AUSENTE: 'Ausente',
+  };
+
+  return labels[normalized] || choice || 'Não informado';
+}
+
+function formatVotingType(type?: string | null) {
+  const normalized = (type ?? '').trim().toUpperCase();
+
+  const labels: Record<string, string> = {
+    NOMINAL: 'Votação nominal',
+    SIMBOLICA: 'Votação simbólica',
+    SIMBÓLICA: 'Votação simbólica',
+    SECRETA: 'Votação secreta',
+  };
+
+  return labels[normalized] || type || 'Votação';
+}
+
+function buildVotingHeadline(summary: string) {
+  const normalized = summary.trim();
+
+  if (!normalized || normalized === 'Resumo não informado.') {
+    return 'Registro de votação';
+  }
+
+  if (/requerimento/i.test(normalized)) {
+    return 'Votação sobre requerimento';
+  }
+
+  if (/emenda/i.test(normalized)) {
+    return 'Votação sobre emenda';
+  }
+
+  if (/projeto|proposi[cç][aã]o|mat[eé]ria/i.test(normalized)) {
+    return 'Votação sobre proposição';
+  }
+
+  if (/^(aprovad[ao]|rejeitad[ao]|retirad[ao]|prejudicad[ao]|mantid[ao])\b/i.test(normalized)) {
+    return 'Deliberação registrada';
+  }
+
+  return normalized.length > 90 ? `${normalized.slice(0, 87).trim()}...` : normalized;
+}
+
+function mapVotacaoResumo(item: BackendVotacaoResumo): VotacaoPerfil {
+  const id = String(item.id ?? item.data ?? Math.random());
+  const resumo = item.resumo?.trim() || 'Resumo não informado.';
+  const tipo = formatVotingType(item.tipo);
+
+  return {
+    id,
+    titulo: tipo,
+    data: item.data || '',
+    tema: buildVotingHeadline(resumo),
+    resumo,
+    voto: formatVotingChoice(item.voto),
+    resultado: item.resultado || 'Resultado não informado',
+    orientacaoCasa: tipo,
+  };
+}
+
 function buildCategoriasFromBackend(
   summary: BackendDespesaCategoria[] | undefined | null,
 ): CategoriaDespesaPerfil[] {
@@ -476,6 +583,17 @@ function buildItensFromBackend(
       : `Registro ${offset + index + 1}`,
     urlDocumento: item.urlDocumento || null,
   }));
+}
+
+function inferExpenseYear(items: Despesa[]): number | null {
+  const years = items
+    .map((item) => {
+      const year = item.data ? new Date(item.data).getFullYear() : Number.NaN;
+      return Number.isFinite(year) ? year : null;
+    })
+    .filter((year): year is number => Boolean(year));
+
+  return years.length > 0 ? Math.max(...years) : null;
 }
 
 function mapEmendaResumo(item: BackendEmendaResumo): EmendaResumoPerfil {
@@ -717,10 +835,44 @@ export async function getDespesasPerfil(
   id: number,
   ano?: number | null,
 ): Promise<DespesasPerfil> {
-  const [resumoDespesas, despesasResponse] = await Promise.all([
-    getResumoDespesas(id, ano),
-    getDespesasParlamentar(id, 1, ano),
-  ]);
+  const anoSolicitado = ano ?? null;
+
+  if (anoSolicitado) {
+    const [resumoDespesas, despesasResponse] = await Promise.all([
+      getResumoDespesas(id, anoSolicitado),
+      getDespesasParlamentar(id, 1, anoSolicitado),
+    ]);
+
+    const categorias = buildCategoriasFromBackend(resumoDespesas.categorias);
+    const totalCategorias = categorias.reduce((acc, item) => acc + item.valor, 0);
+    const totalAno = parseMoney(resumoDespesas.totalAno) || totalCategorias;
+    const mediaMensal = parseMoney(resumoDespesas.mediaMensal) || (totalAno > 0 ? totalAno / 12 : 0);
+    const maiorReembolso = parseMoney(resumoDespesas.maiorReembolso);
+
+    return {
+      totalAno,
+      mediaMensal,
+      maiorReembolso,
+      categorias,
+      itensRecentes: buildItensFromBackend(despesasResponse.data),
+      totalRegistros: despesasResponse.meta.total,
+      paginaAtual: despesasResponse.meta.page,
+      totalPaginas: despesasResponse.meta.lastPage,
+      anoReferencia: anoSolicitado,
+    };
+  }
+
+  const despesasMaisRecentes = await getDespesasParlamentar(id, 1);
+  const anoInferido = inferExpenseYear(despesasMaisRecentes.data);
+  const resumoDespesas = await getResumoDespesas(id, anoInferido ?? undefined);
+  const anoReferencia =
+    resumoDespesas.anoReferencia === null || resumoDespesas.anoReferencia === undefined
+      ? anoInferido
+      : Number(resumoDespesas.anoReferencia);
+
+  const despesasResponse = anoReferencia
+    ? await getDespesasParlamentar(id, 1, anoReferencia)
+    : despesasMaisRecentes;
 
   const categorias = buildCategoriasFromBackend(resumoDespesas.categorias);
   const totalCategorias = categorias.reduce((acc, item) => acc + item.valor, 0);
@@ -737,10 +889,85 @@ export async function getDespesasPerfil(
     totalRegistros: despesasResponse.meta.total,
     paginaAtual: despesasResponse.meta.page,
     totalPaginas: despesasResponse.meta.lastPage,
-    anoReferencia:
-      resumoDespesas.anoReferencia === null || resumoDespesas.anoReferencia === undefined
-        ? ano ?? null
-        : Number(resumoDespesas.anoReferencia),
+    anoReferencia,
+  };
+}
+
+
+function buildVotingsQuery(page: number) {
+  const params = new URLSearchParams();
+  params.append('pagina', String(page));
+  params.append('limit', String(VOTACOES_PAGE_SIZE));
+  params.append('limite', String(VOTACOES_PAGE_SIZE));
+
+  return params.toString();
+}
+
+export async function getVotacoesParlamentar(
+  id: number,
+  page: number = 1,
+): Promise<ListaVotacoesResponse> {
+  try {
+    const res = await api.get(
+      `/parlamentares/${id}/votacoes?${buildVotingsQuery(page)}`,
+    );
+    const payload = res.data as BackendPaginated<BackendVotacaoResumo> | BackendVotacaoResumo[];
+    const list = Array.isArray(payload) ? payload : Array.isArray(payload?.data) ? payload.data : [];
+    const meta = Array.isArray(payload) ? undefined : payload.meta;
+
+    return {
+      data: list.map(mapVotacaoResumo),
+      meta: {
+        total: Number(meta?.total ?? list.length),
+        page: Number(meta?.page ?? page),
+        lastPage: Number(meta?.lastPage ?? 1),
+        limit: Number(meta?.limit ?? VOTACOES_PAGE_SIZE),
+      },
+    };
+  } catch {
+    console.warn('Não foi possível carregar votações do parlamentar.');
+    return {
+      data: [],
+      meta: {
+        total: 0,
+        page,
+        lastPage: 1,
+        limit: VOTACOES_PAGE_SIZE,
+      },
+    };
+  }
+}
+
+export async function getPresencaParlamentar(id: number): Promise<number> {
+  try {
+    const res = await api.get(`/parlamentares/${id}/presenca`);
+    const payload = res.data as BackendPresencaResponse;
+    const taxa = Number(payload.presenca?.sessoesDeliberativas?.taxa ?? 0);
+
+    return Number.isFinite(taxa) ? Math.round(taxa) : 0;
+  } catch {
+    console.warn('Não foi possível carregar presença do parlamentar.');
+    return 0;
+  }
+}
+
+export async function getVotacoesPerfil(id: number): Promise<VotacoesPerfil> {
+  const [votacoesResponse, presenca] = await Promise.all([
+    getVotacoesParlamentar(id, 1),
+    getPresencaParlamentar(id),
+  ]);
+
+  return {
+    presenca,
+    alinhamento: null,
+    destaques: votacoesResponse.data,
+    leituraRapida:
+      votacoesResponse.meta.total > 0
+        ? `${votacoesResponse.meta.total} votações registradas para este parlamentar.`
+        : 'Nenhuma votação registrada foi encontrada para este parlamentar.',
+    totalRegistros: votacoesResponse.meta.total,
+    paginaAtual: votacoesResponse.meta.page,
+    totalPaginas: votacoesResponse.meta.lastPage,
   };
 }
 
@@ -790,10 +1017,11 @@ export async function getParlamentarProfile(
     return null;
   }
 
-  const [despesas, emendasLista, resumoEmendas] = await Promise.all([
+  const [despesas, emendasLista, resumoEmendas, votacoesPerfil] = await Promise.all([
     getDespesasPerfil(id),
     getEmendasParlamentar(id),
     getResumoEmendasParlamentar(id),
+    getVotacoesPerfil(id),
   ]);
 
   const parlamentar = detalheApi;
@@ -803,10 +1031,7 @@ export async function getParlamentarProfile(
     { length: 4 },
     (_, index) => COMISSOES[(seed + index) % COMISSOES.length],
   );
-  const presenca = 92 + (seed % 6);
-  const alinhamento = 71 + (seed % 12);
   const proposicoes = buildProposicoes(seed, temasPrioritarios);
-  const votacoes = buildVotacoes(seed, temasPrioritarios);
 
   const emendas: EmendasPerfil = {
     quantidade: resumoEmendas.totalEmendas,
@@ -832,14 +1057,14 @@ export async function getParlamentarProfile(
   const indicadores: PerfilIndicador[] = [
     {
       titulo: 'Presença em votações',
-      valor: `${presenca}%`,
-      apoio: 'considerando sessões registradas no período',
+      valor: `${votacoesPerfil.presenca}%`,
+      apoio: 'votações nominais registradas',
       destaque: 'positivo',
     },
     {
       titulo: 'Proposições acompanhadas',
       valor: `${18 + (seed % 11)}`,
-      apoio: 'entre autoria, coautoria e requerimentos',
+      apoio: 'registros legislativos vinculados',
       destaque: 'neutro',
     },
     {
@@ -847,8 +1072,8 @@ export async function getParlamentarProfile(
       valor: shortCurrency(emendas.totalEmpenhado),
       apoio:
         emendas.quantidade > 0
-          ? `${emendas.quantidade} emendas vinculadas ao parlamentar`
-          : 'nenhuma emenda vinculada encontrada',
+          ? `${emendas.quantidade} registro${emendas.quantidade === 1 ? '' : 's'} vinculado${emendas.quantidade === 1 ? '' : 's'}`
+          : 'sem emendas vinculadas',
       destaque: 'neutro',
     },
     {
@@ -858,8 +1083,10 @@ export async function getParlamentarProfile(
       valor: shortCurrency(totalDespesas),
       apoio:
         despesas.totalRegistros > 0
-          ? `${despesas.totalRegistros} registros encontrados`
-          : 'nenhuma despesa encontrada',
+          ? despesas.anoReferencia
+            ? `${despesas.totalRegistros} registros · ano mais recente disponível`
+            : `${despesas.totalRegistros} registros consolidados`
+          : 'sem despesas registradas',
       destaque: 'atencao',
     },
   ];
@@ -871,18 +1098,12 @@ export async function getParlamentarProfile(
     resumo: '',
     biografia: `${parlamentar.nomeParlamentar} atua na ${
       parlamentar.casaLegislativa ?? 'casa legislativa'
-    } representando ${parlamentar.uf}. Neste protótipo, a narrativa do perfil foi desenhada para traduzir atividade parlamentar em blocos simples de entender, com foco em ${temasPrioritarios[0].toLowerCase()}, ${temasPrioritarios[1].toLowerCase()} e ${temasPrioritarios[2].toLowerCase()}.`,
+    } representando ${parlamentar.uf}. Os dados consolidados destacam atuação em ${temasPrioritarios[0].toLowerCase()}, ${temasPrioritarios[1].toLowerCase()} e ${temasPrioritarios[2].toLowerCase()}.`,
     temasPrioritarios,
     comissoes,
     indicadores,
     proposicoes,
-    votacoes: {
-      presenca,
-      alinhamento,
-      destaques: votacoes,
-      leituraRapida:
-        'As votações aparecem com contexto, resultado final e o voto registrado, para reduzir a distância entre o dado bruto e o entendimento do cidadão.',
-    },
+    votacoes: votacoesPerfil,
     despesas,
     emendas,
   };
