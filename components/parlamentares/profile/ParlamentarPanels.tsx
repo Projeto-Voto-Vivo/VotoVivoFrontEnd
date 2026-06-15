@@ -29,31 +29,26 @@ export function ParlamentarPanels({ profile }: ParlamentarPanelsProps) {
       {
         key: 'visao-geral' as const,
         label: 'Visão geral',
-        supporting: 'Síntese da atuação e dos dados principais.',
         icon: <Landmark className="h-5 w-5" />,
       },
       {
         key: 'proposicoes' as const,
         label: 'Proposições',
-        supporting: 'Matérias vinculadas ao mandato.',
         icon: <FileText className="h-5 w-5" />,
       },
       {
         key: 'emendas' as const,
         label: 'Emendas',
-        supporting: 'Resumo de recursos destinados e executados.',
         icon: <Receipt className="h-5 w-5" />,
       },
       {
         key: 'votacoes' as const,
         label: 'Votações',
-        supporting: 'Contexto, voto e resultado no mesmo lugar.',
         icon: <Vote className="h-5 w-5" />,
       },
       {
         key: 'despesas' as const,
         label: 'Despesas',
-        supporting: 'Resumo consolidado e itens recentes.',
         icon: <Wallet className="h-5 w-5" />,
       },
     ],
@@ -65,33 +60,31 @@ export function ParlamentarPanels({ profile }: ParlamentarPanelsProps) {
 
   return (
     <>
-      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
-        <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-400">
-              Painéis do perfil
-            </p>
-            <h2 className="mt-2 text-2xl font-bold text-slate-900">
-              Dados do mandato
-            </h2>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
-              Veja os principais dados do parlamentar e aprofunde a consulta por tema: emendas, proposições, votações e despesas.
-            </p>
-          </div>
+      <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+        <div className="border-b border-slate-100 bg-gradient-to-r from-brasil-blue/5 via-white to-brasil-green/5 p-5 md:p-6">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-400">
+                Painéis do perfil
+              </p>
+              <h2 className="mt-2 text-2xl font-bold text-slate-900">
+                Dados do mandato
+              </h2>
+            </div>
 
-          <div className="rounded-full border border-brasil-blue/10 bg-brasil-blue/5 px-4 py-2 text-sm font-medium text-brasil-blue">
-            Painel ativo: {currentPanelLabel}
+            <div className="w-fit rounded-full border border-brasil-blue/10 bg-white px-4 py-2 text-sm font-bold text-brasil-blue shadow-sm">
+              {currentPanelLabel}
+            </div>
           </div>
         </div>
 
-        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+        <div className="grid gap-3 p-5 md:grid-cols-2 md:p-6 xl:grid-cols-5">
           {panelOptions.map((panel) => (
             <PanelButton
               key={panel.key}
               active={activePanel === panel.key}
               icon={panel.icon}
               label={panel.label}
-              supporting={panel.supporting}
               onClick={() => setActivePanel(panel.key)}
             />
           ))}
