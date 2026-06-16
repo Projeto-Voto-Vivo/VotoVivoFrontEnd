@@ -273,12 +273,12 @@ export function DespesasPanel({ profile }: DespesasPanelProps) {
         title={anoParaListagem ? `Registros de ${anoParaListagem}` : 'Registros de despesas'}
       >
         {hasItens ? (
-          <div className="grid gap-3">
-            {itens.map((item) => (
-              <div
-                key={`${item.data}-${item.fornecedor}-${item.tipo}-${item.valor}-${item.urlDocumento ?? ''}`}
-                className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
-              >
+					<div className="grid gap-3">
+              {itens.map((item, index) => (
+                <div
+                  key={`${item.data}-${item.fornecedor}-${item.valor}-${index}`}
+                  className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+                >
                 <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                   <div>
                     <p className="font-semibold text-slate-900">{item.tipo}</p>
