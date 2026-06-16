@@ -10,6 +10,14 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  async rewrites() {
+    return [
+      {
+        source: '/api/proxy/:path*',
+        destination: process.env.BACKEND_INTERNAL_URL || 'http://localhost:3001/:path*', 
+      },
+    ];
+  },
 };
 
 export default nextConfig;
