@@ -938,16 +938,20 @@ export async function getVotacoesParlamentar(
   }
 }
 
-export async function getPresencaParlamentar(id: number): Promise<number> {
+
+export async function getPresencaParlamentar(id: number): Promise<{ taxa: number; totalEventos: number; faltas: number }> {
   try {
     const res = await api.get(`/parlamentares/${id}/presenca`);
     const payload = res.data as BackendPresencaResponse;
-    const taxa = Number(payload.presenca?.sessoesDeliberativas?.taxa ?? 0);
-
-    return Number.isFinite(taxa) ? Math.round(taxa) : 0;
+    const sessoes = payload.presenca?.sessoesDeliberativas;
+    
+    return {
+      taxa: Number.isFinite(Number(sessoes?.taxa)) ? Math.round(Number(sessoes?.taxa)) : 0,
+      totalEventos: Number(sessoes?.totalEventos ?? 0),
+      faltas: Number(sessoes?.faltas ?? 0),
+    };
   } catch {
-    console.warn('Não foi possível carregar presença do parlamentar.');
-    return 0;
+    return { taxa: 0, totalEventos: 0, faltas: 0 };
   }
 }
 
@@ -1054,13 +1058,13 @@ export async function getParlamentarProfile(
 
   const totalDespesas = despesas.totalAno;
 
-  const indicadores: PerfilIndicador[] = [
-    {
-      titulo: 'Presença em votações',
-      valor: `${votacoesPerfil.presenca}%`,
-      apoio: 'votações nominais registradas',
-      destaque: 'positivo',
-    },
+	const indicadores: PerfilIndicador[] = [
+		{
+			titulo: 'Presença em Sessões Deliberativas',
+			valor: `${votacoesPerfil.presenca.taxa}%`,
+			apoio: `${votacoesPerfil.presenca.totalEventos} eventos · ${votacoesPerfil.presenca.faltas} faltas`,
+			destaque: votacoesPerfil.presenca.taxa > 85 ? 'positivo' : 'atencao',
+		},
     {
       titulo: 'Proposições acompanhadas',
       valor: `${18 + (seed % 11)}`,
