@@ -6,15 +6,18 @@ export function formatCurrency(value: number) {
   }).format(value);
 }
 
-export function formatDate(value: string) {
-  if (!value) {
-    return 'Data não informada';
-  }
+export function formatDate(value?: string | Date | null) {
+  if (!value) return 'Data não informada';
 
-  const date = new Date(`${value}T12:00:00`);
+  const date =
+    value instanceof Date
+      ? value
+      : value.includes('T')
+        ? new Date(value)
+        : new Date(`${value}T12:00:00`);
 
   if (Number.isNaN(date.getTime())) {
-    return value;
+    return 'Data inválida';
   }
 
   return new Intl.DateTimeFormat('pt-BR', {
