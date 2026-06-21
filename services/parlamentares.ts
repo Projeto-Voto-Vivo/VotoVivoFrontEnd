@@ -1071,11 +1071,12 @@ export async function getParlamentarProfile(
     return null;
   }
 
-  const [despesas, emendasLista, resumoEmendas, votacoesPerfil] = await Promise.all([
+  const [despesas, emendasLista, resumoEmendas, votacoesPerfil, proposicoesApi] = await Promise.all([
     getDespesasPerfil(id),
     getEmendasParlamentar(id),
     getResumoEmendasParlamentar(id),
     getVotacoesPerfil(id),
+    getProposicoesParlamentar(id), 
   ]);
 
   const parlamentar = detalheApi;
@@ -1085,16 +1086,6 @@ export async function getParlamentarProfile(
     { length: 4 },
     (_, index) => COMISSOES[(seed + index) % COMISSOES.length],
   );
-  const presenca = 92 + (seed % 6);
-  const alinhamento = 71 + (seed % 12);
-  const proposicoes = proposicoesApi;
-  const votacoes = buildVotacoes(seed, temasPrioritarios);
-  const emendas = buildEmendasMock(seed, temasPrioritarios);
-
-  const categorias =
-    resumoGastos.length > 0
-      ? buildCategoriasFromBackend(resumoGastos)
-      : buildCategoriasMock(168000 + (seed % 9) * 8700);
 
   const emendas: EmendasPerfil = {
     quantidade: resumoEmendas.totalEmendas,
@@ -1117,16 +1108,16 @@ export async function getParlamentarProfile(
 
   const totalDespesas = despesas.totalAno;
 
-	const indicadores: PerfilIndicador[] = [
-		{
-			titulo: 'Presença em Sessões Deliberativas',
-			valor: `${votacoesPerfil.presenca.taxa}%`,
-			apoio: `${votacoesPerfil.presenca.totalEventos} eventos · ${votacoesPerfil.presenca.faltas} faltas`,
-			destaque: votacoesPerfil.presenca.taxa > 85 ? 'positivo' : 'atencao',
-		},
+  const indicadores: PerfilIndicador[] = [
+    {
+      titulo: 'Presença em Sessões Deliberativas',
+      valor: `${votacoesPerfil.presenca.taxa}%`,
+      apoio: `${votacoesPerfil.presenca.totalEventos} eventos · ${votacoesPerfil.presenca.faltas} faltas`,
+      destaque: votacoesPerfil.presenca.taxa > 85 ? 'positivo' : 'atencao',
+    },
     {
       titulo: 'Proposições acompanhadas',
-      valor: `${18 + (seed % 11)}`,
+      valor: `${proposicoesApi.length}`, 
       apoio: 'registros legislativos vinculados',
       destaque: 'neutro',
     },
@@ -1165,9 +1156,9 @@ export async function getParlamentarProfile(
     temasPrioritarios,
     comissoes,
     indicadores,
-    proposicoes,
+    proposicoes: proposicoesApi, 
     votacoes: votacoesPerfil,
-    despesas,
+    despesas, 
     emendas,
   };
 }

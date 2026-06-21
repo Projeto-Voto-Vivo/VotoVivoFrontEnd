@@ -1,4 +1,4 @@
-import { FileText } from 'lucide-react';
+import { FileText, CircleHelp } from 'lucide-react'; 
 import { ParlamentarPerfil } from '@/types';
 import { MicroInfoCard } from '../shared/MicroInfoCard';
 import { SectionShell } from '../shared/SectionShell';
@@ -11,14 +11,14 @@ export function ProposicoesPanel({ profile }: ProposicoesPanelProps) {
   const { proposicoes = [] } = profile;
 
   return (
-    <SectionShell
-      icon={<FileText className="h-6 w-6" />}
-      title="Proposições"
-    >
-      {proposicoes.length > 0 ? (
-        <div className="grid gap-4 lg:grid-cols-2">
-          {proposicoes.length > 0 ? (
-            proposicoes.map((proposicao, index) => {
+    <div className="space-y-6"> 
+      <SectionShell
+        icon={<FileText className="h-6 w-6" />}
+        title="Proposições"
+      >
+        {proposicoes.length > 0 ? (
+          <div className="grid gap-4 lg:grid-cols-2">
+            {proposicoes.map((proposicao, index) => {
               const propositionKey = `proposicao-${index}-${proposicao.id || 'sem-id'}`;
 
               const titulo = proposicao.titulo ?? 'Proposição';
@@ -67,18 +67,18 @@ export function ProposicoesPanel({ profile }: ProposicoesPanelProps) {
                   </div>
                 </article>
               );
-            })
-          ) : (
-            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-8 text-slate-700">
-              <p className="text-lg font-semibold text-slate-900">
-                Nenhuma proposição encontrada
-              </p>
-              <p className="mt-3 text-sm leading-6">
-                O backend não retornou proposições para este parlamentar. Não estamos exibindo dados mock.
-              </p>
-            </div>
-          )}
-        </div>
+            })}
+          </div>
+        ) : (
+          <div className="rounded-3xl border border-slate-200 bg-slate-50 p-8 text-slate-700">
+            <p className="text-lg font-semibold text-slate-900">
+              Nenhuma proposição encontrada
+            </p>
+            <p className="mt-3 text-sm leading-6">
+              O backend não retornou proposições para este parlamentar. Não estamos exibindo dados mock.
+            </p>
+          </div>
+        )}
       </SectionShell>
 
       <SectionShell
@@ -121,7 +121,7 @@ export function ProposicoesPanel({ profile }: ProposicoesPanelProps) {
             />
           </div>
         </div>
-      )}
-    </SectionShell>
+      </SectionShell>
+    </div>
   );
 }
