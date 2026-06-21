@@ -115,6 +115,7 @@ export interface ItemDespesaPerfil {
   fornecedor: string;
   valor: number;
   documentoLabel: string;
+  urlDocumento?: string | null;
 }
 
 export interface DespesasPerfil {
@@ -123,30 +124,65 @@ export interface DespesasPerfil {
   maiorReembolso: number;
   categorias: CategoriaDespesaPerfil[];
   itensRecentes: ItemDespesaPerfil[];
+  totalRegistros: number;
+  paginaAtual: number;
+  totalPaginas: number;
+  anoReferencia?: number | null;
+}
+
+export interface VotacoesPerfil {
+  presenca: number;
+  alinhamento: number | null;
+  destaques: VotacaoPerfil[];
+  leituraRapida: string;
+  totalRegistros: number;
+  paginaAtual: number;
+  totalPaginas: number;
 }
 
 export interface EmendaResumoPerfil {
+  id: number;
   codigoEmenda: string;
-  ano: number;
-  tipoEmenda: string;
-  nomeAutor: string;
-  numeroEmenda: string;
-  localidadeDoGasto: string;
-  funcao: string;
-  subfuncao: string;
+  ano: number | null;
+  tipoEmenda: string | null;
+  autor?: string | null;
+  nomeAutor: string | null;
+  numeroEmenda: string | null;
+  localidadeDoGasto: string | null;
+  funcao: string | null;
+  subfuncao: string | null;
   valorEmpenhado: number;
   valorLiquidado: number;
   valorPago: number;
+  valorRestoInscrito?: number;
+  valorRestoCancelado?: number;
+  valorRestoPago?: number;
+  metodoVinculo?: string | null;
+  confiancaVinculo?: number;
 }
 
 export interface DocumentoEmendaPerfil {
   id: number;
-  data: string;
-  fase: string;
-  codigoDocumento: string;
-  codigoDocumentoResumido: string;
-  especieTipo: string;
-  tipoEmenda: string;
+  idEmenda?: number;
+  codigoEmenda?: string;
+  data: string | null;
+  fase: string | null;
+  codigoDocumento: string | null;
+  codigoDocumentoResumido: string | null;
+  especieTipo: string | null;
+  tipoEmenda: string | null;
+  urlPortal?: string | null;
+}
+
+export interface EmendaParlamentarVinculado {
+  id: number;
+  nomeCivil: string | null;
+  nomeUrna: string | null;
+  partidoAtual: string | null;
+  uf: string | null;
+  fotoUrl: string | null;
+  metodoVinculo: string | null;
+  confiancaVinculo: number;
 }
 
 export interface EmendasPerfil {
@@ -171,42 +207,17 @@ export interface ParlamentarPerfil {
   comissoes: string[];
   indicadores: PerfilIndicador[];
   proposicoes: ProposicaoPerfil[];
-  votacoes: {
-    presenca: number;
-    alinhamento: number;
-    destaques: VotacaoPerfil[];
-    leituraRapida: string;
-  };
+  votacoes: VotacoesPerfil;
   despesas: DespesasPerfil;
   emendas: EmendasPerfil;
 }
-export interface DocumentoEmendaPerfil {
-  id: number;
-  data: string;
-  fase: string;
-  codigoDocumento: string;
-  codigoDocumentoResumido: string;
-  especieTipo: string;
-  tipoEmenda: string;
-}
 
-export interface EmendaDetalhe {
-  codigoEmenda: string;
-  ano: number;
-  tipoEmenda: string;
-  autor: string;
-  nomeAutor: string;
-  numeroEmenda: string;
-  localidadeDoGasto: string;
-  funcao: string;
-  subfuncao: string;
-  valorEmpenhado: number;
-  valorLiquidado: number;
-  valorPago: number;
+export interface EmendaDetalhe extends EmendaResumoPerfil {
   valorRestoInscrito: number;
   valorRestoCancelado: number;
   valorRestoPago: number;
   documentos: DocumentoEmendaPerfil[];
+  parlamentares: EmendaParlamentarVinculado[];
   parlamentarId: number;
   nomeParlamentar: string;
 }

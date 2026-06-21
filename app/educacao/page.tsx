@@ -1,13 +1,12 @@
 "use client";
 import { useState } from 'react';
-import { Header } from '@/components/layout/HeaderLayout';
 import Image from "next/image";
 import { 
   Globe, Landmark, Building2, Users, 
   Gavel, Scale, Briefcase, FileText, 
   Eye, Wallet, HelpCircle, ChevronRight,
   User, CheckCircle2, AlertCircle, AlertTriangle, Info, 
-  BookOpen, PenTool, Layers, Search, Settings, Home, Clock3, RotateCcw
+  BookOpen, PenTool, Layers, Search, Settings, Home, Clock3, RotateCcw, ChevronDown
 } from 'lucide-react';
 
 
@@ -26,11 +25,10 @@ export default function EducativoPage() {
 
   return (
     <>
-      <Header />
-      <main className="bg-[#F8FAFC] min-h-screen pb-20 selection:bg-blue-100">
+      <main className="scroll-mt-32 bg-[#F8FAFC] min-h-screen pb-20 selection:bg-blue-100">
         
         {/* HERO SECTION */}
-        <section className="relative overflow-hidden bg-white border-b border-slate-200 py-16 md:py-24">
+        <section className="relative overflow-hidden bg-white border-b border-slate-200 py-10 md:py-12">
           <div className="absolute top-0 right-0 -translate-y-12 translate-x-12 w-64 h-64 bg-blue-50 rounded-full blur-3xl opacity-50" />
           <div className="max-w-6xl mx-auto px-6 relative z-10">
             <span className="inline-block px-4 py-1.5 mb-4 text-xs font-bold tracking-widest text-blue-600 uppercase bg-blue-50 rounded-full">
@@ -46,6 +44,15 @@ export default function EducativoPage() {
               Entenda o papel dos poderes, o que fazem os parlamentares e como o dinheiro público é utilizado.
             </p>
           </div>
+          <a
+            href="#estado"
+            className="group absolute bottom-4 left-1/2 z-20 hidden -translate-x-1/2 flex-col items-center gap-2 text-sm font-medium text-slate-500 transition-colors hover:text-brasil-blue focus:outline-none focus-visible:text-brasil-blue md:inline-flex"
+            aria-label="Rolar para a seção de destaques"
+          >
+            <span className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 bg-white/90 shadow-sm transition-transform duration-300 group-hover:translate-y-1 motion-safe:animate-bounce">
+              <ChevronDown className="h-5 w-5" aria-hidden="true" />
+            </span>
+          </a>
         </section>
 
         {/* ESTRUTURA COM SIDEBAR */}

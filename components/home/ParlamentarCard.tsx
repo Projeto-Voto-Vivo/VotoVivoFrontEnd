@@ -6,7 +6,32 @@ interface ParlamentarCardProps {
   parlamentar: Parlamentar;
 }
 
+function getCargoBadge(cargo?: string | null) {
+  const normalizedCargo = cargo?.toLowerCase() ?? '';
+
+  if (normalizedCargo.includes('senador')) {
+    return {
+      label: 'Senador',
+      className: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+    };
+  }
+
+  if (normalizedCargo.includes('deputado')) {
+    return {
+      label: 'Deputado federal',
+      className: 'border-brasil-blue/20 bg-blue-50 text-brasil-blue',
+    };
+  }
+
+  return {
+    label: 'Parlamentar',
+    className: 'border-slate-200 bg-slate-50 text-slate-600',
+  };
+}
+
 export function ParlamentarCard({ parlamentar }: ParlamentarCardProps) {
+  const cargoBadge = getCargoBadge(parlamentar.cargo);
+
   return (
     <Link
       href={`/parlamentares/${parlamentar.id}`}
@@ -14,6 +39,12 @@ export function ParlamentarCard({ parlamentar }: ParlamentarCardProps) {
     >
       <div className="relative aspect-[4/3] overflow-hidden bg-slate-100">
         <div className="absolute inset-0 z-10 bg-gradient-to-t from-slate-900/80 to-transparent" />
+
+        <span
+          className={`absolute left-3 top-3 z-20 rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] shadow-sm ${cargoBadge.className}`}
+        >
+          {cargoBadge.label}
+        </span>
 
         <Image
           src={parlamentar.urlFoto}
@@ -29,7 +60,7 @@ export function ParlamentarCard({ parlamentar }: ParlamentarCardProps) {
             {parlamentar.nomeParlamentar}
           </p>
           <p className="mt-1 text-xs font-medium uppercase tracking-wider text-slate-300">
-            {parlamentar.cargo ?? 'Parlamentar'}
+            {parlamentar.casaLegislativa ?? parlamentar.cargo ?? 'Poder Legislativo'}
           </p>
         </div>
       </div>

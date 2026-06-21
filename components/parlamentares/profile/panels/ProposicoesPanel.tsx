@@ -1,4 +1,4 @@
-import { CircleHelp, FileText } from 'lucide-react';
+import { FileText } from 'lucide-react';
 import { ParlamentarPerfil } from '@/types';
 import { MicroInfoCard } from '../shared/MicroInfoCard';
 import { SectionShell } from '../shared/SectionShell';
@@ -11,12 +11,11 @@ export function ProposicoesPanel({ profile }: ProposicoesPanelProps) {
   const { proposicoes = [] } = profile;
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[1.25fr_0.75fr]">
-      <SectionShell
-        icon={<FileText className="h-6 w-6" />}
-        title="Proposições em destaque"
-        description="Cartões com linguagem clara para mostrar papel do parlamentar, estágio da matéria e impacto esperado para o cidadão."
-      >
+    <SectionShell
+      icon={<FileText className="h-6 w-6" />}
+      title="Proposições"
+    >
+      {proposicoes.length > 0 ? (
         <div className="grid gap-4 lg:grid-cols-2">
           {proposicoes.length > 0 ? (
             proposicoes.map((proposicao, index) => {
@@ -122,7 +121,7 @@ export function ProposicoesPanel({ profile }: ProposicoesPanelProps) {
             />
           </div>
         </div>
-      </SectionShell>
-    </div>
+      )}
+    </SectionShell>
   );
 }

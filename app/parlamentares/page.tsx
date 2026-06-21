@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { getParlamentaresLista } from '@/services/parlamentares';
 import { ParlamentarCard } from '@/components/home/ParlamentarCard';
-import { Header } from '@/components/layout/HeaderLayout';
 
 type ParlamentaresPageProps = {
   searchParams?: Promise<{
@@ -9,8 +8,34 @@ type ParlamentaresPageProps = {
     uf?: string;
     partido?: string;
     page?: string;
+    tipo?: string;
   }>;
 };
+
+const filtrosTipo = [
+  {
+    label: 'Lista completa',
+    href: '/parlamentares',
+    value: undefined,
+    description: 'Deputados federais e senadores em exercício.',
+  },
+  {
+    label: 'Deputados federais',
+    href: '/parlamentares?tipo=deputados',
+    value: 'deputados',
+    description: 'Representantes da Câmara dos Deputados.',
+  },
+  {
+    label: 'Senadores',
+    href: '/parlamentares?tipo=senadores',
+    value: 'senadores',
+    description: 'Representantes do Senado Federal.',
+  },
+] as const;
+
+function normalizeTipo(tipo?: string) {
+  return tipo === 'deputados' || tipo === 'senadores' ? tipo : undefined;
+}
 
 export default async function ParlamentaresPage({
   searchParams,
@@ -20,9 +45,12 @@ export default async function ParlamentaresPage({
   const nome = params.nome?.trim() || undefined;
   const uf = params.uf?.trim() || undefined;
   const partido = params.partido?.trim() || undefined;
+  const tipo = normalizeTipo(params.tipo);
   const page = Number(params.page || '1');
 
-  const { data, meta } = await getParlamentaresLista(page, nome, uf, partido);
+  const { data, meta } = await getParlamentaresLista(page, nome, uf, partido, tipo);
+
+  const filtroAtivo = filtrosTipo.find((item) => item.value === tipo) ?? filtrosTipo[0];
 
   const buildPageHref = (nextPage: number) => {
     const query = new URLSearchParams();
@@ -30,25 +58,64 @@ export default async function ParlamentaresPage({
     if (nome) query.set('nome', nome);
     if (uf) query.set('uf', uf);
     if (partido) query.set('partido', partido);
+    if (tipo) query.set('tipo', tipo);
     query.set('page', String(nextPage));
 
     return `/parlamentares?${query.toString()}`;
   };
 
+  const buildTipoHref = (nextTipo?: 'deputados' | 'senadores') => {
+    const query = new URLSearchParams();
+
+    if (nome) query.set('nome', nome);
+    if (uf) query.set('uf', uf);
+    if (partido) query.set('partido', partido);
+    if (nextTipo) query.set('tipo', nextTipo);
+
+    const queryString = query.toString();
+    return queryString ? `/parlamentares?${queryString}` : '/parlamentares';
+  };
+
   return (
     <>
-    <Header />
-    <main className="min-h-screen bg-slate-50 py-10">
+    <main className="scroll-mt-32 min-h-screen bg-slate-50 py-10">
       <div className="container mx-auto px-4">
         <header className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900">Parlamentares</h1>
-          <p className="mt-2 text-slate-600">
-            Consulte perfis, filtros e detalhes de atuação parlamentar.
+          <p className="text-xs font-bold uppercase tracking-[0.24em] text-brasil-blue">
+            {filtroAtivo.label}
+          </p>
+          <h1 className="mt-2 text-3xl font-bold text-slate-900">Parlamentares</h1>
+          <p className="mt-2 max-w-2xl text-slate-600">
+            {filtroAtivo.description} Use os filtros para localizar perfis e acompanhar dados do mandato.
           </p>
         </header>
 
+        <section className="mb-6 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
+          <nav className="grid gap-2 md:grid-cols-3" aria-label="Tipo de parlamentar">
+            {filtrosTipo.map((item) => {
+              const active = item.value === tipo;
+
+              return (
+                <Link
+                  key={item.label}
+                  href={buildTipoHref(item.value)}
+                  className={`rounded-xl px-4 py-3 text-sm font-semibold transition ${
+                    active
+                      ? 'bg-brasil-blue text-white shadow-sm'
+                      : 'text-slate-600 hover:bg-blue-50 hover:text-brasil-blue'
+                  }`}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
+        </section>
+
         <section className="mb-8 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <form className="grid grid-cols-1 gap-4 md:grid-cols-4">
+            {tipo && <input type="hidden" name="tipo" value={tipo} />}
+
             <input
               type="text"
               name="nome"
