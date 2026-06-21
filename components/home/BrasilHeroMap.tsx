@@ -1,4 +1,15 @@
+'use client';
+
+import { useRouter } from 'next/navigation';
+
 export function BrasilHeroMap() {
+  const router = useRouter();
+
+  const handleEstadoClick = (uf: string) => {
+    // Redireciona para a página de parlamentares aplicando o filtro de estado na query string
+    router.push(`/parlamentares?uf=${uf}`);
+  };
+
   return (
     <div className="relative hidden md:flex items-center justify-center">
       <div className="absolute inset-0 -z-10 flex items-center justify-center">
@@ -48,7 +59,7 @@ export function BrasilHeroMap() {
               [&_.estado-path]:stroke-[1.0404]
               [&_.estado-path]:transition-colors
               [&_.estado-path]:duration-200
-              [&_.estado]:cursor-default
+              [&_.estado]:cursor-pointer
               [&_.estado:hover_.estado-path]:fill-[#003399]
               [&_.estado-text]:fill-white
               [&_.estado-text]:text-[12px]
@@ -57,7 +68,7 @@ export function BrasilHeroMap() {
               [&_.estado-circle]:hidden
             "
           >
-            <g className="estado" data-name="Tocantins">
+            <g className="estado" data-name="Tocantins" onClick={() => handleEstadoClick('TO')}>
               <path
                 className="estado-path"
                 strokeLinecap="round"
@@ -69,7 +80,7 @@ export function BrasilHeroMap() {
               <text x="287.0137" y="188.3208" className="estado-text">TO</text>
             </g>
 
-            <g className="estado" data-name="Bahia">
+            <g className="estado" data-name="Bahia" onClick={() => handleEstadoClick('BA')}>
               <path
                 className="estado-path"
                 strokeLinecap="round"
@@ -86,7 +97,7 @@ export function BrasilHeroMap() {
               <text x="359.7324" y="210.1221" className="estado-text">BA</text>
             </g>
 
-            <g className="estado" data-name="Sergipe">
+            <g className="estado" data-name="Sergipe" onClick={() => handleEstadoClick('SE')}>
               <path
                 className="estado-path"
                 strokeLinecap="round"
@@ -104,7 +115,7 @@ export function BrasilHeroMap() {
               <text x="411.3" y="194.2" className="estado-text estado-text-small">SE</text>
             </g>
 
-            <g className="estado" data-name="Pernambuco">
+            <g className="estado" data-name="Pernambuco" onClick={() => handleEstadoClick('PE')}>
               <path
                 className="estado-path"
                 strokeLinecap="round"
@@ -120,7 +131,7 @@ export function BrasilHeroMap() {
               <text x="401.3984" y="165.8003" className="estado-text">PE</text>
             </g>
 
-            <g className="estado" data-name="Alagoas">
+            <g className="estado" data-name="Alagoas" onClick={() => handleEstadoClick('AL')}>
               <path
                 className="estado-path"
                 strokeLinecap="round"
@@ -138,7 +149,7 @@ export function BrasilHeroMap() {
               <text x="420.7891" y="181.895" className="estado-text estado-text-small">AL</text>
             </g>
 
-            <g className="estado" data-name="Rio Grande do Norte">
+            <g className="estado" data-name="Rio Grande do Norte" onClick={() => handleEstadoClick('RN')}>
               <path
                 className="estado-path"
                 strokeLinecap="round"
@@ -156,7 +167,7 @@ export function BrasilHeroMap() {
               <text x="422.541" y="123.9009" className="estado-text estado-text-small">RN</text>
             </g>
 
-            <g className="estado" data-name="Ceará">
+            <g className="estado" data-name="Ceará" onClick={() => handleEstadoClick('CE')}>
               <path
                 className="estado-path"
                 strokeLinecap="round"
@@ -172,7 +183,7 @@ export function BrasilHeroMap() {
               <text x="386.8379" y="129.0347" className="estado-text">CE</text>
             </g>
 
-            <g className="estado" data-name="Piauí">
+            <g className="estado" data-name="Piauí" onClick={() => handleEstadoClick('PI')}>
               <path
                 className="estado-path"
                 strokeLinecap="round"
@@ -188,7 +199,7 @@ export function BrasilHeroMap() {
               <text x="355.127" y="158.1045" className="estado-text">PI</text>
             </g>
 
-            <g className="estado" data-name="Maranhão">
+            <g className="estado" data-name="Maranhão" onClick={() => handleEstadoClick('MA')}>
               <path
                 className="estado-path"
                 strokeLinecap="round"
@@ -209,7 +220,7 @@ export function BrasilHeroMap() {
               <text x="318.2754" y="126.7036" className="estado-text">MA</text>
             </g>
 
-            <g className="estado" data-name="Amapá">
+            <g className="estado" data-name="Amapá" onClick={() => handleEstadoClick('AP')}>
               <path
                 className="estado-path"
                 strokeLinecap="round"
@@ -223,7 +234,7 @@ export function BrasilHeroMap() {
               <text x="245.9023" y="52.6099" className="estado-text">AP</text>
             </g>
 
-            <g className="estado" data-name="Pará">
+            <g className="estado" data-name="Pará" onClick={() => handleEstadoClick('PA')}>
               <path
                 className="estado-path"
                 strokeLinecap="round"
@@ -245,7 +256,7 @@ export function BrasilHeroMap() {
               <text x="232.7725" y="122.5137" className="estado-text">PA</text>
             </g>
 
-            <g className="estado" data-name="Roraima">
+            <g className="estado" data-name="Roraima" onClick={() => handleEstadoClick('RR')}>
               <path
                 className="estado-path"
                 strokeLinecap="round"
@@ -262,7 +273,7 @@ export function BrasilHeroMap() {
               <text x="136.2939" y="42.3862" className="estado-text">RR</text>
             </g>
 
-            <g className="estado" data-name="Amazonas">
+            <g className="estado" data-name="Amazonas" onClick={() => handleEstadoClick('AM')}>
               <path
                 className="estado-path"
                 strokeLinecap="round"
@@ -288,7 +299,7 @@ export function BrasilHeroMap() {
               <text x="98.1406" y="119.0591" className="estado-text">AM</text>
             </g>
 
-            <g className="estado" data-name="Acre">
+            <g className="estado" data-name="Acre" onClick={() => handleEstadoClick('AC')}>
               <path
                 className="estado-path"
                 strokeLinecap="round"
@@ -303,7 +314,7 @@ export function BrasilHeroMap() {
               <text x="47.7017" y="184.9355" className="estado-text">AC</text>
             </g>
 
-            <g className="estado" data-name="Rondônia">
+            <g className="estado" data-name="Rondônia" onClick={() => handleEstadoClick('RO')}>
               <path
                 className="estado-path"
                 strokeLinecap="round"
@@ -321,7 +332,7 @@ export function BrasilHeroMap() {
               <text x="118.1299" y="195.3193" className="estado-text">RO</text>
             </g>
 
-            <g className="estado" data-name="Mato Grosso">
+            <g className="estado" data-name="Mato Grosso" onClick={() => handleEstadoClick('MT')}>
               <path
                 className="estado-path"
                 strokeLinecap="round"
@@ -342,7 +353,7 @@ export function BrasilHeroMap() {
               <text x="200.0244" y="218.4175" className="estado-text">MT</text>
             </g>
 
-            <g className="estado" data-name="Mato Grosso do Sul">
+            <g className="estado" data-name="Mato Grosso do Sul" onClick={() => handleEstadoClick('MS')}>
               <path
                 className="estado-path"
                 strokeLinecap="round"
@@ -360,7 +371,7 @@ export function BrasilHeroMap() {
               <text x="213.2939" y="306.7236" className="estado-text">MS</text>
             </g>
 
-            <g className="estado" data-name="Goiás">
+            <g className="estado" data-name="Goiás" onClick={() => handleEstadoClick('GO')}>
               <path
                 className="estado-path"
                 strokeLinecap="round"
@@ -382,7 +393,7 @@ export function BrasilHeroMap() {
               <text x="266.9111" y="254.2139" className="estado-text">GO</text>
             </g>
 
-            <g className="estado" data-name="Paraná">
+            <g className="estado" data-name="Paraná" onClick={() => handleEstadoClick('PR')}>
               <path
                 className="estado-path"
                 strokeLinecap="round"
@@ -396,7 +407,7 @@ export function BrasilHeroMap() {
               <text x="248.4453" y="356.1045" className="estado-text">PR</text>
             </g>
 
-            <g className="estado" data-name="Santa Catarina">
+            <g className="estado" data-name="Santa Catarina" onClick={() => handleEstadoClick('SC')}>
               <path
                 className="estado-path"
                 strokeLinecap="round"
@@ -410,7 +421,7 @@ export function BrasilHeroMap() {
               <text x="266.9111" y="387.7646" className="estado-text">SC</text>
             </g>
 
-            <g className="estado" data-name="Rio Grande do Sul">
+            <g className="estado" data-name="Rio Grande do Sul" onClick={() => handleEstadoClick('RS')}>
               <path
                 className="estado-path"
                 strokeLinecap="round"
@@ -427,7 +438,7 @@ export function BrasilHeroMap() {
               <text x="231.0313" y="414.4658" className="estado-text">RS</text>
             </g>
 
-            <g className="estado" data-name="São Paulo">
+            <g className="estado" data-name="São Paulo" onClick={() => handleEstadoClick('SP')}>
               <path
                 className="estado-path"
                 strokeLinecap="round"
@@ -445,7 +456,7 @@ export function BrasilHeroMap() {
               <text x="280.6816" y="327.3193" className="estado-text">SP</text>
             </g>
 
-            <g className="estado" data-name="Minas Gerais">
+            <g className="estado" data-name="Minas Gerais" onClick={() => handleEstadoClick('MG')}>
               <path
                 className="estado-path"
                 strokeLinecap="round"
@@ -470,7 +481,7 @@ export function BrasilHeroMap() {
               <text x="328.4063" y="286.4561" className="estado-text">MG</text>
             </g>
 
-            <g className="estado" data-name="Rio de Janeiro">
+            <g className="estado" data-name="Rio de Janeiro" onClick={() => handleEstadoClick('RJ')}>
               <path
                 className="estado-path"
                 strokeLinecap="round"
@@ -492,7 +503,7 @@ export function BrasilHeroMap() {
               <text x="353.4648" y="330.6807" className="estado-text estado-text-small">RJ</text>
             </g>
 
-            <g className="estado" data-name="Espírito Santo">
+            <g className="estado" data-name="Espírito Santo" onClick={() => handleEstadoClick('ES')}>
               <path
                 className="estado-path"
                 strokeLinecap="round"
@@ -512,7 +523,7 @@ export function BrasilHeroMap() {
               <text x="377.3047" y="298.4971" className="estado-text estado-text-small">ES</text>
             </g>
 
-            <g className="estado" data-name="Distrito Federal">
+            <g className="estado" data-name="Distrito Federal" onClick={() => handleEstadoClick('DF')}>
               <path
                 className="estado-path"
                 strokeLinecap="round"
@@ -529,7 +540,7 @@ export function BrasilHeroMap() {
               <text x="292.4141" y="254.2139" className="estado-text estado-text-small">DF</text>
             </g>
 
-            <g className="estado" data-name="Paraíba">
+            <g className="estado" data-name="Paraíba" onClick={() => handleEstadoClick('PB')}>
               <path
                 className="estado-path"
                 strokeLinecap="round"

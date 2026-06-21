@@ -130,8 +130,14 @@ export interface DespesasPerfil {
   anoReferencia?: number | null;
 }
 
+export interface PresencaDetalhe {
+  taxa: number;
+  totalEventos: number;
+  faltas: number;
+}
+
 export interface VotacoesPerfil {
-  presenca: number;
+  presenca: PresencaDetalhe;'
   alinhamento: number | null;
   destaques: VotacaoPerfil[];
   leituraRapida: string;

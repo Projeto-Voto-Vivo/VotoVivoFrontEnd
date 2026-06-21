@@ -143,12 +143,13 @@ export function VotacoesPanel({ profile }: VotacoesPanelProps) {
         )}
       </SectionShell>
 
-      <SectionShell
+			<SectionShell
         icon={<BadgeCheck className="h-6 w-6" />}
         title="Resumo de presença"
       >
         <div className="grid gap-3 md:grid-cols-2">
-          <MicroInfoCard label="Presença" value={`${profile.votacoes.presenca}%`} />
+          {/* Adicionado .taxa aqui */}
+          <MicroInfoCard label="Presença" value={`${profile.votacoes.presenca.taxa}%`} />
           <MicroInfoCard
             label="Votações registradas"
             value={String(totalRegistros)}
@@ -158,16 +159,25 @@ export function VotacoesPanel({ profile }: VotacoesPanelProps) {
         <div className="mt-6 space-y-4">
           <div>
             <div className="mb-2 flex items-center justify-between text-sm font-medium text-slate-600">
-              <span>Presença em votações registradas</span>
-              <span>{profile.votacoes.presenca}%</span>
+              <span>Presença em Sessões Deliberativas</span>
+              <span>{profile.votacoes.presenca.taxa}%</span>
             </div>
             <div className="h-2 overflow-hidden rounded-full bg-slate-100">
               <div
                 className="h-full rounded-full bg-brasil-green"
-                style={{ width: `${profile.votacoes.presenca}%` }}
+                style={{ width: `${profile.votacoes.presenca.taxa}%` }}
               />
             </div>
           </div>
+        </div>
+
+        <div className="mt-4 flex gap-4 text-xs font-medium text-slate-500">
+          <span className="rounded-full bg-slate-100 px-3 py-1">
+            Total de eventos: {profile.votacoes.presenca.totalEventos}
+          </span>
+          <span className="rounded-full bg-red-50 text-red-600 px-3 py-1">
+            Faltas registradas: {profile.votacoes.presenca.faltas}
+          </span>
         </div>
 
         <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-600">
