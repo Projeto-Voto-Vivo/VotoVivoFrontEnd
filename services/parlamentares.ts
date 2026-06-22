@@ -1069,6 +1069,20 @@ export async function getProposicoesParlamentar(
   }
 }
 
+export async function getTodasProposicoesParlamentar(
+  id: number,
+): Promise<ProposicaoPerfil[]> {
+  const primeira = await getProposicoesParlamentar(id, 1);
+  const todas = [...primeira.data];
+
+  for (let pagina = 2; pagina <= primeira.meta.lastPage; pagina += 1) {
+    const proxima = await getProposicoesParlamentar(id, pagina);
+    todas.push(...proxima.data);
+  }
+
+  return todas;
+}
+
 export async function getResumoEmendasParlamentar(parlamentarId: number) {
   try {
     const res = await api.get(`/parlamentares/${parlamentarId}/emendas/resumo`);

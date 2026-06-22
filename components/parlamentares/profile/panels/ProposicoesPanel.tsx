@@ -1,13 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight, FileText, Loader2 } from 'lucide-react';
 
 import { ParlamentarPerfil, ProposicaoPerfil } from '@/types';
-import {
-  getProposicoesParlamentar,
-  ListaProposicoesResponse,
-} from '@/services/parlamentares';
+import { getTodasProposicoesParlamentar } from '@/services/parlamentares';
 import { MicroInfoCard } from '../shared/MicroInfoCard';
 import { SectionShell } from '../shared/SectionShell';
 
@@ -15,25 +12,18 @@ interface ProposicoesPanelProps {
   profile: ParlamentarPerfil;
 }
 
-const META_INICIAL: ListaProposicoesResponse['meta'] = {
-  total: 0,
-  page: 1,
-  lastPage: 1,
-  limit: 0,
-};
-
 const TIPOS = ['PL', 'PLP', 'PEC', 'REQ', 'RCP', 'PDC', 'MPV'];
+const ITENS_POR_PAGINA = 10;
 
 export function ProposicoesPanel({ profile }: ProposicoesPanelProps) {
-  const [proposicoesPagina, setProposicoesPagina] = useState<
+  const [todasProposicoes, setTodasProposicoes] = useState<
     ProposicaoPerfil[]
   >([]);
-  const [meta, setMeta] =
-    useState<ListaProposicoesResponse['meta']>(META_INICIAL);
 
   const [paginaAtual, setPaginaAtual] = useState(1);
   const [siglaSelecionada, setSiglaSelecionada] = useState('');
   const [anoSelecionado, setAnoSelecionado] = useState('');
+  const [situacaoSelecionada, setSituacaoSelecionada] = useState('');
   const [carregando, setCarregando] = useState(true);
 
   useEffect(() => {
@@ -43,21 +33,19 @@ export function ProposicoesPanel({ profile }: ProposicoesPanelProps) {
       setCarregando(true);
 
       try {
-        const response = await getProposicoesParlamentar(
+        const proposicoes = await getTodasProposicoesParlamentar(
           profile.parlamentar.id,
-          paginaAtual,
         );
 
         if (cancelado) return;
 
-        setProposicoesPagina(response.data);
-        setMeta(response.meta);
+        setTodasProposicoes(proposicoes);
+        setPaginaAtual(1);
       } catch (error) {
         console.error('Erro ao carregar proposições:', error);
 
         if (!cancelado) {
-          setProposicoesPagina([]);
-          setMeta(META_INICIAL);
+          setTodasProposicoes([]);
         }
       } finally {
         if (!cancelado) {
@@ -71,36 +59,75 @@ export function ProposicoesPanel({ profile }: ProposicoesPanelProps) {
     return () => {
       cancelado = true;
     };
-  }, [profile.parlamentar.id, paginaAtual]);
+  }, [profile.parlamentar.id]);
 
-  // O backend não suporta filtro por tipo/ano, então o filtro é aplicado
-  // apenas sobre os itens já carregados na página atual.
-  const proposicoes = proposicoesPagina.filter((proposicao) => {
-    if (siglaSelecionada && proposicao.sigla !== siglaSelecionada) {
-      return false;
-    }
+  const situacoesDisponiveis = useMemo(() => {
+    const unicas = new Set(
+      todasProposicoes
+        .map((proposicao) => proposicao.situacao)
+        .filter((situacao) => Boolean(situacao)),
+    );
 
-    if (anoSelecionado && proposicao.ano !== anoSelecionado) {
-      return false;
-    }
+    return Array.from(unicas).sort((a, b) => a.localeCompare(b));
+  }, [todasProposicoes]);
 
-    return true;
-  });
+  const proposicoesFiltradas = useMemo(() => {
+    return todasProposicoes.filter((proposicao) => {
+      if (siglaSelecionada && proposicao.sigla !== siglaSelecionada) {
+        return false;
+      }
+
+      if (anoSelecionado && proposicao.ano !== anoSelecionado) {
+        return false;
+      }
+
+      if (
+        situacaoSelecionada &&
+        proposicao.situacao !== situacaoSelecionada
+      ) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [todasProposicoes, siglaSelecionada, anoSelecionado, situacaoSelecionada]);
+
+  const totalPaginas = Math.max(
+    1,
+    Math.ceil(proposicoesFiltradas.length / ITENS_POR_PAGINA),
+  );
+  const paginaSegura = Math.min(paginaAtual, totalPaginas);
+
+  const proposicoes = proposicoesFiltradas.slice(
+    (paginaSegura - 1) * ITENS_POR_PAGINA,
+    paginaSegura * ITENS_POR_PAGINA,
+  );
 
   function mudarTipo(sigla: string) {
     setSiglaSelecionada(sigla);
+    setPaginaAtual(1);
   }
 
   function mudarAno(ano: string) {
     setAnoSelecionado(ano);
+    setPaginaAtual(1);
+  }
+
+  function mudarSituacao(situacao: string) {
+    setSituacaoSelecionada(situacao);
+    setPaginaAtual(1);
   }
 
   function limparFiltros() {
     setSiglaSelecionada('');
     setAnoSelecionado('');
+    setSituacaoSelecionada('');
+    setPaginaAtual(1);
   }
 
-  const filtroAtivo = Boolean(siglaSelecionada || anoSelecionado);
+  const filtroAtivo = Boolean(
+    siglaSelecionada || anoSelecionado || situacaoSelecionada,
+  );
 
   return (
     <div className="space-y-6">
@@ -110,7 +137,7 @@ export function ProposicoesPanel({ profile }: ProposicoesPanelProps) {
         description="Proposições legislativas vinculadas ao parlamentar."
       >
         <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-3">
             <label className="flex flex-col gap-1 text-sm font-semibold text-slate-600">
               Tipo
               <select
@@ -140,6 +167,23 @@ export function ProposicoesPanel({ profile }: ProposicoesPanelProps) {
                 className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700"
               />
             </label>
+
+            <label className="flex flex-col gap-1 text-sm font-semibold text-slate-600">
+              Situação
+              <select
+                value={situacaoSelecionada}
+                onChange={(event) => mudarSituacao(event.target.value)}
+                className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700"
+              >
+                <option value="">Todas as situações</option>
+
+                {situacoesDisponiveis.map((situacao) => (
+                  <option key={situacao} value={situacao}>
+                    {situacao}
+                  </option>
+                ))}
+              </select>
+            </label>
           </div>
 
           <div className="flex items-center gap-3">
@@ -156,21 +200,14 @@ export function ProposicoesPanel({ profile }: ProposicoesPanelProps) {
             {carregando && (
               <span className="inline-flex items-center gap-2 text-sm font-semibold text-brasil-blue">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Atualizando
+                Carregando todas as proposições
               </span>
             )}
           </div>
         </div>
 
-        {filtroAtivo && (
-          <p className="mt-2 text-xs text-slate-400">
-            O filtro se aplica apenas às proposições já carregadas nesta
-            página.
-          </p>
-        )}
-
         <div className="mt-5">
-          {carregando && proposicoes.length === 0 ? (
+          {carregando && todasProposicoes.length === 0 ? (
             <div className="rounded-3xl border border-slate-200 bg-slate-50 p-8 text-center text-sm text-slate-500">
               Carregando proposições...
             </div>
@@ -212,27 +249,26 @@ export function ProposicoesPanel({ profile }: ProposicoesPanelProps) {
           ) : (
             <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-6 text-sm text-slate-500">
               {filtroAtivo
-                ? 'Nenhuma proposição nesta página corresponde aos filtros selecionados.'
+                ? 'Nenhuma proposição corresponde aos filtros selecionados.'
                 : 'Nenhuma proposição encontrada.'}
             </div>
           )}
         </div>
 
-        {meta.total > 0 && (
+        {proposicoesFiltradas.length > 0 && (
           <div className="mt-5 flex flex-col gap-3 border-t border-slate-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-slate-500">
-              {filtroAtivo
-                ? `${proposicoes.length} de ${proposicoesPagina.length} nesta página correspondem ao filtro`
-                : `${(meta.page - 1) * meta.limit + 1}–${
-                    (meta.page - 1) * meta.limit + proposicoesPagina.length
-                  } de ${meta.total} proposições`}
+              {`${(paginaSegura - 1) * ITENS_POR_PAGINA + 1}–${
+                (paginaSegura - 1) * ITENS_POR_PAGINA + proposicoes.length
+              } de ${proposicoesFiltradas.length} proposições`}
+              {filtroAtivo && ` (de ${todasProposicoes.length} no total)`}
             </p>
 
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={() => setPaginaAtual((pagina) => pagina - 1)}
-                disabled={paginaAtual <= 1 || carregando}
+                disabled={paginaSegura <= 1 || carregando}
                 className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <ChevronLeft size={16} />
@@ -242,7 +278,7 @@ export function ProposicoesPanel({ profile }: ProposicoesPanelProps) {
               <button
                 type="button"
                 onClick={() => setPaginaAtual((pagina) => pagina + 1)}
-                disabled={paginaAtual >= meta.lastPage || carregando}
+                disabled={paginaSegura >= totalPaginas || carregando}
                 className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Próxima
