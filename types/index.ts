@@ -137,7 +137,7 @@ export interface PresencaDetalhe {
 }
 
 export interface VotacoesPerfil {
-  presenca: PresencaDetalhe;'
+  presenca: PresencaDetalhe;
   alinhamento: number | null;
   destaques: VotacaoPerfil[];
   leituraRapida: string;

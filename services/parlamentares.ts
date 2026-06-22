@@ -22,6 +22,8 @@ import {
 const PAGE_SIZE = 20;
 const DESPESAS_PAGE_SIZE = 5;
 const VOTACOES_PAGE_SIZE = 5;
+// Tamanho de página fixo no backend (não configurável via query string).
+const PROPOSICOES_PAGE_SIZE = 20;
 
 type TipoParlamentarFiltro = 'deputados' | 'senadores';
 
@@ -992,54 +994,81 @@ export async function getEmendasParlamentar(
 
 type BackendProposicaoPerfil = {
   id?: number;
-  apiId?: number;
-  idTipoProposicao?: number;
-  numero?: string | null;
+  sigla?: string | null;
+  numero?: string | number | null;
   ano?: number | null;
-  summary?: string | null;
-  currentStatus?: string | null;
+  ementa?: string | null;
+  situacao?: string | null;
+};
+
+export type ListaProposicoesResponse = {
+  data: ProposicaoPerfil[];
+  meta: {
+    total: number;
+    page: number;
+    lastPage: number;
+    limit: number;
+  };
 };
 
 export async function getProposicoesParlamentar(
   id: number,
-): Promise<ProposicaoPerfil[]> {
+  page = 1,
+): Promise<ListaProposicoesResponse> {
   try {
-    const res = await api.get(`/parlamentares/${id}/proposicoes`);
+    // O backend só aceita "pagina" e devolve um tamanho de página fixo
+    // (PROPOSICOES_PAGE_SIZE); ele ignora filtros e limites customizados.
+    const res = await api.get(
+      `/parlamentares/${id}/proposicoes?pagina=${page}`,
+    );
 
-    console.log('PROPOSIÇÕES RECEBIDAS DA API:', res.data);
+    const payload = res.data as BackendPaginated<BackendProposicaoPerfil>;
+    const list = Array.isArray(payload?.data) ? payload.data : [];
+    const meta = payload?.meta;
 
-    const list = Array.isArray(res.data)
-      ? (res.data as BackendProposicaoPerfil[])
-      : [];
+    return {
+      data: list.map((item, index) => {
+        const propositionId = item.id ?? index + 1;
+        const sigla = item.sigla?.trim() || 'Proposição';
+        const numero = String(item.numero ?? 'S/N');
+        const ano = String(item.ano ?? 'Não informado');
 
-    return list.map((item, index) => {
-      const propositionId = item.id ?? item.apiId ?? index;
-      const numero = item.numero ?? 'S/N';
-      const ano = item.ano ? String(item.ano) : 'Ano não informado';
-      const resumo = item.summary ?? 'Resumo não informado';
-      const situacao = item.currentStatus ?? 'Situação não informada';
-      const tipo = `Tipo ${item.idTipoProposicao ?? 'não informado'}`;
-
-      return {
-        id: String(propositionId),
-        sigla: tipo,
-        numero,
-        ano,
-        titulo: `Proposição ${numero}/${ano}`,
-        resumo,
-        papel: 'Autor',
-        situacao,
-        tema: tipo,
-        impactoCidadao:
-          'Esta proposição está vinculada à atuação parlamentar registrada no banco de dados.',
-        data: '',
-      };
-    });
+        return {
+          id: String(propositionId),
+          sigla,
+          numero,
+          ano,
+          titulo: `${sigla} ${numero}/${ano}`,
+          resumo: item.ementa?.trim() || 'Ementa não informada',
+          papel: 'Autor',
+          situacao: item.situacao?.trim() || 'Situação não informada',
+          tema: sigla,
+          impactoCidadao: '',
+          data: '',
+        };
+      }),
+      meta: {
+        total: Number(meta?.total ?? list.length),
+        page: Number(meta?.page ?? page),
+        lastPage: Number(meta?.lastPage ?? 1),
+        limit: Number(meta?.limit ?? PROPOSICOES_PAGE_SIZE),
+      },
+    };
   } catch (error) {
-    console.error('Erro ao buscar proposições do parlamentar', error);
-    return [];
+    console.error('Erro ao buscar proposições do parlamentar:', error);
+
+    return {
+      data: [],
+      meta: {
+        total: 0,
+        page,
+        lastPage: 1,
+        limit: PROPOSICOES_PAGE_SIZE,
+      },
+    };
   }
 }
+
 export async function getResumoEmendasParlamentar(parlamentarId: number) {
   try {
     const res = await api.get(`/parlamentares/${parlamentarId}/emendas/resumo`);
@@ -1071,12 +1100,18 @@ export async function getParlamentarProfile(
     return null;
   }
 
-  const [despesas, emendasLista, resumoEmendas, votacoesPerfil, proposicoesApi] = await Promise.all([
+  const [
+    despesas,
+    emendasLista,
+    resumoEmendas,
+    votacoesPerfil,
+    proposicoesResponse,
+  ] = await Promise.all([
     getDespesasPerfil(id),
     getEmendasParlamentar(id),
     getResumoEmendasParlamentar(id),
     getVotacoesPerfil(id),
-    getProposicoesParlamentar(id), 
+    getProposicoesParlamentar(id, 1),
   ]);
 
   const parlamentar = detalheApi;
@@ -1117,7 +1152,7 @@ export async function getParlamentarProfile(
     },
     {
       titulo: 'Proposições acompanhadas',
-      valor: `${proposicoesApi.length}`, 
+      valor: `${proposicoesResponse.meta.total}`,
       apoio: 'registros legislativos vinculados',
       destaque: 'neutro',
     },
@@ -1156,7 +1191,7 @@ export async function getParlamentarProfile(
     temasPrioritarios,
     comissoes,
     indicadores,
-    proposicoes: proposicoesApi, 
+    proposicoes: proposicoesResponse.data,
     votacoes: votacoesPerfil,
     despesas, 
     emendas,
