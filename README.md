@@ -4,6 +4,25 @@ Frontend em Next.js para consulta e visualização de dados públicos do Legisla
 
 A aplicação apresenta informações de forma organizada, responsiva e consumindo dados da API do VotoVivo para apoiar a navegação por indicadores e registros relacionados à atuação parlamentar.
 
+## Funcionalidades
+* Página inicial com busca e destaques
+* Consulta de parlamentares (Câmara e Senado)
+* Perfil detalhado de parlamentar
+* Visualização de:
+  * Emendas parlamentares
+  * Proposições
+  * Votações
+  * Despesas
+* Integração com API própria
+
+## Tecnologias utilizadas
+
+- [Next.js 15](https://nextjs.org/) (App Router)
+- [TypeScript](https://www.typescriptlang.org/)
+- [Tailwind CSS](https://tailwindcss.com/)
+- [ESLint](https://eslint.org/)
+- [Docker](https://www.docker.com/) (para produção)
+
 ## Requisitos
 
 * Node.js 20.9+ recomendado
@@ -58,89 +77,109 @@ NEXT_PUBLIC_API_URL
 └── README.md
 ```
 
-## O que vai em cada pasta
+
+## 📂 O que vai em cada pasta
 
 ### `app/`
 
-Define as rotas e páginas da aplicação.
+Define as rotas e páginas da aplicação usando o **App Router** do Next.js.
 
-* `page.tsx`: página de uma rota.
-* `layout.tsx`: layout compartilhado.
-* `globals.css`: estilos globais.
-* Exemplo:
+- `page.tsx`: página de uma rota
+- `layout.tsx`: layout compartilhado
+- `globals.css`: estilos globais
 
-  * `app/page.tsx` → home
-  * `app/parlamentares/page.tsx` → listagem de parlamentares
-  * `app/parlamentares/[id]/page.tsx` → perfil de um parlamentar
-  * `app/parlamentares/[id]/emendas/[codigoEmenda]/page.tsx` → detalhe de emenda
+Exemplos:
 
-## `components/`
+| Rota                              | Caminho no arquivo                      |
+|-----------------------------------|-----------------------------------------|
+| Home                              | `app/page.tsx`                          |
+| Listagem de parlamentares         | `app/parlamentares/page.tsx`            |
+| Perfil de um parlamentar           | `app/parlamentares/[id]/page.tsx`       |
+| Detalhe de emenda                 | `app/parlamentares/[id]/emendas/[idEmenda]/page.tsx` |
+| Página de educação                | `app/educacao/page.tsx`                 |
+| Página do projeto                 | `app/projeto/page.tsx`                  |
+
+### `components/`
 
 Guarda componentes reutilizáveis da interface.
 
-### `components/home/`
+#### `components/home/`
 
-Contém componentes usados na página inicial.
+Componentes usados na página inicial:
 
-* `HeroSearch.tsx`: seção principal de busca da home.
-* `Destaques.tsx`: bloco de destaques da página inicial.
-* `ParlamentarCard.tsx`: card usado para exibir parlamentares em listas.
+- `HeroSearch.tsx`: seção principal de busca
+- `Destaques.tsx`: bloco de destaques
+- `ParlamentarCard.tsx`: card para exibir parlamentares em listas
+- `BrasilHeroMap.tsx`: mapa interativo da home
 
-### `components/layout/`
+#### `components/layout/`
 
-Contém componentes estruturais compartilhados.
+Componentes estruturais compartilhados:
 
-* `HeaderLayout.tsx`: cabeçalho reutilizável para navegação e identidade visual da aplicação.
+- `HeaderLayout.tsx`: cabeçalho reutilizável
+- `FooterLayout.tsx`: rodapé da aplicação
+- `BrowserLoadingTitle.tsx`: título durante carregamento
 
-## `components/parlamentares/`
+#### `components/parlamentares/`
 
-Agrupa os componentes relacionados ao domínio de parlamentares.
+Componentes relacionados ao domínio de parlamentares.
 
-### `components/parlamentares/emendas/`
+##### `components/parlamentares/emendas/`
 
-* `EmendaDetailPage.tsx`: componente visual da tela de detalhe de emenda.
+- `EmendaDetailPage.tsx`: detalhe visual de emenda
 
-### `components/parlamentares/profile/`
+##### `components/parlamentares/profile/`
 
-Contém a composição visual da página de perfil do parlamentar.
+Composição visual da página de perfil:
 
-* `ParlamentarProfilePage.tsx`: estrutura principal da tela de perfil.
-* `ParlamentarHero.tsx`: seção de topo do perfil.
-* `ParlamentarIndicators.tsx`: indicadores resumidos do perfil.
-* `ParlamentarPanels.tsx`: controlador dos painéis visíveis na área principal.
+- `ParlamentarProfilePage.tsx`: estrutura principal
+- `ParlamentarHero.tsx`: seção de topo
+- `ParlamentarIndicators.tsx`: indicadores resumidos
+- `ParlamentarPanels.tsx`: controlador dos painéis
 
-### `components/parlamentares/profile/panels/`
+##### `components/parlamentares/profile/panels/`
 
-Cada arquivo representa uma aba ou painel do perfil.
+Painéis/abas do perfil:
 
-* `VisaoGeralPanel.tsx`: visão geral da atuação parlamentar.
-* `ProposicoesPanel.tsx`: proposições e matérias relacionadas.
-* `EmendasPanel.tsx`: emendas parlamentares e links para detalhes.
-* `VotacoesPanel.tsx`: votações, posicionamentos e resultados.
-* `DespesasPanel.tsx`: resumo e registros de despesas.
+- `VisaoGeralPanel.tsx`: visão geral
+- `ProposicoesPanel.tsx`: proposições e matérias
+- `EmendasPanel.tsx`: emendas parlamentares
+- `VotacoesPanel.tsx`: votações e posicionamentos
+- `DespesasPanel.tsx`: registros de despesas
 
-### `components/parlamentares/profile/shared/`
+##### `components/parlamentares/profile/shared/`
 
-Componentes e utilitários compartilhados entre os painéis.
+Componentes e utilitários compartilhados:
 
-* `MicroInfoCard.tsx`: card pequeno de informação resumida.
-* `PanelButton.tsx`: botão para alternar entre painéis.
-* `SectionShell.tsx`: estrutura visual padrão para seções.
-* `formatters.ts`: funções de formatação de dados, como moeda e data.
+- `MicroInfoCard.tsx`: card pequeno de informação
+- `PanelButton.tsx`: botão para alternar painéis
+- `SectionShell.tsx`: estrutura visual padrão
+- `formatters.ts`: formatação de moeda e data
 
-## `services/`
+#### `components/projeto/`
 
-Centraliza chamadas à API e montagem de dados consumidos pela interface.
+- `ProjetoSection.tsx`: seção relacionada ao projeto
 
-* `api.ts`: configuração base do cliente HTTP.
-* `parlamentares.ts`: funções relacionadas à consulta de parlamentares e seus dados associados.
+### `services/`
 
-## `types/`
+Centraliza chamadas à API:
 
-Centraliza interfaces e tipos TypeScript usados no projeto.
+- `api.ts`: configuração base do cliente HTTP
+- `parlamentares.ts`: funções para consulta de parlamentares e dados associados
 
-* Exemplo: `Parlamentar`, `ParlamentarPerfil`, `EmendaDetalhe`, `Despesa`.
+### `types/`
 
-## Objetivo
+Interfaces e tipos TypeScript:
 
-O VotoVivo busca tornar dados legislativos mais compreensíveis para o cidadão, reunindo informações públicas em uma interface simples, moderna e de fácil navegação.
+- `Parlamentar`
+- `ParlamentarPerfil`
+- `EmendaDetalhe`
+- `Despesa`
+
+### `public/`
+
+Imagens e arquivos estáticos:
+
+- Imagens do sistema eleitoral (`icone-eleitoral-majoritatio.png`, `icone-eleitoral-proporcional.png`)
+- Ícone de informação (`info-sistema-eleitoral.png`)
+
