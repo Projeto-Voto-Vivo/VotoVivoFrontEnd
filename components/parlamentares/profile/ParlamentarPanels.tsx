@@ -61,13 +61,13 @@ export function ParlamentarPanels({ profile }: ParlamentarPanelsProps) {
   return (
     <>
       <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-        <div className="border-b border-slate-100 bg-gradient-to-r from-brasil-blue/5 via-white to-brasil-green/5 p-5 md:p-6">
+        <div className="border-b border-slate-100 bg-gradient-to-r from-brasil-blue/5 via-white to-brasil-green/5 p-4 md:p-6">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-400">
                 Painéis do perfil
               </p>
-              <h2 className="mt-2 text-2xl font-bold text-slate-900">
+              <h2 className="mt-1 text-xl font-bold text-slate-900 md:mt-2 md:text-2xl">
                 Dados do mandato
               </h2>
             </div>
@@ -78,7 +78,24 @@ export function ParlamentarPanels({ profile }: ParlamentarPanelsProps) {
           </div>
         </div>
 
-        <div className="grid gap-3 p-5 md:grid-cols-2 md:p-6 xl:grid-cols-5">
+        {/* Mobile: tab bar com scroll horizontal */}
+        <div className="md:hidden">
+          <div className="flex overflow-x-auto border-b border-slate-100 px-2 scrollbar-none">
+            {panelOptions.map((panel) => (
+              <PanelButton
+                key={panel.key}
+                active={activePanel === panel.key}
+                icon={panel.icon}
+                label={panel.label}
+                onClick={() => setActivePanel(panel.key)}
+                compact
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Desktop: grid de cards */}
+        <div className="hidden gap-3 p-5 md:grid md:grid-cols-2 md:p-6 xl:grid-cols-5">
           {panelOptions.map((panel) => (
             <PanelButton
               key={panel.key}

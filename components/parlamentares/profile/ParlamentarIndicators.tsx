@@ -14,17 +14,20 @@ export function ParlamentarIndicators({
   indicadores,
 }: ParlamentarIndicatorsProps) {
   return (
-    <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
       {indicadores.map((indicador) => (
         <div
           key={indicador.titulo}
-          className={`relative overflow-hidden rounded-3xl border p-5 shadow-sm ${indicatorStyles(indicador.destaque)}`}
+          className={`relative overflow-hidden rounded-3xl border p-4 shadow-sm md:p-5 ${indicatorStyles(indicador.destaque)}`}
         >
           <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-brasil-blue via-brasil-green to-brasil-yellow" />
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400 md:text-[11px]">
             {indicador.titulo}
           </p>
-          <p className="mt-4 text-3xl font-bold text-slate-900">{indicador.valor}</p>
+          <p className="mt-3 text-2xl font-bold text-slate-900 md:mt-4 md:text-3xl">{indicador.valor}</p>
+          {indicador.apoio && (
+            <p className="mt-1 text-xs text-slate-500">{indicador.apoio}</p>
+          )}
         </div>
       ))}
     </section>

@@ -273,43 +273,41 @@ export function DespesasPanel({ profile }: DespesasPanelProps) {
         title={anoParaListagem ? `Registros de ${anoParaListagem}` : 'Registros de despesas'}
       >
         {hasItens ? (
-					<div className="grid gap-3">
-              {itens.map((item, index) => (
-                <div
-                  key={`${item.data}-${item.fornecedor}-${item.valor}-${index}`}
-                  className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
-                >
-                <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                  <div>
-                    <p className="font-semibold text-slate-900">{item.tipo}</p>
-                    <p className="mt-1 text-sm text-slate-600">{item.fornecedor}</p>
-                    <p className="mt-1 text-xs font-medium uppercase tracking-[0.16em] text-slate-400">
-                      {formatDate(item.data)}
-                    </p>
-                  </div>
-
-                  <div className="text-left md:text-right">
-                    <p className="text-lg font-bold text-slate-900">
-                      {formatCurrency(item.valor)}
-                    </p>
-                    {item.urlDocumento ? (
-                      <a
-                        href={item.urlDocumento}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="mt-2 inline-flex items-center gap-2 rounded-full border border-brasil-blue/20 bg-white px-3 py-1 text-xs font-semibold text-brasil-blue transition hover:border-brasil-blue hover:bg-brasil-blue hover:text-white"
-                      >
-                        <ExternalLink size={14} />
-                        Abrir documento
-                      </a>
-                    ) : (
-                      <span className="mt-2 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-500">
-                        <Receipt size={14} />
-                        {item.documentoLabel}
-                      </span>
-                    )}
-                  </div>
+          <div className="grid gap-3">
+            {itens.map((item, index) => (
+              <div
+                key={`${item.data}-${item.fornecedor}-${item.valor}-${index}`}
+                className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+              >
+                {/* Linha superior: valor em destaque + link de documento */}
+                <div className="mb-3 flex items-start justify-between gap-3">
+                  <p className="text-lg font-bold text-slate-900">
+                    {formatCurrency(item.valor)}
+                  </p>
+                  {item.urlDocumento ? (
+                    <a
+                      href={item.urlDocumento}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-brasil-blue/20 bg-white px-3 py-1 text-xs font-semibold text-brasil-blue transition hover:border-brasil-blue hover:bg-brasil-blue hover:text-white"
+                    >
+                      <ExternalLink size={12} />
+                      Documento
+                    </a>
+                  ) : (
+                    <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-500">
+                      <Receipt size={12} />
+                      {item.documentoLabel}
+                    </span>
+                  )}
                 </div>
+
+                {/* Linha inferior: tipo, fornecedor e data */}
+                <p className="font-semibold text-slate-900">{item.tipo}</p>
+                <p className="mt-0.5 text-sm text-slate-600">{item.fornecedor}</p>
+                <p className="mt-1 text-xs font-medium uppercase tracking-[0.16em] text-slate-400">
+                  {formatDate(item.data)}
+                </p>
               </div>
             ))}
           </div>

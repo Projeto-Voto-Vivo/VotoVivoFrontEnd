@@ -46,3 +46,13 @@ body {
     transform: translateX(320%);
   }
 }
+
+/* Esconde a scrollbar visualmente mas mantém o scroll funcional */
+.scrollbar-none {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}

@@ -91,7 +91,7 @@ export default async function ParlamentaresPage({
         </header>
 
         <section className="mb-6 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
-          <nav className="grid gap-2 md:grid-cols-3" aria-label="Tipo de parlamentar">
+          <nav className="grid grid-cols-3 gap-2" aria-label="Tipo de parlamentar">
             {filtrosTipo.map((item) => {
               const active = item.value === tipo;
 
@@ -99,7 +99,7 @@ export default async function ParlamentaresPage({
                 <Link
                   key={item.label}
                   href={buildTipoHref(item.value)}
-                  className={`rounded-xl px-4 py-3 text-sm font-semibold transition ${
+                  className={`rounded-xl px-2 py-2.5 text-center text-xs font-semibold transition sm:px-4 sm:py-3 sm:text-sm ${
                     active
                       ? 'bg-brasil-blue text-white shadow-sm'
                       : 'text-slate-600 hover:bg-blue-50 hover:text-brasil-blue'
@@ -113,7 +113,7 @@ export default async function ParlamentaresPage({
         </section>
 
         <section className="mb-8 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <form className="grid grid-cols-1 gap-4 md:grid-cols-4">
+          <form className="grid grid-cols-2 gap-3 md:grid-cols-4">
             {tipo && <input type="hidden" name="tipo" value={tipo} />}
 
             <input
@@ -121,7 +121,7 @@ export default async function ParlamentaresPage({
               name="nome"
               placeholder="Buscar por nome"
               defaultValue={nome}
-              className="rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none ring-0 focus:border-brasil-blue"
+              className="col-span-2 rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none ring-0 focus:border-brasil-blue md:col-span-1"
             />
 
             <input
@@ -142,7 +142,7 @@ export default async function ParlamentaresPage({
 
             <button
               type="submit"
-              className="rounded-xl bg-brasil-blue px-4 py-3 text-sm font-semibold text-white transition hover:opacity-90"
+              className="col-span-2 rounded-xl bg-brasil-blue px-4 py-3 text-sm font-semibold text-white transition hover:opacity-90 md:col-span-1"
             >
               Filtrar
             </button>
@@ -169,7 +169,7 @@ export default async function ParlamentaresPage({
             Nenhum parlamentar encontrado para os filtros informados.
           </div>
         ) : (
-          <section className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <section className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4">
             {data.map((parlamentar) => (
               <ParlamentarCard key={parlamentar.id} parlamentar={parlamentar} />
             ))}
