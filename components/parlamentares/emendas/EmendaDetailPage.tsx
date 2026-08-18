@@ -172,7 +172,7 @@ export function EmendaDetailPage({ emenda }: EmendaDetailPageProps) {
                             </p>
                           </div>
                           {documento.urlPortal ? (
-                            <Link
+                            <a
                               href={documento.urlPortal}
                               target="_blank"
                               rel="noreferrer"
@@ -180,7 +180,7 @@ export function EmendaDetailPage({ emenda }: EmendaDetailPageProps) {
                             >
                               <ExternalLink size={12} />
                               Portal
-                            </Link>
+                            </a>
                           ) : (
                             <span className="text-slate-400">—</span>
                           )}
@@ -225,7 +225,7 @@ export function EmendaDetailPage({ emenda }: EmendaDetailPageProps) {
                             </td>
                             <td className="whitespace-nowrap px-4 py-4">
                               {documento.urlPortal ? (
-                                <Link
+                                <a
                                   href={documento.urlPortal}
                                   target="_blank"
                                   rel="noreferrer"
@@ -233,7 +233,7 @@ export function EmendaDetailPage({ emenda }: EmendaDetailPageProps) {
                                 >
                                   <ExternalLink size={12} />
                                   Abrir no Portal
-                                </Link>
+                                </a>
                               ) : (
                                 <span className="text-slate-400">—</span>
                               )}
