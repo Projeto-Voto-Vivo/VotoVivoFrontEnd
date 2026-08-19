@@ -1,5 +1,9 @@
 import type { NextConfig } from "next";
 
+const backendBaseUrl = process.env.BACKEND_INTERNAL_URL 
+  ? process.env.BACKEND_INTERNAL_URL.replace(/\/+$/, '') 
+  : 'http://localhost:3001';
+
 const nextConfig: NextConfig = {
   output: "standalone",
   images: {
@@ -14,10 +18,11 @@ const nextConfig: NextConfig = {
     return [
       {
         source: '/api/proxy/:path*',
-        destination: process.env.BACKEND_INTERNAL_URL || 'http://localhost:3001/:path*', 
+        destination: `${backendBaseUrl}/:path*`,
       },
     ];
   },
 };
 
 export default nextConfig;
+;
