@@ -560,7 +560,7 @@ function formatVotingType(type?: string | null) {
   return labels[normalized] || type || 'Votação';
 }
 
-function formatCasa(casa?: string | null) {
+export function formatCasa(casa?: string | null) {
   const normalized = normalizeToken(casa);
   if (!normalized) return null;
   if (normalized.includes('SENADO')) return 'Senado Federal';

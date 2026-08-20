@@ -299,6 +299,127 @@ export interface EmendaDetalhe extends EmendaResumoPerfil {
   nomeParlamentar: string;
 }
 
+/* ------------------------------------------------------------------ *
+ * Tramitação de proposições
+ * ------------------------------------------------------------------ */
+
+/** Referência curta a outra proposição (jornada bicameral, apensados). */
+export interface ProposicaoRef {
+  id: number;
+  casa: string | null;
+  sigla: string | null;
+  numero: string | null;
+  ano: number | null;
+  titulo: string;
+}
+
+export interface OrgaoTramitacao {
+  id: number | null;
+  sigla: string | null;
+  nome: string | null;
+  tipoOrgao: string | null;
+  casa: string | null;
+}
+
+/** Um passo do caminho da proposição (tabela `tramitacao`). */
+export interface EtapaTramitacao {
+  id: string;
+  sequencia: number | null;
+  data: string | null;
+  orgao: OrgaoTramitacao | null;
+  descricao: string | null;
+  situacao: string | null;
+  despacho: string | null;
+  regime: string | null;
+}
+
+/** Agregado derivado das etapas: por onde a proposição passou e quando. */
+export interface PassagemPorOrgao {
+  chave: string;
+  orgao: OrgaoTramitacao;
+  etapas: number;
+  primeiraData: string | null;
+  ultimaData: string | null;
+}
+
+export interface PlacarVotacao {
+  sim: number;
+  nao: number;
+  abstencao: number;
+  obstrucao: number;
+  ausenciaJustificada: number;
+  ausente: number;
+  naoRegistrado: number;
+  total: number;
+}
+
+export interface OrientacaoBancada {
+  bancada: string;
+  orientacao: string;
+}
+
+export interface VotacaoProposicao {
+  id: number;
+  casa: string | null;
+  data: string | null;
+  resumo: string;
+  resultado: string;
+  tipo: string;
+  /** `null` quando o detalhe da votação não foi carregado ou não tem votos. */
+  placar: PlacarVotacao | null;
+  orientacoes: OrientacaoBancada[];
+  /** Detalhe não buscado (limite de requisições) — não confundir com "sem votos". */
+  detalheCarregado: boolean;
+}
+
+export interface AutorProposicao {
+  id: number | null;
+  nome: string;
+  siglaPartido: string | null;
+  uf: string | null;
+  urlFoto: string | null;
+}
+
+export interface DocumentoProposicao {
+  id: string;
+  titulo: string;
+  tipo: string | null;
+  data: string | null;
+  url: string | null;
+}
+
+export interface JornadaProposicao {
+  mesmaMateria: ProposicaoRef[];
+  principal: ProposicaoRef | null;
+  anteriores: ProposicaoRef[];
+  posteriores: ProposicaoRef[];
+}
+
+export interface ProposicaoDetalhe {
+  id: number;
+  apiId: string | null;
+  casa: string | null;
+  sigla: string | null;
+  numero: string | null;
+  ano: number | null;
+  titulo: string;
+  ementa: string;
+  situacao: string | null;
+  dataApresentacao: string | null;
+  temas: string[];
+  autores: AutorProposicao[];
+  /** Ordenadas da mais antiga para a mais recente. */
+  tramitacao: EtapaTramitacao[];
+  /** `false` = a API ainda não publica o histórico (≠ "não tramitou"). */
+  tramitacaoDisponivel: boolean;
+  orgaosPercorridos: PassagemPorOrgao[];
+  votacoes: VotacaoProposicao[];
+  documentos: DocumentoProposicao[];
+  documentosDisponiveis: boolean;
+  jornada: JornadaProposicao;
+  urlFonteOficial: string | null;
+}
+
 export const UFs = [
   'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA',
   'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN',

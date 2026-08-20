@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, FileText, Loader2 } from 'lucide-react';
+import Link from 'next/link';
+import { ArrowRight, ChevronLeft, ChevronRight, FileText, Loader2 } from 'lucide-react';
 
 import { ParlamentarPerfil, ProposicaoPerfil } from '@/types';
 import { getTodasProposicoesParlamentar } from '@/services/parlamentares';
@@ -287,6 +288,16 @@ export function ProposicoesPanel({ profile }: ProposicoesPanelProps) {
                           : String(proposicao.ano)
                       }
                     />
+                  </div>
+
+                  <div className="mt-5 flex justify-end">
+                    <Link
+                      href={`/proposicoes/${proposicao.id}`}
+                      className="inline-flex items-center gap-2 rounded-xl bg-brasil-blue px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
+                    >
+                      Ver tramitação
+                      <ArrowRight size={16} />
+                    </Link>
                   </div>
                 </article>
               ))}
