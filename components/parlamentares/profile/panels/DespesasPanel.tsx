@@ -11,7 +11,11 @@ import {
   Wallet,
 } from 'lucide-react';
 import { DespesasPerfil, ItemDespesaPerfil, ParlamentarPerfil } from '@/types';
-import { getDespesasParlamentar, getDespesasPerfil } from '@/services/parlamentares';
+import {
+  getDespesasParlamentar,
+  getDespesasPerfil,
+  parseMoney,
+} from '@/services/parlamentares';
 import { MicroInfoCard } from '../shared/MicroInfoCard';
 import { SectionShell } from '../shared/SectionShell';
 import { formatCurrency, formatDate } from '../shared/formatters';
@@ -24,11 +28,12 @@ const ANOS_FILTRO = Array.from(
   new Set([new Date().getFullYear(), 2026, 2025, 2024, 2023, 2022]),
 ).sort((a, b) => b - a);
 
-function valueOrDash(value: number) {
+/** `null` e 0 são coisas diferentes: sem dado não é gasto zero. */
+function valueOrDash(value: number | null) {
+  if (value === null || value === undefined) return 'Sem dados';
   return value > 0 ? formatCurrency(value) : '—';
 }
 
-const DESPESAS_PAGE_SIZE = 5;
 const CATEGORIAS_GRAFICO_MAX = 6;
 
 function mapDespesaToItem(
@@ -40,7 +45,7 @@ function mapDespesaToItem(
     data: item.data || '',
     tipo: item.tipo || 'Tipo não informado',
     fornecedor: item.fornecedor || 'Fornecedor não informado',
-    valor: Number(item.valor ?? 0),
+    valor: parseMoney(item.valor),
     documentoLabel: item.urlDocumento
       ? `Documento ${offset + index + 1}`
       : `Registro ${offset + index + 1}`,
@@ -148,6 +153,7 @@ export function DespesasPanel({ profile }: DespesasPanelProps) {
         totalRegistros: response.meta.total,
         paginaAtual: response.meta.page,
         totalPaginas: response.meta.lastPage,
+        itensPorPagina: response.meta.limit,
       }));
     } finally {
       setCarregando(false);
@@ -156,7 +162,9 @@ export function DespesasPanel({ profile }: DespesasPanelProps) {
 
   const hasResumo = despesas.totalAno > 0 || despesas.categorias.length > 0;
   const hasItens = itens.length > 0;
-  const inicioPagina = hasItens ? (paginaAtual - 1) * DESPESAS_PAGE_SIZE + 1 : 0;
+  // O tamanho da página é o que o backend informou em `meta.limit`.
+  const itensPorPagina = despesas.itensPorPagina || itens.length || 1;
+  const inicioPagina = hasItens ? (paginaAtual - 1) * itensPorPagina + 1 : 0;
   const fimPagina = hasItens ? Math.min(inicioPagina + itens.length - 1, despesas.totalRegistros) : 0;
 
   return (
@@ -203,7 +211,14 @@ export function DespesasPanel({ profile }: DespesasPanelProps) {
         ) : (
           <div className="mt-5 grid gap-3 md:grid-cols-3">
             <MicroInfoCard label={`Total no ${rotuloAnoResumo}`} value={valueOrDash(despesas.totalAno)} />
-            <MicroInfoCard label={`Média mensal no ${rotuloAnoResumo}`} value={valueOrDash(despesas.mediaMensal)} />
+            <MicroInfoCard
+              label={
+                despesas.mesesConsiderados
+                  ? `Média mensal (${despesas.mesesConsiderados} ${despesas.mesesConsiderados === 1 ? 'mês' : 'meses'} com dados)`
+                  : `Média mensal no ${rotuloAnoResumo}`
+              }
+              value={valueOrDash(despesas.mediaMensal)}
+            />
             <MicroInfoCard
               label={`Maior reembolso no ${rotuloAnoResumo}`}
               value={valueOrDash(despesas.maiorReembolso)}

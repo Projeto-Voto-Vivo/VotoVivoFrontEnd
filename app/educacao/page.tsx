@@ -10,6 +10,52 @@ import {
 } from 'lucide-react';
 
 
+/**
+ * Valores de referência do custo de um parlamentar.
+ *
+ * Estão fixos no código e por isso envelhecem: cada um traz a fonte oficial e
+ * a data da última revisão editorial. O ideal, quando o backend expuser um
+ * endpoint de parâmetros (salário, CEAP, verba de gabinete), é servi-los do
+ * banco em vez de manter estes literais.
+ */
+const REVISAO_CUSTOS = 'agosto de 2026';
+
+const FONTES_CUSTOS = {
+  salario: {
+    rotulo: 'Subsídio fixado por decreto legislativo',
+    url: 'https://www.camara.leg.br/transparencia/remuneracao-e-verbas',
+  },
+  gabinete: {
+    rotulo: 'Verba de gabinete — atos das Mesas da Câmara e do Senado',
+    url: 'https://www12.senado.leg.br/transparencia',
+  },
+  cota: {
+    rotulo: 'Cota para o Exercício da Atividade Parlamentar (CEAP/CEAPS)',
+    url: 'https://www.camara.leg.br/transparencia/gastos-parlamentares',
+  },
+  beneficios: {
+    rotulo: 'Auxílio-moradia e demais benefícios — portais de transparência',
+    url: 'https://www.camara.leg.br/transparencia/remuneracao-e-verbas',
+  },
+} as const;
+
+function FonteValor({ fonte }: { fonte: { rotulo: string; url: string } }) {
+  return (
+    <p className="mt-3 text-[11px] leading-4 text-slate-400">
+      Fonte:{' '}
+      <a
+        href={fonte.url}
+        target="_blank"
+        rel="noreferrer"
+        className="underline decoration-slate-300 underline-offset-2 hover:text-slate-600"
+      >
+        {fonte.rotulo}
+      </a>
+      . Revisado em {REVISAO_CUSTOS}.
+    </p>
+  );
+}
+
 export default function EducativoPage() {
   const [activeTab, setActiveTab] = useState(0);
   const menuItems = [
@@ -549,6 +595,11 @@ export default function EducativoPage() {
                   <h2 className="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-green-400 leading-none">
                     R$ 200 mil a R$ 500 mil+
                   </h2>
+                  <p className="mt-3 max-w-xs text-[11px] leading-4 text-slate-400 md:ml-auto">
+                    Soma dos itens detalhados abaixo (salário, gabinete, cota e
+                    benefícios). Estimativa, não um valor publicado como total
+                    por nenhuma das casas.
+                  </p>
                 </div>
               </div>
 
@@ -564,6 +615,7 @@ export default function EducativoPage() {
                 <p className="text-xs text-slate-500 leading-relaxed font-medium">
                   Remuneração base mensal igual para deputados e senadores.
                 </p>
+                <FonteValor fonte={FONTES_CUSTOS.salario} />
               </div>
 
               {/* EQUIPE GABINETE */}
@@ -587,6 +639,7 @@ export default function EducativoPage() {
                 <p className="text-xs text-slate-500 mt-4 leading-relaxed font-medium">
                   Pagamento de funcionários e assessores do gabinete.
                 </p>
+                <FonteValor fonte={FONTES_CUSTOS.gabinete} />
               </div>
 
               {/* COTA PARLAMENTAR */}
@@ -599,8 +652,10 @@ export default function EducativoPage() {
                 </div>
                 <h4 className="text-3xl font-black text-slate-900 mb-2">R$ 21 mil a R$ 58 mil</h4>
                 <p className="text-xs text-slate-500 leading-relaxed font-medium">
-                  Transporte, escritório, serviços e atividades do mandato.
+                  Transporte, escritório, serviços e atividades do mandato. O
+                  valor varia conforme a distância do estado até Brasília.
                 </p>
+                <FonteValor fonte={FONTES_CUSTOS.cota} />
               </div>
 
               {/* BENEFÍCIOS */}
@@ -615,9 +670,19 @@ export default function EducativoPage() {
                 <p className="text-xs text-slate-500 leading-relaxed font-medium">
                   Inclui auxílio-moradia, saúde e ajuda de custo.
                 </p>
+                <FonteValor fonte={FONTES_CUSTOS.beneficios} />
               </div>
 
             </div>
+
+            <p className="mt-6 rounded-2xl border border-slate-200 bg-white px-5 py-4 text-xs leading-5 text-slate-500">
+              Os valores acima são de referência e foram revisados em{' '}
+              {REVISAO_CUSTOS}. Reajustes, atos das Mesas e decisões judiciais
+              alteram esses montantes ao longo do tempo — confira sempre o valor
+              vigente nos portais de transparência da Câmara e do Senado. Os
+              gastos efetivamente executados por cada parlamentar estão no
+              painel de despesas do respectivo perfil.
+            </p>
           </section>
 
           {/* EMENDAS */}
@@ -740,7 +805,7 @@ export default function EducativoPage() {
                     </h3>
                     <p className="text-sm text-slate-600 mb-6 leading-relaxed">
                       Originalmente usadas para ajustes orçamentários, tornaram-se controversas e ganharam o apelido de 
-                      <strong className="text-amber-800"> "Orçamento Secreto"</strong> pela baixa rastreabilidade e centralização de poder.
+                      <strong className="text-amber-800"> &ldquo;Orçamento Secreto&rdquo;</strong> pela baixa rastreabilidade e centralização de poder.
                     </p>
 
                     {/* Box de Nota Crítica (Estilo 'Debate Crítico' da imagem) */}
@@ -984,7 +1049,9 @@ export default function EducativoPage() {
                   />
                 </div>
                 <p className="text-center text-xs text-slate-400 mt-5 italic">
-                  Fonte: .
+                  Infográfico ilustrativo dos sistemas majoritário e
+                  proporcional, conforme o Código Eleitoral (Lei nº 4.737/1965)
+                  e a Lei das Eleições (Lei nº 9.504/1997).
                 </p>
               </div>
           </section>

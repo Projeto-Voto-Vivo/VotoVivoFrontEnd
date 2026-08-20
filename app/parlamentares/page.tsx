@@ -9,6 +9,8 @@ type ParlamentaresPageProps = {
     partido?: string;
     page?: string;
     tipo?: string;
+    /** Termo único vindo da home: procurado em nome, partido e UF. */
+    busca?: string;
   }>;
 };
 
@@ -45,16 +47,26 @@ export default async function ParlamentaresPage({
   const nome = params.nome?.trim() || undefined;
   const uf = params.uf?.trim() || undefined;
   const partido = params.partido?.trim() || undefined;
+  const busca = params.busca?.trim() || undefined;
   const tipo = normalizeTipo(params.tipo);
-  const page = Number(params.page || '1');
+  const pageParam = Number(params.page || '1');
+  const page = Number.isFinite(pageParam) && pageParam > 0 ? Math.trunc(pageParam) : 1;
 
-  const { data, meta } = await getParlamentaresLista(page, nome, uf, partido, tipo);
+  const { data, meta } = await getParlamentaresLista(
+    page,
+    nome,
+    uf,
+    partido,
+    tipo,
+    busca,
+  );
 
   const filtroAtivo = filtrosTipo.find((item) => item.value === tipo) ?? filtrosTipo[0];
 
   const buildPageHref = (nextPage: number) => {
     const query = new URLSearchParams();
 
+    if (busca) query.set('busca', busca);
     if (nome) query.set('nome', nome);
     if (uf) query.set('uf', uf);
     if (partido) query.set('partido', partido);
@@ -67,6 +79,7 @@ export default async function ParlamentaresPage({
   const buildTipoHref = (nextTipo?: 'deputados' | 'senadores') => {
     const query = new URLSearchParams();
 
+    if (busca) query.set('busca', busca);
     if (nome) query.set('nome', nome);
     if (uf) query.set('uf', uf);
     if (partido) query.set('partido', partido);
@@ -111,6 +124,20 @@ export default async function ParlamentaresPage({
             })}
           </nav>
         </section>
+
+        {busca && (
+          <div className="mb-6 flex flex-wrap items-center gap-3 rounded-2xl border border-brasil-blue/15 bg-brasil-blue/5 px-4 py-3 text-sm text-slate-700">
+            <span>
+              Buscando <strong>&ldquo;{busca}&rdquo;</strong> em nome, partido e UF.
+            </span>
+            <Link
+              href={tipo ? `/parlamentares?tipo=${tipo}` : '/parlamentares'}
+              className="font-semibold text-brasil-blue hover:underline"
+            >
+              Limpar busca
+            </Link>
+          </div>
+        )}
 
         <section className="mb-8 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <form className="grid grid-cols-2 gap-3 md:grid-cols-4">

@@ -1,6 +1,8 @@
 import api from './api';
 import {
+  CasaLegislativaFiltro,
   CategoriaDespesaPerfil,
+  ComissaoPerfil,
   Despesa,
   DespesasPerfil,
   DocumentoEmendaPerfil,
@@ -8,13 +10,18 @@ import {
   EmendaParlamentarVinculado,
   EmendaResumoPerfil,
   EmendasPerfil,
+  FiliacaoPartidariaPerfil,
   ItemDespesaPerfil,
   ListaParlamentaresResponse,
+  MandatoExercicioPerfil,
   Parlamentar,
   ParlamentarDetalhe,
   ParlamentarPerfil,
   PerfilIndicador,
+  PresencaDetalhe,
+  PresencaPerfil,
   ProposicaoPerfil,
+  UFs,
   VotacaoPerfil,
   VotacoesPerfil,
 } from '@/types';
@@ -22,10 +29,26 @@ import {
 const PAGE_SIZE = 20;
 const DESPESAS_PAGE_SIZE = 5;
 const VOTACOES_PAGE_SIZE = 5;
-// Tamanho de página fixo no backend (não configurável via query string).
+const EMENDAS_PAGE_SIZE = 5;
 const PROPOSICOES_PAGE_SIZE = 20;
 
+/**
+ * A cobertura de proposições do agregador passou a ser o universo completo
+ * (dumps anuais da Câmara e listagem anual do Senado). Carregar "todas" as
+ * páginas de um parlamentar prolífico significaria dezenas de requisições em
+ * sequência, então o carregamento é limitado e o truncamento é declarado.
+ */
+const MAX_PAGINAS_PROPOSICOES = 15;
+
+/** Páginas por dimensão (nome/partido/UF) na busca livre da home. */
+const MAX_PAGINAS_BUSCA = 5;
+
 type TipoParlamentarFiltro = 'deputados' | 'senadores';
+
+const CASA_POR_TIPO: Record<TipoParlamentarFiltro, CasaLegislativaFiltro> = {
+  deputados: 'camara',
+  senadores: 'senado',
+};
 
 type BackendParlamentarResumo = {
   id: number;
@@ -34,6 +57,11 @@ type BackendParlamentarResumo = {
   uf?: string | null;
   urlFoto?: string | null;
   cargo?: string | null;
+  casa?: string | null;
+  legislatura?: string | number | null;
+  condicaoMandato?: string | null;
+  condicao_mandato?: string | null;
+  situacaoMandato?: string | null;
 };
 
 type BackendParlamentarDetalhe = BackendParlamentarResumo & {
@@ -52,19 +80,24 @@ type BackendPaginated<T> = {
   meta?: {
     total?: number;
     page?: number;
+    pagina?: number;
     lastPage?: number;
+    totalPaginas?: number;
     limit?: number;
+    limite?: number;
   };
+};
+
+type PaginacaoNormalizada = {
+  total: number;
+  page: number;
+  lastPage: number;
+  limit: number;
 };
 
 type ListaDespesasResponse = {
   data: Despesa[];
-  meta: {
-    total: number;
-    page: number;
-    lastPage: number;
-    limit: number;
-  };
+  meta: PaginacaoNormalizada;
 };
 
 type BackendDespesaCategoria = {
@@ -77,6 +110,9 @@ type BackendDespesaResumo = {
   mediaMensal?: string | number | null;
   maiorReembolso?: string | number | null;
   anoReferencia?: string | number | null;
+  /** Meses com dados dentro do exercício — base correta da média mensal. */
+  mesesComDados?: string | number | null;
+  mesesConsiderados?: string | number | null;
   categorias?: BackendDespesaCategoria[] | null;
 };
 
@@ -84,28 +120,41 @@ type BackendVotacaoResumo = {
   id?: string | number | null;
   data?: string | null;
   resumo?: string | null;
+  descricao?: string | null;
   voto?: string | null;
   resultado?: string | null;
   tipo?: string | null;
+  tipoVotacao?: string | null;
+  casa?: string | null;
+  orientacaoPartido?: string | null;
+  orientacao?: string | null;
+  siglaPartido?: string | null;
+  siglaPartidoNaData?: string | null;
+  seguiuOrientacao?: boolean | null;
 };
 
 type ListaVotacoesResponse = {
   data: VotacaoPerfil[];
-  meta: {
-    total: number;
-    page: number;
-    lastPage: number;
-    limit: number;
-  };
+  meta: PaginacaoNormalizada;
+};
+
+type BackendPresencaBloco = {
+  taxa?: string | number | null;
+  percentual?: string | number | null;
+  totalEventos?: string | number | null;
+  faltas?: string | number | null;
+  metodologia?: string | null;
 };
 
 type BackendPresencaResponse = {
+  casa?: string | null;
+  observacao?: string | null;
+  metodologia?: string | null;
   presenca?: {
-    sessoesDeliberativas?: {
-      taxa?: string | number | null;
-      totalEventos?: string | number | null;
-      faltas?: string | number | null;
-    } | null;
+    plenario?: BackendPresencaBloco | null;
+    comissoes?: BackendPresencaBloco | null;
+    /** Formato anterior (uma taxa só, plenário e comissão somados). */
+    sessoesDeliberativas?: BackendPresencaBloco | null;
   } | null;
 };
 
@@ -160,29 +209,40 @@ type BackendEmendaDetalhe = BackendEmendaResumo & {
   parlamentares?: BackendEmendaParlamentar[] | null;
 };
 
-const TEMAS = [
-  'Transparência pública',
-  'Educação básica',
-  'Saúde preventiva',
-  'Mobilidade urbana',
-  'Desenvolvimento regional',
-  'Inovação no setor público',
-  'Primeira infância',
-  'Segurança alimentar',
-  'Sustentabilidade fiscal',
-  'Infraestrutura digital',
-];
+type BackendComissao = {
+  id?: number | null;
+  idOrgao?: number | null;
+  nome?: string | null;
+  nomeOrgao?: string | null;
+  sigla?: string | null;
+  siglaOrgao?: string | null;
+  tipoOrgao?: string | null;
+  papel?: string | null;
+  titulo?: string | null;
+  cargo?: string | null;
+  dataInicio?: string | null;
+  dataFim?: string | null;
+};
 
-const COMISSOES = [
-  'Comissão de Fiscalização Financeira e Controle',
-  'Comissão de Educação',
-  'Comissão de Constituição e Justiça',
-  'Comissão de Transparência e Integridade',
-  'Comissão de Desenvolvimento Regional',
-  'Frente Parlamentar de Dados Abertos',
-  'Comissão de Administração Pública',
-  'Comissão de Ciência e Tecnologia',
-];
+type BackendFiliacao = {
+  id?: number | null;
+  siglaPartido?: string | null;
+  sigla?: string | null;
+  nomePartido?: string | null;
+  nome?: string | null;
+  dataInicio?: string | null;
+  dataFim?: string | null;
+};
+
+type BackendMandato = {
+  id?: number | null;
+  casa?: string | null;
+  legislatura?: string | number | null;
+  dataInicio?: string | null;
+  dataFim?: string | null;
+  condicao?: string | null;
+  condicaoMandato?: string | null;
+};
 
 const DESPESA_DESCRICOES: Record<string, string> = {
   'Passagens e deslocamentos':
@@ -220,6 +280,16 @@ function toCapitalizedCategory(category: string) {
     .split(' ')
     .map((part) => (part ? part[0].toUpperCase() + part.slice(1).toLowerCase() : part))
     .join(' ');
+}
+
+function normalizeToken(value?: string | null) {
+  return (value ?? '')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toUpperCase();
 }
 
 function getFallbackPhoto(nome: string) {
@@ -263,36 +333,107 @@ function parseOfficeAddress(address?: string | null) {
   };
 }
 
-function getCasaLegislativa(cargo?: string | null) {
-  const normalizedCargo = cargo?.trim().toLowerCase() ?? '';
+function getCasaLegislativa(cargo?: string | null, casa?: string | null) {
+  const normalizedCasa = normalizeToken(casa);
 
-  if (normalizedCargo.includes('senador')) {
-    return 'Senado Federal';
-  }
+  if (normalizedCasa.includes('SENADO')) return 'Senado Federal';
+  if (normalizedCasa.includes('CAMARA')) return 'Câmara dos Deputados';
+  if (normalizedCasa.includes('CONGRESSO')) return 'Congresso Nacional';
 
-  if (normalizedCargo.includes('deputad')) {
-    return 'Câmara dos Deputados';
-  }
+  const normalizedCargo = normalizeToken(cargo);
+
+  if (normalizedCargo.includes('SENADOR')) return 'Senado Federal';
+  if (normalizedCargo.includes('DEPUTAD')) return 'Câmara dos Deputados';
 
   return 'Poder Legislativo';
 }
 
-function parseMoney(value?: string | number | null) {
-  if (typeof value === 'number') return value;
-  if (!value) return 0;
+/**
+ * Aceita tanto o formato ISO devolvido pelo Prisma/`Decimal` ("1234.56")
+ * quanto o formato pt-BR ("R$ 1.234,56"). A versão anterior removia todos os
+ * pontos, o que transformava "1234.56" em 123456 silenciosamente.
+ */
+export function parseMoney(value?: string | number | null): number {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : 0;
+  }
 
-  const normalized = String(value)
-    .replace(/\./g, '')
-    .replace(',', '.')
-    .trim();
+  if (value === null || value === undefined) return 0;
 
-  const parsed = Number(normalized);
-  return Number.isNaN(parsed) ? 0 : parsed;
+  const raw = String(value).trim();
+  if (!raw) return 0;
+
+  // Tem vírgula → decimal pt-BR: ponto é separador de milhar.
+  if (raw.includes(',')) {
+    const ptBr = raw.replace(/[^\d,-]/g, '').replace(',', '.');
+    const parsed = Number(ptBr);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  const semRuido = raw.replace(/[^\d.eE+-]/g, '');
+
+  // Agrupamento de milhar sem decimais ("1.234", "12.345.678").
+  if (/^-?\d{1,3}(\.\d{3})+$/.test(semRuido)) {
+    const parsed = Number(semRuido.replace(/\./g, ''));
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  const parsed = Number(semRuido);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function parsePercent(value?: string | number | null): number | null {
+  if (value === null || value === undefined || value === '') return null;
+
+  const parsed = typeof value === 'number' ? value : Number(String(value).replace(',', '.'));
+  if (!Number.isFinite(parsed)) return null;
+
+  // Taxa pode chegar como fração (0–1) ou percentual (0–100).
+  const percentual = parsed > 0 && parsed <= 1 ? parsed * 100 : parsed;
+
+  return Math.min(100, Math.max(0, Math.round(percentual)));
+}
+
+function normalizeMeta(
+  meta: BackendPaginated<unknown>['meta'],
+  fallbackPage: number,
+  fallbackLimit: number,
+  fallbackTotal: number,
+): PaginacaoNormalizada {
+  const limit = Number(meta?.limit ?? meta?.limite ?? fallbackLimit) || fallbackLimit;
+  const total = Number(meta?.total ?? fallbackTotal) || 0;
+  const lastPageBruta = Number(meta?.lastPage ?? meta?.totalPaginas ?? 0);
+
+  return {
+    total,
+    page: Number(meta?.page ?? meta?.pagina ?? fallbackPage) || fallbackPage,
+    lastPage: lastPageBruta > 0 ? lastPageBruta : Math.max(1, Math.ceil(total / limit)),
+    limit,
+  };
+}
+
+function unwrapList<T>(payload: BackendPaginated<T> | T[] | null | undefined): {
+  itens: T[];
+  meta: BackendPaginated<T>['meta'];
+} {
+  if (Array.isArray(payload)) {
+    return { itens: payload, meta: undefined };
+  }
+
+  return {
+    itens: Array.isArray(payload?.data) ? (payload?.data as T[]) : [],
+    meta: payload?.meta,
+  };
 }
 
 function mapResumo(item: BackendParlamentarResumo): Parlamentar {
   const nomeParlamentar = item.nomeParlamentar?.trim() || 'Parlamentar';
   const cargo = item.cargo?.trim() || 'Parlamentar';
+  const condicao =
+    item.condicaoMandato?.trim() ||
+    item.condicao_mandato?.trim() ||
+    item.situacaoMandato?.trim() ||
+    null;
 
   return {
     id: item.id,
@@ -301,9 +442,10 @@ function mapResumo(item: BackendParlamentarResumo): Parlamentar {
     uf: item.uf?.trim() || '--',
     urlFoto: normalizePhoto(item.urlFoto, nomeParlamentar),
     cargo,
-    casaLegislativa: getCasaLegislativa(cargo),
-    situacaoMandato: 'Em exercício',
-    situacao: 'Em exercício',
+    casaLegislativa: getCasaLegislativa(cargo, item.casa),
+    legislatura: item.legislatura ? String(item.legislatura) : undefined,
+    situacaoMandato: condicao,
+    situacao: condicao,
   };
 }
 
@@ -313,13 +455,13 @@ function matchesTipoParlamentar(
 ) {
   if (!tipo) return true;
 
-  const cargo = parlamentar.cargo?.toLowerCase() ?? '';
+  const cargo = normalizeToken(parlamentar.cargo);
 
   if (tipo === 'senadores') {
-    return cargo.includes('senador');
+    return cargo.includes('SENADOR');
   }
 
-  return cargo.includes('deputado');
+  return cargo.includes('DEPUTAD');
 }
 
 function paginateParlamentares(
@@ -349,7 +491,7 @@ function mapDetalhe(item: BackendParlamentarDetalhe): ParlamentarDetalhe {
 
   return {
     ...base,
-    situacao: base.situacao ?? base.situacaoMandato ?? 'Em exercício',
+    situacao: base.situacaoMandato ?? null,
     nomeCivil: item.nomeCivil?.trim() || base.nomeParlamentar,
     dataNascimento: item.dataNascimento || '',
     email: emailBase,
@@ -369,145 +511,62 @@ function mapDetalhe(item: BackendParlamentarDetalhe): ParlamentarDetalhe {
   };
 }
 
-function selectItems(seed: number, start: number, size: number) {
-  return Array.from(
-    { length: size },
-    (_, index) => TEMAS[(seed + start + index) % TEMAS.length],
-  );
-}
+/**
+ * Enum canônico de voto do banco (7 valores). O Prisma passou a devolver
+ * `OBSTRUCAO` e `NAO REGISTRADO`, que antes vazavam crus para a interface.
+ */
+const VOTO_LABELS: Record<string, string> = {
+  SIM: 'Sim',
+  NAO: 'Não',
+  ABSTENCAO: 'Abstenção',
+  OBSTRUCAO: 'Obstrução',
+  'AUSENCIA JUSTIFICADA': 'Ausência justificada',
+  AUSENTE: 'Ausente',
+  'NAO REGISTRADO': 'Voto não registrado',
+};
 
-function buildProposicoes(seed: number, temas: string[]): ProposicaoPerfil[] {
-  const modelos = [
-    {
-      sigla: 'PL',
-      papel: 'Autoria principal',
-      situacao: 'Em tramitação',
-      sufixo:
-        'amplia padrões de transparência ativa e simplifica a leitura dos dados públicos.',
-    },
-    {
-      sigla: 'PEC',
-      papel: 'Coautoria',
-      situacao: 'Aguardando parecer',
-      sufixo:
-        'reorganiza competências e reforça mecanismos de monitoramento cidadão.',
-    },
-    {
-      sigla: 'REQ',
-      papel: 'Requerimento apresentado',
-      situacao: 'Aprovado em comissão',
-      sufixo:
-        'pede audiência pública com especialistas e representantes da sociedade civil.',
-    },
-  ];
+export const VOTO_EXPLICACOES: Record<string, string> = {
+  Sim: 'Votou a favor da matéria.',
+  Não: 'Votou contra a matéria.',
+  Abstenção: 'Estava presente e optou por não votar a favor nem contra.',
+  Obstrução:
+    'Manobra regimental: o parlamentar está presente, mas não vota, para dificultar o quórum e atrasar a votação. Não é falta.',
+  'Ausência justificada':
+    'Falta abonada pela Mesa (licença, missão oficial ou motivo de saúde).',
+  Ausente: 'Não registrou presença na votação.',
+  'Voto não registrado':
+    'A votação ocorreu, mas o painel não registrou o voto deste parlamentar.',
+};
 
-  return modelos.map((modelo, index) => ({
-    id: `${modelo.sigla}-${seed}-${index}`,
-    sigla: modelo.sigla,
-    numero: String(100 + ((seed + index * 17) % 700)),
-    ano: '2026',
-    titulo: `${modelo.sigla} ${100 + ((seed + index * 17) % 700)}/2026`,
-    resumo: `Proposição que trata de ${temas[index].toLowerCase()} e ${modelo.sufixo}`,
-    papel: modelo.papel,
-    situacao: modelo.situacao,
-    tema: temas[index],
-    impactoCidadao:
-      index === 0
-        ? 'Facilita o acompanhamento do mandato e melhora a transparência para quem está fiscalizando.'
-        : index === 1
-          ? 'Pode alterar regras permanentes e costuma exigir debate mais amplo com impacto institucional.'
-          : 'Ajuda a destravar discussões e dar visibilidade ao tema antes de avançar para votação final.',
-    data: `2026-0${index + 2}-1${seed % 8}`,
-  }));
-}
+/** Votos que representam posicionamento comparável com a orientação do partido. */
+const VOTOS_POSICIONADOS = new Set(['SIM', 'NAO', 'ABSTENCAO', 'OBSTRUCAO']);
 
-function buildVotacoes(seed: number, temas: string[]): VotacaoPerfil[] {
-  const votos = ['Favorável', 'Contrário', 'Abstenção', 'Favorável'];
-  const resultados = ['Aprovada', 'Rejeitada', 'Aprovada', 'Aprovada'];
+export function formatVotingChoice(choice?: string | null) {
+  const normalized = normalizeToken(choice);
+  if (!normalized) return 'Não informado';
 
-  return [
-    {
-      id: `vot-${seed}-1`,
-      titulo: 'Marco de Transparência Orçamentária',
-      data: '2026-03-18',
-      tema: temas[0],
-      resumo:
-        'Votação nominal sobre regras de publicação e reaproveitamento de dados de execução orçamentária.',
-      voto: votos[0],
-      resultado: resultados[0],
-      orientacaoCasa:
-        'Houve convergência entre governo e oposição em parte do texto final.',
-    },
-    {
-      id: `vot-${seed}-2`,
-      titulo: 'Incentivo à conectividade em escolas públicas',
-      data: '2026-03-04',
-      tema: temas[1],
-      resumo:
-        'Define prioridade de investimento em infraestrutura digital e conectividade educacional.',
-      voto: votos[3],
-      resultado: resultados[3],
-      orientacaoCasa:
-        'A orientação partidária ficou dividida em blocos e houve destaque para ajustes no financiamento.',
-    },
-    {
-      id: `vot-${seed}-3`,
-      titulo: 'Crédito extraordinário para atendimento regional',
-      data: '2026-02-21',
-      tema: temas[2],
-      resumo:
-        'Reforço orçamentário com foco em ações emergenciais e atendimento local.',
-      voto: votos[1],
-      resultado: resultados[1],
-      orientacaoCasa:
-        'O debate girou em torno do impacto fiscal e da necessidade de critérios mais claros de execução.',
-    },
-    {
-      id: `vot-${seed}-4`,
-      titulo: 'Programa de compras públicas sustentáveis',
-      data: '2026-02-05',
-      tema: 'Sustentabilidade fiscal',
-      resumo:
-        'Estabelece parâmetros para contratação pública com critérios de eficiência e sustentabilidade.',
-      voto: votos[0],
-      resultado: resultados[0],
-      orientacaoCasa:
-        'A discussão combinou impacto orçamentário, metas ambientais e incentivo à inovação.',
-    },
-  ];
-}
-
-
-function formatVotingChoice(choice?: string | null) {
-  const normalized = (choice ?? '').trim().toUpperCase();
-
-  const labels: Record<string, string> = {
-    YES: 'Sim',
-    SIM: 'Sim',
-    NO: 'Não',
-    NAO: 'Não',
-    NÃO: 'Não',
-    ABSTENTION: 'Abstenção',
-    ABSTENCAO: 'Abstenção',
-    ABSTENÇÃO: 'Abstenção',
-    ABSENT: 'Ausente',
-    AUSENTE: 'Ausente',
-  };
-
-  return labels[normalized] || choice || 'Não informado';
+  return VOTO_LABELS[normalized] || 'Não informado';
 }
 
 function formatVotingType(type?: string | null) {
-  const normalized = (type ?? '').trim().toUpperCase();
+  const normalized = normalizeToken(type);
 
   const labels: Record<string, string> = {
     NOMINAL: 'Votação nominal',
     SIMBOLICA: 'Votação simbólica',
-    SIMBÓLICA: 'Votação simbólica',
     SECRETA: 'Votação secreta',
   };
 
   return labels[normalized] || type || 'Votação';
+}
+
+function formatCasa(casa?: string | null) {
+  const normalized = normalizeToken(casa);
+  if (!normalized) return null;
+  if (normalized.includes('SENADO')) return 'Senado Federal';
+  if (normalized.includes('CAMARA')) return 'Câmara dos Deputados';
+  if (normalized.includes('CONGRESSO')) return 'Congresso Nacional';
+  return casa ?? null;
 }
 
 function buildVotingHeadline(summary: string) {
@@ -536,20 +595,49 @@ function buildVotingHeadline(summary: string) {
   return normalized.length > 90 ? `${normalized.slice(0, 87).trim()}...` : normalized;
 }
 
-function mapVotacaoResumo(item: BackendVotacaoResumo): VotacaoPerfil {
-  const id = String(item.id ?? item.data ?? Math.random());
-  const resumo = item.resumo?.trim() || 'Resumo não informado.';
-  const tipo = formatVotingType(item.tipo);
+function resolveSeguiuOrientacao(
+  voto: string | null,
+  orientacao: string | null,
+  informado?: boolean | null,
+): boolean | null {
+  if (typeof informado === 'boolean') return informado;
+
+  const votoNormalizado = normalizeToken(voto);
+  const orientacaoNormalizada = normalizeToken(orientacao);
+
+  if (!votoNormalizado || !orientacaoNormalizada) return null;
+  if (orientacaoNormalizada.includes('LIBERAD')) return null;
+  if (!VOTOS_POSICIONADOS.has(votoNormalizado)) return null;
+  if (!VOTOS_POSICIONADOS.has(orientacaoNormalizada)) return null;
+
+  return votoNormalizado === orientacaoNormalizada;
+}
+
+function mapVotacaoResumo(item: BackendVotacaoResumo, index: number): VotacaoPerfil {
+  const id = String(item.id ?? `${item.data ?? 'votacao'}-${index}`);
+  const resumo = item.resumo?.trim() || item.descricao?.trim() || 'Resumo não informado.';
+  const tipoVotacao = formatVotingType(item.tipoVotacao ?? item.tipo);
+  const votoOriginal = item.voto ? normalizeToken(item.voto) : null;
+  const orientacaoBruta = item.orientacaoPartido ?? item.orientacao ?? null;
 
   return {
     id,
-    titulo: tipo,
+    titulo: tipoVotacao,
     data: item.data || '',
-    tema: buildVotingHeadline(resumo),
+    descricao: buildVotingHeadline(resumo),
     resumo,
     voto: formatVotingChoice(item.voto),
+    votoOriginal,
     resultado: item.resultado || 'Resultado não informado',
-    orientacaoCasa: tipo,
+    tipoVotacao,
+    casa: formatCasa(item.casa),
+    orientacaoPartido: orientacaoBruta ? formatVotingChoice(orientacaoBruta) : null,
+    siglaPartidoNaData: item.siglaPartidoNaData ?? item.siglaPartido ?? null,
+    seguiuOrientacao: resolveSeguiuOrientacao(
+      item.voto ?? null,
+      orientacaoBruta,
+      item.seguiuOrientacao,
+    ),
   };
 }
 
@@ -579,7 +667,7 @@ function buildItensFromBackend(
     data: item.data || '',
     tipo: item.tipo || 'Tipo não informado',
     fornecedor: item.fornecedor || 'Fornecedor não informado',
-    valor: Number(item.valor ?? 0),
+    valor: parseMoney(item.valor),
     documentoLabel: item.urlDocumento
       ? `Documento ${offset + index + 1}`
       : `Registro ${offset + index + 1}`,
@@ -600,6 +688,10 @@ function inferExpenseYear(items: Despesa[]): number | null {
 
 function mapEmendaResumo(item: BackendEmendaResumo): EmendaResumoPerfil {
   const id = Number(item.id ?? item.idEmenda ?? 0);
+  const confianca =
+    item.confiancaVinculo === null || item.confiancaVinculo === undefined
+      ? null
+      : Number(item.confiancaVinculo);
 
   return {
     id,
@@ -619,10 +711,7 @@ function mapEmendaResumo(item: BackendEmendaResumo): EmendaResumoPerfil {
     valorRestoCancelado: parseMoney(item.valorRestoCancelado),
     valorRestoPago: parseMoney(item.valorRestoPago),
     metodoVinculo: item.metodoVinculo ?? null,
-    confiancaVinculo:
-      item.confiancaVinculo === null || item.confiancaVinculo === undefined
-        ? undefined
-        : Number(item.confiancaVinculo),
+    confiancaVinculo: confianca !== null && Number.isFinite(confianca) ? confianca : null,
   };
 }
 
@@ -644,6 +733,11 @@ function mapDocumentoEmenda(item: BackendDocumentoEmenda): DocumentoEmendaPerfil
 function mapEmendaParlamentar(
   item: BackendEmendaParlamentar,
 ): EmendaParlamentarVinculado {
+  const confianca =
+    item.confiancaVinculo === null || item.confiancaVinculo === undefined
+      ? null
+      : Number(item.confiancaVinculo);
+
   return {
     id: Number(item.id ?? 0),
     nomeCivil: item.nomeCivil ?? null,
@@ -652,18 +746,153 @@ function mapEmendaParlamentar(
     uf: item.uf ?? null,
     fotoUrl: item.fotoUrl ?? null,
     metodoVinculo: item.metodoVinculo ?? null,
-    confiancaVinculo: Number(item.confiancaVinculo ?? 0),
+    confiancaVinculo: confianca !== null && Number.isFinite(confianca) ? confianca : null,
   };
+}
+
+export function descreveVinculoEmenda(
+  metodo?: string | null,
+  confianca?: number | null,
+): string | null {
+  if (confianca === null || confianca === undefined) {
+    return metodo ? `Vínculo estabelecido por ${metodo.toLowerCase()}.` : null;
+  }
+
+  const percentual = Math.round((confianca > 1 ? confianca / 100 : confianca) * 100);
+  const base = metodo
+    ? `Vínculo por ${metodo.toLowerCase()} · confiança ${percentual}%`
+    : `Confiança do vínculo: ${percentual}%`;
+
+  return percentual >= 100
+    ? `${base}. Autoria declarada na fonte oficial.`
+    : `${base}. Autoria inferida por correspondência de nome — pode conter erro.`;
 }
 
 export async function getParlamentarById(id: number): Promise<ParlamentarDetalhe | null> {
   try {
     const res = await api.get(`/parlamentares/${id}`);
+
+    if (!res.data) return null;
+
     return mapDetalhe(res.data as BackendParlamentarDetalhe);
   } catch {
     console.warn('Não foi possível carregar parlamentar do backend.');
     return null;
   }
+}
+
+type FiltrosParlamentares = {
+  nome?: string;
+  uf?: string;
+  partido?: string;
+  tipo?: TipoParlamentarFiltro;
+  /** Termo único da busca da home: procurado em nome, partido e UF. */
+  busca?: string;
+};
+
+function buildParlamentaresParams(
+  pagina: number,
+  filtros: Omit<FiltrosParlamentares, 'busca'>,
+) {
+  const params = new URLSearchParams();
+
+  params.append('pagina', String(pagina));
+  if (filtros.nome) params.append('nome', filtros.nome);
+  if (filtros.uf) params.append('uf', filtros.uf);
+  if (filtros.partido) params.append('partido', filtros.partido);
+  if (filtros.tipo) params.append('casa', CASA_POR_TIPO[filtros.tipo]);
+
+  return params.toString();
+}
+
+async function fetchParlamentaresPagina(
+  pagina: number,
+  filtros: Omit<FiltrosParlamentares, 'busca'>,
+) {
+  const res = await api.get(
+    `/parlamentares?${buildParlamentaresParams(pagina, filtros)}`,
+  );
+
+  const { itens, meta } = unwrapList<BackendParlamentarResumo>(res.data);
+
+  return { itens: itens.map(mapResumo), meta };
+}
+
+/**
+ * A busca da home manda um termo só. Antes ele ia sempre para `nome`, então
+ * "PT" e "SP" nunca achavam nada. Aqui o termo é procurado nas três dimensões
+ * e os resultados são unificados por id.
+ */
+async function buscarPorTermoLivre(
+  termo: string,
+  page: number,
+  tipo?: TipoParlamentarFiltro,
+): Promise<ListaParlamentaresResponse> {
+  const termoNormalizado = termo.trim();
+  const ehUf = (UFs as readonly string[]).includes(termoNormalizado.toUpperCase());
+
+  const dimensoes: Omit<FiltrosParlamentares, 'busca'>[] = [
+    { nome: termoNormalizado, tipo },
+    { partido: termoNormalizado, tipo },
+  ];
+
+  if (ehUf) {
+    dimensoes.push({ uf: termoNormalizado.toUpperCase(), tipo });
+  }
+
+  const resultados = await Promise.all(
+    dimensoes.map(async (filtros) => {
+      try {
+        const primeira = await fetchParlamentaresPagina(1, filtros);
+        const meta = normalizeMeta(primeira.meta, 1, PAGE_SIZE, primeira.itens.length);
+        const paginasExtras = Math.min(meta.lastPage, MAX_PAGINAS_BUSCA) - 1;
+
+        if (paginasExtras <= 0) {
+          return { itens: primeira.itens, truncado: meta.lastPage > MAX_PAGINAS_BUSCA };
+        }
+
+        const extras = await Promise.all(
+          Array.from({ length: paginasExtras }, (_, index) =>
+            fetchParlamentaresPagina(index + 2, filtros).then((r) => r.itens),
+          ),
+        );
+
+        return {
+          itens: [...primeira.itens, ...extras.flat()],
+          truncado: meta.lastPage > MAX_PAGINAS_BUSCA,
+        };
+      } catch {
+        return { itens: [] as Parlamentar[], truncado: false };
+      }
+    }),
+  );
+
+  const porId = new Map<number, Parlamentar>();
+  resultados
+    .flatMap((resultado) => resultado.itens)
+    .filter((item) => matchesTipoParlamentar(item, tipo))
+    .forEach((item) => {
+      if (!porId.has(item.id)) porId.set(item.id, item);
+    });
+
+  const unificados = Array.from(porId.values()).sort((a, b) =>
+    a.nomeParlamentar.localeCompare(b.nomeParlamentar, 'pt-BR'),
+  );
+
+  const paginado = paginateParlamentares(unificados, page);
+  const truncado = resultados.some((resultado) => resultado.truncado);
+
+  return {
+    ...paginado,
+    meta: {
+      ...paginado.meta,
+      aviso: unificados.length === 0
+        ? `Nenhum parlamentar encontrado para "${termoNormalizado}" em nome, partido ou UF.`
+        : truncado
+          ? 'Muitos resultados: a busca combinada mostra apenas os primeiros. Use os filtros para refinar.'
+          : undefined,
+    },
+  };
 }
 
 export async function getParlamentaresLista(
@@ -672,72 +901,30 @@ export async function getParlamentaresLista(
   uf?: string,
   partido?: string,
   tipo?: TipoParlamentarFiltro,
+  busca?: string,
 ): Promise<ListaParlamentaresResponse> {
   try {
-    const buildParams = (pagina: number) => {
-      const params = new URLSearchParams();
+    if (busca?.trim()) {
+      return await buscarPorTermoLivre(busca, page, tipo);
+    }
 
-      params.append('pagina', String(pagina));
-      if (nome) params.append('nome', nome);
-      if (uf) params.append('uf', uf);
-      if (partido) params.append('partido', partido);
+    const filtros = { nome, uf, partido, tipo };
+    const primeira = await fetchParlamentaresPagina(page, filtros);
+    const meta = normalizeMeta(primeira.meta, page, PAGE_SIZE, primeira.itens.length);
 
-      return params;
-    };
-
-    const res = await api.get(`/parlamentares?${buildParams(tipo ? 1 : page).toString()}`);
-    const payload = res.data as BackendPaginated<BackendParlamentarResumo> | BackendParlamentarResumo[];
-
-    const itens = Array.isArray(payload) ? payload : Array.isArray(payload?.data) ? payload.data : [];
-    const meta = Array.isArray(payload) ? undefined : payload.meta;
-
-    if (tipo) {
-      const lastPage = Number(meta?.lastPage ?? 1);
-      const remainingPages = Array.from(
-        { length: Math.max(0, lastPage - 1) },
-        (_, index) => index + 2,
-      );
-
-      const remainingResponses = await Promise.all(
-        remainingPages.map((pagina) => api.get(`/parlamentares?${buildParams(pagina).toString()}`)),
-      );
-
-      const allItems = [
-        ...itens,
-        ...remainingResponses.flatMap((response) => {
-          const pagePayload = response.data as BackendPaginated<BackendParlamentarResumo> | BackendParlamentarResumo[];
-          return Array.isArray(pagePayload)
-            ? pagePayload
-            : Array.isArray(pagePayload?.data)
-              ? pagePayload.data
-              : [];
-        }),
-      ];
-
-      const filtered = allItems.map(mapResumo).filter((item) => matchesTipoParlamentar(item, tipo));
-      const paginated = paginateParlamentares(filtered, page);
-
-      return {
-        ...paginated,
-        meta: {
-          ...paginated.meta,
-          aviso:
-            filtered.length === 0
-              ? 'Nenhum parlamentar foi retornado pelo backend para os filtros informados.'
-              : undefined,
-        },
-      };
+    if (tipo && !(await backendFiltraPorCasa(primeira.itens, filtros))) {
+      return await listarComFiltroEmMemoria(page, { nome, uf, partido }, tipo);
     }
 
     return {
-      data: itens.map(mapResumo),
+      data: primeira.itens,
       meta: {
-        total: Number(meta?.total ?? itens.length),
-        totalPaginas: Number(meta?.lastPage ?? 1),
-        pagina: Number(meta?.page ?? page),
+        total: meta.total,
+        totalPaginas: meta.lastPage,
+        pagina: meta.page,
         fonte: 'api',
         aviso:
-          itens.length === 0
+          primeira.itens.length === 0
             ? 'Nenhum parlamentar foi retornado pelo backend para os filtros informados.'
             : undefined,
       },
@@ -756,6 +943,82 @@ export async function getParlamentaresLista(
       },
     };
   }
+}
+
+/**
+ * O backend passou a aceitar `casa` em `GET /parlamentares` (Fase 3). Se a
+ * versão publicada ainda ignorar o parâmetro, a listagem volta misturada e é
+ * preciso cair no filtro em memória.
+ *
+ * A sonda usa o Senado de propósito: senadores são minoria, então uma página
+ * só de senadores é evidência forte de que o filtro foi aplicado. Fazer a
+ * verificação pela Câmara daria falso positivo, já que a primeira página do
+ * universo inteiro tende a ser toda de deputados.
+ */
+async function backendFiltraPorCasa(
+  itensDaPrimeiraPagina: Parlamentar[],
+  filtros: Omit<FiltrosParlamentares, 'busca'>,
+): Promise<boolean> {
+  if (filtros.tipo === 'senadores') {
+    return (
+      itensDaPrimeiraPagina.length > 0 &&
+      itensDaPrimeiraPagina.every((item) => matchesTipoParlamentar(item, 'senadores'))
+    );
+  }
+
+  // Filtro de deputados: um senador na lista já denuncia o parâmetro ignorado.
+  if (itensDaPrimeiraPagina.some((item) => !matchesTipoParlamentar(item, 'deputados'))) {
+    return false;
+  }
+
+  try {
+    const sonda = await fetchParlamentaresPagina(1, { ...filtros, tipo: 'senadores' });
+
+    return (
+      sonda.itens.length > 0 &&
+      sonda.itens.every((item) => matchesTipoParlamentar(item, 'senadores'))
+    );
+  } catch {
+    return false;
+  }
+}
+
+/** Compatibilidade com backends que ainda não filtram por casa no servidor. */
+async function listarComFiltroEmMemoria(
+  page: number,
+  filtros: Omit<FiltrosParlamentares, 'tipo' | 'busca'>,
+  tipo: TipoParlamentarFiltro,
+): Promise<ListaParlamentaresResponse> {
+  const primeira = await fetchParlamentaresPagina(1, filtros);
+  const meta = normalizeMeta(primeira.meta, 1, PAGE_SIZE, primeira.itens.length);
+
+  const paginasRestantes = Array.from(
+    { length: Math.max(0, meta.lastPage - 1) },
+    (_, index) => index + 2,
+  );
+
+  const restantes = await Promise.all(
+    paginasRestantes.map((pagina) =>
+      fetchParlamentaresPagina(pagina, filtros).then((r) => r.itens),
+    ),
+  );
+
+  const filtrados = [...primeira.itens, ...restantes.flat()].filter((item) =>
+    matchesTipoParlamentar(item, tipo),
+  );
+
+  const paginado = paginateParlamentares(filtrados, page);
+
+  return {
+    ...paginado,
+    meta: {
+      ...paginado.meta,
+      aviso:
+        filtrados.length === 0
+          ? 'Nenhum parlamentar foi retornado pelo backend para os filtros informados.'
+          : undefined,
+    },
+  };
 }
 
 function buildExpenseQuery(page: number, ano?: number | null) {
@@ -806,31 +1069,74 @@ export async function getDespesasParlamentar(
     const res = await api.get(
       `/parlamentares/${id}/despesas?${buildExpenseQuery(page, ano)}`,
     );
-    const payload = res.data as BackendPaginated<Despesa> | Despesa[];
-    const list = Array.isArray(payload) ? payload : Array.isArray(payload?.data) ? payload.data : [];
-    const meta = Array.isArray(payload) ? undefined : payload.meta;
+    const { itens, meta } = unwrapList<Despesa>(res.data);
 
     return {
-      data: list,
-      meta: {
-        total: Number(meta?.total ?? list.length),
-        page: Number(meta?.page ?? page),
-        lastPage: Number(meta?.lastPage ?? 1),
-        limit: Number(meta?.limit ?? DESPESAS_PAGE_SIZE),
-      },
+      data: itens,
+      meta: normalizeMeta(meta, page, DESPESAS_PAGE_SIZE, itens.length),
     };
   } catch {
     console.warn('Não foi possível carregar despesas do backend.');
     return {
       data: [],
-      meta: {
-        total: 0,
-        page,
-        lastPage: 1,
-        limit: DESPESAS_PAGE_SIZE,
-      },
+      meta: { total: 0, page, lastPage: 1, limit: DESPESAS_PAGE_SIZE },
     };
   }
+}
+
+/**
+ * A média mensal só é calculada sobre os meses com dados dentro do exercício.
+ * Dividir por 12 fixo subestima quem assumiu no meio do mandato.
+ */
+function resolveMediaMensal(
+  resumo: BackendDespesaResumo,
+  totalAno: number,
+): { mediaMensal: number | null; mesesConsiderados: number | null } {
+  const mesesInformados = Number(
+    resumo.mesesComDados ?? resumo.mesesConsiderados ?? Number.NaN,
+  );
+  const meses = Number.isFinite(mesesInformados) && mesesInformados > 0
+    ? Math.round(mesesInformados)
+    : null;
+
+  const mediaBackend = parseMoney(resumo.mediaMensal);
+  if (mediaBackend > 0) {
+    return { mediaMensal: mediaBackend, mesesConsiderados: meses };
+  }
+
+  if (meses && totalAno > 0) {
+    return { mediaMensal: totalAno / meses, mesesConsiderados: meses };
+  }
+
+  return { mediaMensal: null, mesesConsiderados: null };
+}
+
+function montarDespesasPerfil(
+  resumo: BackendDespesaResumo,
+  lista: ListaDespesasResponse,
+  anoReferencia: number | null,
+): DespesasPerfil {
+  const categorias = buildCategoriasFromBackend(resumo.categorias);
+  const totalCategorias = categorias.reduce((acc, item) => acc + item.valor, 0);
+  const totalAno = parseMoney(resumo.totalAno) || totalCategorias;
+  const { mediaMensal, mesesConsiderados } = resolveMediaMensal(resumo, totalAno);
+
+  return {
+    totalAno,
+    mediaMensal,
+    mesesConsiderados,
+    maiorReembolso: parseMoney(resumo.maiorReembolso),
+    categorias,
+    itensRecentes: buildItensFromBackend(
+      lista.data,
+      (lista.meta.page - 1) * lista.meta.limit,
+    ),
+    totalRegistros: lista.meta.total,
+    paginaAtual: lista.meta.page,
+    totalPaginas: lista.meta.lastPage,
+    itensPorPagina: lista.meta.limit,
+    anoReferencia,
+  };
 }
 
 export async function getDespesasPerfil(
@@ -845,23 +1151,7 @@ export async function getDespesasPerfil(
       getDespesasParlamentar(id, 1, anoSolicitado),
     ]);
 
-    const categorias = buildCategoriasFromBackend(resumoDespesas.categorias);
-    const totalCategorias = categorias.reduce((acc, item) => acc + item.valor, 0);
-    const totalAno = parseMoney(resumoDespesas.totalAno) || totalCategorias;
-    const mediaMensal = parseMoney(resumoDespesas.mediaMensal) || (totalAno > 0 ? totalAno / 12 : 0);
-    const maiorReembolso = parseMoney(resumoDespesas.maiorReembolso);
-
-    return {
-      totalAno,
-      mediaMensal,
-      maiorReembolso,
-      categorias,
-      itensRecentes: buildItensFromBackend(despesasResponse.data),
-      totalRegistros: despesasResponse.meta.total,
-      paginaAtual: despesasResponse.meta.page,
-      totalPaginas: despesasResponse.meta.lastPage,
-      anoReferencia: anoSolicitado,
-    };
+    return montarDespesasPerfil(resumoDespesas, despesasResponse, anoSolicitado);
   }
 
   const despesasMaisRecentes = await getDespesasParlamentar(id, 1);
@@ -876,25 +1166,8 @@ export async function getDespesasPerfil(
     ? await getDespesasParlamentar(id, 1, anoReferencia)
     : despesasMaisRecentes;
 
-  const categorias = buildCategoriasFromBackend(resumoDespesas.categorias);
-  const totalCategorias = categorias.reduce((acc, item) => acc + item.valor, 0);
-  const totalAno = parseMoney(resumoDespesas.totalAno) || totalCategorias;
-  const mediaMensal = parseMoney(resumoDespesas.mediaMensal) || (totalAno > 0 ? totalAno / 12 : 0);
-  const maiorReembolso = parseMoney(resumoDespesas.maiorReembolso);
-
-  return {
-    totalAno,
-    mediaMensal,
-    maiorReembolso,
-    categorias,
-    itensRecentes: buildItensFromBackend(despesasResponse.data),
-    totalRegistros: despesasResponse.meta.total,
-    paginaAtual: despesasResponse.meta.page,
-    totalPaginas: despesasResponse.meta.lastPage,
-    anoReferencia,
-  };
+  return montarDespesasPerfil(resumoDespesas, despesasResponse, anoReferencia);
 }
-
 
 function buildVotingsQuery(page: number) {
   const params = new URLSearchParams();
@@ -913,48 +1186,95 @@ export async function getVotacoesParlamentar(
     const res = await api.get(
       `/parlamentares/${id}/votacoes?${buildVotingsQuery(page)}`,
     );
-    const payload = res.data as BackendPaginated<BackendVotacaoResumo> | BackendVotacaoResumo[];
-    const list = Array.isArray(payload) ? payload : Array.isArray(payload?.data) ? payload.data : [];
-    const meta = Array.isArray(payload) ? undefined : payload.meta;
+    const { itens, meta } = unwrapList<BackendVotacaoResumo>(res.data);
 
     return {
-      data: list.map(mapVotacaoResumo),
-      meta: {
-        total: Number(meta?.total ?? list.length),
-        page: Number(meta?.page ?? page),
-        lastPage: Number(meta?.lastPage ?? 1),
-        limit: Number(meta?.limit ?? VOTACOES_PAGE_SIZE),
-      },
+      data: itens.map(mapVotacaoResumo),
+      meta: normalizeMeta(meta, page, VOTACOES_PAGE_SIZE, itens.length),
     };
   } catch {
     console.warn('Não foi possível carregar votações do parlamentar.');
     return {
       data: [],
-      meta: {
-        total: 0,
-        page,
-        lastPage: 1,
-        limit: VOTACOES_PAGE_SIZE,
-      },
+      meta: { total: 0, page, lastPage: 1, limit: VOTACOES_PAGE_SIZE },
     };
   }
 }
 
+const PRESENCA_VAZIA: PresencaDetalhe = {
+  taxa: null,
+  totalEventos: 0,
+  faltas: 0,
+  metodologia: null,
+};
 
-export async function getPresencaParlamentar(id: number): Promise<{ taxa: number; totalEventos: number; faltas: number }> {
+function mapPresencaBloco(
+  bloco: BackendPresencaBloco | null | undefined,
+  metodologiaPadrao: string,
+): PresencaDetalhe {
+  if (!bloco) return { ...PRESENCA_VAZIA };
+
+  const taxa = parsePercent(bloco.taxa ?? bloco.percentual);
+  const totalEventos = Number(bloco.totalEventos ?? 0) || 0;
+
+  return {
+    // Sem eventos no denominador não existe taxa — e "0%" mentiria.
+    taxa: totalEventos > 0 ? taxa : null,
+    totalEventos,
+    faltas: Number(bloco.faltas ?? 0) || 0,
+    metodologia: bloco.metodologia?.trim() || (totalEventos > 0 ? metodologiaPadrao : null),
+  };
+}
+
+export async function getPresencaParlamentar(id: number): Promise<PresencaPerfil> {
   try {
     const res = await api.get(`/parlamentares/${id}/presenca`);
-    const payload = res.data as BackendPresencaResponse;
-    const sessoes = payload.presenca?.sessoesDeliberativas;
-    
+    const payload = (res.data ?? {}) as BackendPresencaResponse;
+    const presenca = payload.presenca ?? {};
+
+    const plenarioBruto = presenca.plenario ?? presenca.sessoesDeliberativas ?? null;
+    const usandoFormatoAntigo = !presenca.plenario && Boolean(presenca.sessoesDeliberativas);
+
     return {
-      taxa: Number.isFinite(Number(sessoes?.taxa)) ? Math.round(Number(sessoes?.taxa)) : 0,
-      totalEventos: Number(sessoes?.totalEventos ?? 0),
-      faltas: Number(sessoes?.faltas ?? 0),
+      plenario: mapPresencaBloco(
+        plenarioBruto,
+        'Sessões deliberativas de plenário, dentro do período de exercício do mandato.',
+      ),
+      comissoes: mapPresencaBloco(
+        presenca.comissoes,
+        'Reuniões deliberativas de comissão, dentro do período de exercício do mandato.',
+      ),
+      casa: formatCasa(payload.casa),
+      observacao:
+        payload.observacao?.trim() ||
+        payload.metodologia?.trim() ||
+        (usandoFormatoAntigo
+          ? 'O backend ainda devolve plenário e comissão somados; a taxa exibida agrega as duas.'
+          : null),
     };
   } catch {
-    return { taxa: 0, totalEventos: 0, faltas: 0 };
+    return {
+      plenario: { ...PRESENCA_VAZIA },
+      comissoes: { ...PRESENCA_VAZIA },
+      casa: null,
+      observacao: null,
+    };
   }
+}
+
+function calcularAlinhamento(votacoes: VotacaoPerfil[]) {
+  const comparaveis = votacoes.filter((votacao) => votacao.seguiuOrientacao !== null);
+
+  if (comparaveis.length === 0) {
+    return { alinhamento: null, alinhamentoBase: 0 };
+  }
+
+  const seguiu = comparaveis.filter((votacao) => votacao.seguiuOrientacao).length;
+
+  return {
+    alinhamento: Math.round((seguiu / comparaveis.length) * 100),
+    alinhamentoBase: comparaveis.length,
+  };
 }
 
 export async function getVotacoesPerfil(id: number): Promise<VotacoesPerfil> {
@@ -963,9 +1283,12 @@ export async function getVotacoesPerfil(id: number): Promise<VotacoesPerfil> {
     getPresencaParlamentar(id),
   ]);
 
+  const { alinhamento, alinhamentoBase } = calcularAlinhamento(votacoesResponse.data);
+
   return {
     presenca,
-    alinhamento: null,
+    alinhamento,
+    alinhamentoBase,
     destaques: votacoesResponse.data,
     leituraRapida:
       votacoesResponse.meta.total > 0
@@ -974,21 +1297,41 @@ export async function getVotacoesPerfil(id: number): Promise<VotacoesPerfil> {
     totalRegistros: votacoesResponse.meta.total,
     paginaAtual: votacoesResponse.meta.page,
     totalPaginas: votacoesResponse.meta.lastPage,
+    itensPorPagina: votacoesResponse.meta.limit,
   };
 }
 
+export type ListaEmendasResponse = {
+  data: EmendaResumoPerfil[];
+  meta: PaginacaoNormalizada;
+};
+
 export async function getEmendasParlamentar(
   parlamentarId: number,
-): Promise<EmendaResumoPerfil[]> {
+  page: number = 1,
+): Promise<ListaEmendasResponse> {
   try {
-    const res = await api.get(`/parlamentares/${parlamentarId}/emendas`);
-    const payload = res.data as BackendPaginated<BackendEmendaResumo> | BackendEmendaResumo[];
-    const list = Array.isArray(payload) ? payload : Array.isArray(payload?.data) ? payload.data : [];
+    const params = new URLSearchParams();
+    params.append('pagina', String(page));
+    params.append('limit', String(EMENDAS_PAGE_SIZE));
+    params.append('limite', String(EMENDAS_PAGE_SIZE));
 
-    return list.map(mapEmendaResumo).filter((emenda) => emenda.id > 0);
+    const res = await api.get(
+      `/parlamentares/${parlamentarId}/emendas?${params.toString()}`,
+    );
+    const { itens, meta } = unwrapList<BackendEmendaResumo>(res.data);
+    const emendas = itens.map(mapEmendaResumo).filter((emenda) => emenda.id > 0);
+
+    return {
+      data: emendas,
+      meta: normalizeMeta(meta, page, EMENDAS_PAGE_SIZE, emendas.length),
+    };
   } catch {
     console.warn('Não foi possível carregar emendas do parlamentar.');
-    return [];
+    return {
+      data: [],
+      meta: { total: 0, page, lastPage: 1, limit: EMENDAS_PAGE_SIZE },
+    };
   }
 }
 
@@ -999,88 +1342,102 @@ type BackendProposicaoPerfil = {
   ano?: number | null;
   ementa?: string | null;
   situacao?: string | null;
+  casa?: string | null;
+  papel?: string | null;
+  dataApresentacao?: string | null;
+  temas?: (string | { nome?: string | null; tema?: string | null })[] | null;
 };
 
 export type ListaProposicoesResponse = {
   data: ProposicaoPerfil[];
-  meta: {
-    total: number;
-    page: number;
-    lastPage: number;
-    limit: number;
-  };
+  meta: PaginacaoNormalizada;
 };
+
+function mapTemas(temas: BackendProposicaoPerfil['temas']): string[] {
+  if (!Array.isArray(temas)) return [];
+
+  return temas
+    .map((tema) =>
+      typeof tema === 'string' ? tema : tema?.nome ?? tema?.tema ?? '',
+    )
+    .map((tema) => tema.trim())
+    .filter(Boolean);
+}
+
+function mapProposicao(item: BackendProposicaoPerfil, index: number): ProposicaoPerfil {
+  const propositionId = item.id ?? index + 1;
+  const sigla = item.sigla?.trim() || 'Proposição';
+  const numero = String(item.numero ?? 'S/N');
+  const ano = String(item.ano ?? 'Não informado');
+
+  return {
+    id: String(propositionId),
+    sigla,
+    numero,
+    ano,
+    titulo: `${sigla} ${numero}/${ano}`,
+    resumo: item.ementa?.trim() || 'Ementa não informada',
+    papel: item.papel?.trim() || null,
+    situacao: item.situacao?.trim() || 'Situação não informada',
+    temas: mapTemas(item.temas),
+    casa: formatCasa(item.casa),
+    dataApresentacao: item.dataApresentacao || null,
+  };
+}
 
 export async function getProposicoesParlamentar(
   id: number,
   page = 1,
 ): Promise<ListaProposicoesResponse> {
   try {
-    // O backend só aceita "pagina" e devolve um tamanho de página fixo
-    // (PROPOSICOES_PAGE_SIZE); ele ignora filtros e limites customizados.
+    const params = new URLSearchParams();
+    params.append('pagina', String(page));
+    params.append('limit', String(PROPOSICOES_PAGE_SIZE));
+    params.append('limite', String(PROPOSICOES_PAGE_SIZE));
+
     const res = await api.get(
-      `/parlamentares/${id}/proposicoes?pagina=${page}`,
+      `/parlamentares/${id}/proposicoes?${params.toString()}`,
     );
 
-    const payload = res.data as BackendPaginated<BackendProposicaoPerfil>;
-    const list = Array.isArray(payload?.data) ? payload.data : [];
-    const meta = payload?.meta;
+    const { itens, meta } = unwrapList<BackendProposicaoPerfil>(res.data);
 
     return {
-      data: list.map((item, index) => {
-        const propositionId = item.id ?? index + 1;
-        const sigla = item.sigla?.trim() || 'Proposição';
-        const numero = String(item.numero ?? 'S/N');
-        const ano = String(item.ano ?? 'Não informado');
-
-        return {
-          id: String(propositionId),
-          sigla,
-          numero,
-          ano,
-          titulo: `${sigla} ${numero}/${ano}`,
-          resumo: item.ementa?.trim() || 'Ementa não informada',
-          papel: 'Autor',
-          situacao: item.situacao?.trim() || 'Situação não informada',
-          tema: sigla,
-          impactoCidadao: '',
-          data: '',
-        };
-      }),
-      meta: {
-        total: Number(meta?.total ?? list.length),
-        page: Number(meta?.page ?? page),
-        lastPage: Number(meta?.lastPage ?? 1),
-        limit: Number(meta?.limit ?? PROPOSICOES_PAGE_SIZE),
-      },
+      data: itens.map(mapProposicao),
+      meta: normalizeMeta(meta, page, PROPOSICOES_PAGE_SIZE, itens.length),
     };
   } catch (error) {
     console.error('Erro ao buscar proposições do parlamentar:', error);
 
     return {
       data: [],
-      meta: {
-        total: 0,
-        page,
-        lastPage: 1,
-        limit: PROPOSICOES_PAGE_SIZE,
-      },
+      meta: { total: 0, page, lastPage: 1, limit: PROPOSICOES_PAGE_SIZE },
     };
   }
 }
 
+export type ProposicoesCarregadas = {
+  data: ProposicaoPerfil[];
+  total: number;
+  truncado: boolean;
+};
+
 export async function getTodasProposicoesParlamentar(
   id: number,
-): Promise<ProposicaoPerfil[]> {
+): Promise<ProposicoesCarregadas> {
   const primeira = await getProposicoesParlamentar(id, 1);
   const todas = [...primeira.data];
+  const ultimaPagina = Math.min(primeira.meta.lastPage, MAX_PAGINAS_PROPOSICOES);
 
-  for (let pagina = 2; pagina <= primeira.meta.lastPage; pagina += 1) {
+  for (let pagina = 2; pagina <= ultimaPagina; pagina += 1) {
     const proxima = await getProposicoesParlamentar(id, pagina);
     todas.push(...proxima.data);
   }
 
-  return todas;
+  return {
+    data: todas,
+    total: primeira.meta.total,
+    truncado: primeira.meta.lastPage > MAX_PAGINAS_PROPOSICOES,
+  };
 }
 
 export async function getResumoEmendasParlamentar(parlamentarId: number) {
@@ -1088,10 +1445,11 @@ export async function getResumoEmendasParlamentar(parlamentarId: number) {
     const res = await api.get(`/parlamentares/${parlamentarId}/emendas/resumo`);
 
     return {
-      totalEmendas: Number(res.data?.totalEmendas ?? 0),
+      totalEmendas: Number(res.data?.totalEmendas ?? 0) || 0,
       totalEmpenhado: parseMoney(res.data?.totalEmpenhado),
       totalLiquidado: parseMoney(res.data?.totalLiquidado),
       totalPago: parseMoney(res.data?.totalPago),
+      totalRestoInscrito: parseMoney(res.data?.totalRestoInscrito),
     };
   } catch {
     console.warn('Não foi possível carregar resumo de emendas do parlamentar.');
@@ -1101,72 +1459,99 @@ export async function getResumoEmendasParlamentar(parlamentarId: number) {
       totalEmpenhado: 0,
       totalLiquidado: 0,
       totalPago: 0,
+      totalRestoInscrito: 0,
     };
   }
 }
 
-export async function getParlamentarProfile(
-  id: number,
-): Promise<ParlamentarPerfil | null> {
-  const detalheApi = await getParlamentarById(id);
-
-  if (!detalheApi) {
-    return null;
+/**
+ * Endpoints da Fase 3 do plano de integração. Enquanto o backend não os
+ * publica, o perfil simplesmente não mostra a seção — nunca dado inventado.
+ */
+async function getListaOpcional<TBackend, TFront>(
+  url: string,
+  mapper: (item: TBackend, index: number) => TFront,
+): Promise<TFront[]> {
+  try {
+    const res = await api.get(url);
+    const { itens } = unwrapList<TBackend>(res.data);
+    return itens.map(mapper);
+  } catch {
+    return [];
   }
+}
 
-  const [
-    despesas,
-    emendasLista,
-    resumoEmendas,
-    votacoesPerfil,
-    proposicoesResponse,
-  ] = await Promise.all([
-    getDespesasPerfil(id),
-    getEmendasParlamentar(id),
-    getResumoEmendasParlamentar(id),
-    getVotacoesPerfil(id),
-    getProposicoesParlamentar(id, 1),
-  ]);
-
-  const parlamentar = detalheApi;
-  const seed = Math.abs(id);
-  const temasPrioritarios = selectItems(seed, 0, 3);
-  const comissoes = Array.from(
-    { length: 4 },
-    (_, index) => COMISSOES[(seed + index) % COMISSOES.length],
+export function getComissoesParlamentar(id: number): Promise<ComissaoPerfil[]> {
+  return getListaOpcional<BackendComissao, ComissaoPerfil>(
+    `/parlamentares/${id}/comissoes`,
+    (item, index) => ({
+      id: Number(item.id ?? item.idOrgao ?? index),
+      nome: item.nome?.trim() || item.nomeOrgao?.trim() || 'Órgão não informado',
+      sigla: item.sigla?.trim() || item.siglaOrgao?.trim() || null,
+      tipoOrgao: item.tipoOrgao?.trim() || null,
+      papel: item.papel?.trim() || item.titulo?.trim() || item.cargo?.trim() || null,
+      dataInicio: item.dataInicio || null,
+      dataFim: item.dataFim || null,
+    }),
   );
+}
 
-  const emendas: EmendasPerfil = {
-    quantidade: resumoEmendas.totalEmendas,
-    totalEmpenhado: resumoEmendas.totalEmpenhado,
-    totalLiquidado: resumoEmendas.totalLiquidado,
-    totalPago: resumoEmendas.totalPago,
-    totalRestoInscrito: emendasLista.reduce(
-      (acc, item) => acc + Number(item.valorRestoInscrito ?? 0),
-      0,
-    ),
-    principalTipo: emendasLista[0]?.tipoEmenda || '—',
-    principalLocalidade: emendasLista[0]?.localidadeDoGasto || '—',
-    destaques: emendasLista,
-    documentosRecentes: [],
-    leituraRapida:
-      resumoEmendas.totalEmendas > 0
-        ? 'Emendas vinculadas ao parlamentar.'
-        : 'Nenhuma emenda vinculada foi encontrada para este parlamentar.',
-  };
+export function getFiliacoesParlamentar(
+  id: number,
+): Promise<FiliacaoPartidariaPerfil[]> {
+  return getListaOpcional<BackendFiliacao, FiliacaoPartidariaPerfil>(
+    `/parlamentares/${id}/filiacoes`,
+    (item, index) => ({
+      id: Number(item.id ?? index),
+      siglaPartido: item.siglaPartido?.trim() || item.sigla?.trim() || 'Sem partido',
+      nomePartido: item.nomePartido?.trim() || item.nome?.trim() || null,
+      dataInicio: item.dataInicio || null,
+      dataFim: item.dataFim || null,
+    }),
+  );
+}
 
-  const totalDespesas = despesas.totalAno;
+export function getMandatosParlamentar(
+  id: number,
+): Promise<MandatoExercicioPerfil[]> {
+  return getListaOpcional<BackendMandato, MandatoExercicioPerfil>(
+    `/parlamentares/${id}/mandatos`,
+    (item, index) => ({
+      id: Number(item.id ?? index),
+      casa: formatCasa(item.casa),
+      legislatura: item.legislatura ? String(item.legislatura) : null,
+      dataInicio: item.dataInicio || null,
+      dataFim: item.dataFim || null,
+      condicao: item.condicao?.trim() || item.condicaoMandato?.trim() || null,
+    }),
+  );
+}
 
-  const indicadores: PerfilIndicador[] = [
+function montarIndicadores(
+  votacoes: VotacoesPerfil,
+  totalProposicoes: number,
+  emendas: EmendasPerfil,
+  despesas: DespesasPerfil,
+): PerfilIndicador[] {
+  const presencaPlenario = votacoes.presenca.plenario;
+  const temPresenca = presencaPlenario.taxa !== null;
+
+  return [
     {
-      titulo: 'Presença em Sessões Deliberativas',
-      valor: `${votacoesPerfil.presenca.taxa}%`,
-      apoio: `${votacoesPerfil.presenca.totalEventos} eventos · ${votacoesPerfil.presenca.faltas} faltas`,
-      destaque: votacoesPerfil.presenca.taxa > 85 ? 'positivo' : 'atencao',
+      titulo: 'Presença em plenário',
+      valor: temPresenca ? `${presencaPlenario.taxa}%` : 'Sem dados',
+      apoio: temPresenca
+        ? `${presencaPlenario.totalEventos} sessões deliberativas · ${presencaPlenario.faltas} ausências`
+        : 'O backend não informou presença para este parlamentar.',
+      destaque: !temPresenca
+        ? 'neutro'
+        : (presencaPlenario.taxa as number) > 85
+          ? 'positivo'
+          : 'atencao',
     },
     {
       titulo: 'Proposições acompanhadas',
-      valor: `${proposicoesResponse.meta.total}`,
+      valor: `${totalProposicoes}`,
       apoio: 'registros legislativos vinculados',
       destaque: 'neutro',
     },
@@ -1183,31 +1568,92 @@ export async function getParlamentarProfile(
       titulo: despesas.anoReferencia
         ? `Despesas de ${despesas.anoReferencia}`
         : 'Despesas no período',
-      valor: shortCurrency(totalDespesas),
+      valor: despesas.totalRegistros > 0 ? shortCurrency(despesas.totalAno) : 'Sem dados',
       apoio:
         despesas.totalRegistros > 0
           ? despesas.anoReferencia
             ? `${despesas.totalRegistros} registros · ano mais recente disponível`
             : `${despesas.totalRegistros} registros consolidados`
-          : 'sem despesas registradas',
-      destaque: 'atencao',
+          : 'nenhuma despesa registrada para este parlamentar',
+      destaque: despesas.totalRegistros > 0 ? 'atencao' : 'neutro',
     },
   ];
+}
+
+export async function getParlamentarProfile(
+  id: number,
+): Promise<ParlamentarPerfil | null> {
+  const detalheApi = await getParlamentarById(id);
+
+  if (!detalheApi) {
+    return null;
+  }
+
+  const [
+    despesas,
+    emendasResponse,
+    resumoEmendas,
+    votacoesPerfil,
+    proposicoesResponse,
+    comissoes,
+    filiacoes,
+    mandatos,
+  ] = await Promise.all([
+    getDespesasPerfil(id),
+    getEmendasParlamentar(id, 1),
+    getResumoEmendasParlamentar(id),
+    getVotacoesPerfil(id),
+    getProposicoesParlamentar(id, 1),
+    getComissoesParlamentar(id),
+    getFiliacoesParlamentar(id),
+    getMandatosParlamentar(id),
+  ]);
+
+  const emendasPagina = emendasResponse.data;
+  const quantidade = resumoEmendas.totalEmendas || emendasResponse.meta.total;
+
+  const emendas: EmendasPerfil = {
+    quantidade,
+    totalEmpenhado: resumoEmendas.totalEmpenhado,
+    totalLiquidado: resumoEmendas.totalLiquidado,
+    totalPago: resumoEmendas.totalPago,
+    totalRestoInscrito: resumoEmendas.totalRestoInscrito,
+    principalTipo: emendasPagina[0]?.tipoEmenda || '—',
+    principalLocalidade: emendasPagina[0]?.localidadeDoGasto || '—',
+    destaques: emendasPagina,
+    documentosRecentes: [],
+    paginaAtual: emendasResponse.meta.page,
+    totalPaginas: emendasResponse.meta.lastPage,
+    itensPorPagina: emendasResponse.meta.limit,
+    vinculosInferidos: emendasPagina.filter(
+      (emenda) =>
+        emenda.confiancaVinculo !== null &&
+        emenda.confiancaVinculo !== undefined &&
+        emenda.confiancaVinculo < 1,
+    ).length,
+    leituraRapida:
+      quantidade > 0
+        ? `${quantidade} emenda${quantidade === 1 ? '' : 's'} vinculada${quantidade === 1 ? '' : 's'} a este parlamentar.`
+        : 'Nenhuma emenda vinculada foi encontrada para este parlamentar.',
+  };
 
   return {
-    parlamentar,
+    parlamentar: detalheApi,
     subtitulo:
       'Acompanhe a atuação legislativa, as votações e o uso de recursos do mandato.',
     resumo: '',
-    biografia: `${parlamentar.nomeParlamentar} atua na ${
-      parlamentar.casaLegislativa ?? 'casa legislativa'
-    } representando ${parlamentar.uf}. Os dados consolidados destacam atuação em ${temasPrioritarios[0].toLowerCase()}, ${temasPrioritarios[1].toLowerCase()} e ${temasPrioritarios[2].toLowerCase()}.`,
-    temasPrioritarios,
     comissoes,
-    indicadores,
+    filiacoes,
+    mandatos,
+    indicadores: montarIndicadores(
+      votacoesPerfil,
+      proposicoesResponse.meta.total,
+      emendas,
+      despesas,
+    ),
     proposicoes: proposicoesResponse.data,
     votacoes: votacoesPerfil,
-    despesas, 
+    despesas,
     emendas,
   };
 }
@@ -1218,6 +1664,9 @@ export async function getEmendaDetalhe(
 ): Promise<EmendaDetalhe | null> {
   try {
     const res = await api.get(`/emendas/${idEmenda}/detalhes`);
+
+    if (!res.data) return null;
+
     const data = res.data as BackendEmendaDetalhe;
     const resumo = mapEmendaResumo(data);
     const documentos = Array.isArray(data.documentos)

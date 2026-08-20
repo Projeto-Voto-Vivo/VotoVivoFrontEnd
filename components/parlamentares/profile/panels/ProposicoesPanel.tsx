@@ -7,6 +7,7 @@ import { ParlamentarPerfil, ProposicaoPerfil } from '@/types';
 import { getTodasProposicoesParlamentar } from '@/services/parlamentares';
 import { MicroInfoCard } from '../shared/MicroInfoCard';
 import { SectionShell } from '../shared/SectionShell';
+import { formatDate } from '../shared/formatters';
 
 interface ProposicoesPanelProps {
   profile: ParlamentarPerfil;
@@ -19,6 +20,8 @@ export function ProposicoesPanel({ profile }: ProposicoesPanelProps) {
   const [todasProposicoes, setTodasProposicoes] = useState<
     ProposicaoPerfil[]
   >([]);
+  const [totalNoBackend, setTotalNoBackend] = useState(0);
+  const [truncado, setTruncado] = useState(false);
 
   const [paginaAtual, setPaginaAtual] = useState(1);
   const [siglaSelecionada, setSiglaSelecionada] = useState('');
@@ -33,19 +36,23 @@ export function ProposicoesPanel({ profile }: ProposicoesPanelProps) {
       setCarregando(true);
 
       try {
-        const proposicoes = await getTodasProposicoesParlamentar(
+        const resultado = await getTodasProposicoesParlamentar(
           profile.parlamentar.id,
         );
 
         if (cancelado) return;
 
-        setTodasProposicoes(proposicoes);
+        setTodasProposicoes(resultado.data);
+        setTotalNoBackend(resultado.total);
+        setTruncado(resultado.truncado);
         setPaginaAtual(1);
       } catch (error) {
         console.error('Erro ao carregar proposições:', error);
 
         if (!cancelado) {
           setTodasProposicoes([]);
+          setTotalNoBackend(0);
+          setTruncado(false);
         }
       } finally {
         if (!cancelado) {
@@ -206,6 +213,15 @@ export function ProposicoesPanel({ profile }: ProposicoesPanelProps) {
           </div>
         </div>
 
+        {truncado && (
+          <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-800">
+            Este parlamentar tem {totalNoBackend} proposições registradas. Para
+            não disparar dezenas de requisições, apenas as{' '}
+            {todasProposicoes.length} primeiras foram carregadas — os filtros
+            abaixo se aplicam só a elas.
+          </div>
+        )}
+
         <div className="mt-5">
           {carregando && todasProposicoes.length === 0 ? (
             <div className="rounded-3xl border border-slate-200 bg-slate-50 p-8 text-center text-sm text-slate-500">
@@ -226,6 +242,18 @@ export function ProposicoesPanel({ profile }: ProposicoesPanelProps) {
                     <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-600">
                       {proposicao.situacao}
                     </span>
+
+                    {proposicao.casa ? (
+                      <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-600">
+                        {proposicao.casa}
+                      </span>
+                    ) : null}
+
+                    {proposicao.papel ? (
+                      <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-600">
+                        {proposicao.papel}
+                      </span>
+                    ) : null}
                   </div>
 
                   <h3 className="mt-4 text-lg font-bold text-slate-900">
@@ -236,11 +264,28 @@ export function ProposicoesPanel({ profile }: ProposicoesPanelProps) {
                     {proposicao.resumo}
                   </p>
 
+                  {proposicao.temas.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {proposicao.temas.map((tema) => (
+                        <span
+                          key={tema}
+                          className="rounded-full bg-brasil-green/10 px-3 py-1 text-xs font-semibold text-brasil-green"
+                        >
+                          {tema}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
                   <div className="mt-4 grid gap-3 sm:grid-cols-2">
                     <MicroInfoCard label="Tipo" value={proposicao.sigla} />
                     <MicroInfoCard
-                      label="Ano"
-                      value={String(proposicao.ano)}
+                      label="Apresentada em"
+                      value={
+                        proposicao.dataApresentacao
+                          ? formatDate(proposicao.dataApresentacao)
+                          : String(proposicao.ano)
+                      }
                     />
                   </div>
                 </article>
@@ -261,7 +306,12 @@ export function ProposicoesPanel({ profile }: ProposicoesPanelProps) {
               {`${(paginaSegura - 1) * ITENS_POR_PAGINA + 1}–${
                 (paginaSegura - 1) * ITENS_POR_PAGINA + proposicoes.length
               } de ${proposicoesFiltradas.length} proposições`}
-              {filtroAtivo && ` (de ${todasProposicoes.length} no total)`}
+              {filtroAtivo &&
+                ` (de ${todasProposicoes.length} carregadas${
+                  totalNoBackend > todasProposicoes.length
+                    ? ` · ${totalNoBackend} no total`
+                    : ''
+                })`}
             </p>
 
             <div className="flex gap-2">

@@ -1,5 +1,6 @@
-import { ChevronDown, ExternalLink, FileText } from 'lucide-react';
+import { ChevronDown, ExternalLink, FileText, Info } from 'lucide-react';
 import { EmendaDetalhe } from '@/types';
+import { descreveVinculoEmenda } from '@/services/parlamentares';
 import { BackButton } from '@/components/layout/BackButton';
 import { NavLink } from '@/components/layout/NavLink';
 
@@ -82,19 +83,42 @@ export function EmendaDetailPage({ emenda }: EmendaDetailPageProps) {
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
               Parlamentar(es) vinculado(s)
             </p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {emenda.parlamentares.map((parlamentar) => (
-                <span
-                  key={`${parlamentar.id}-${parlamentar.nomeCivil ?? parlamentar.nomeUrna}`}
-                  className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700"
-                >
-                  {parlamentar.nomeCivil || parlamentar.nomeUrna || 'Parlamentar'}
-                  {parlamentar.partidoAtual && parlamentar.uf
-                    ? ` · ${parlamentar.partidoAtual}/${parlamentar.uf}`
-                    : ''}
-                </span>
-              ))}
-            </div>
+            <ul className="mt-3 space-y-2">
+              {emenda.parlamentares.map((parlamentar) => {
+                const vinculo = descreveVinculoEmenda(
+                  parlamentar.metodoVinculo,
+                  parlamentar.confiancaVinculo,
+                );
+
+                return (
+                  <li
+                    key={`${parlamentar.id}-${parlamentar.nomeCivil ?? parlamentar.nomeUrna}`}
+                    className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3"
+                  >
+                    <p className="text-sm font-semibold text-slate-800">
+                      {parlamentar.nomeCivil || parlamentar.nomeUrna || 'Parlamentar'}
+                      {parlamentar.partidoAtual && parlamentar.uf
+                        ? ` · ${parlamentar.partidoAtual}/${parlamentar.uf}`
+                        : ''}
+                    </p>
+
+                    {vinculo ? (
+                      <p className="mt-1 flex items-start gap-1.5 text-xs leading-5 text-slate-500">
+                        <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                        {vinculo}
+                      </p>
+                    ) : null}
+                  </li>
+                );
+              })}
+            </ul>
+
+            <p className="mt-3 text-xs leading-5 text-slate-400">
+              O Portal da Transparência publica o nome do autor da emenda em
+              texto livre. Quando a correspondência com o cadastro parlamentar é
+              feita por semelhança de nome, o vínculo é uma inferência — e vem
+              com o grau de confiança acima.
+            </p>
           </section>
         )}
 

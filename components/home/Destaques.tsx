@@ -12,11 +12,18 @@ export async function Destaques() {
       <div className="container mx-auto px-4">
         <div className="mb-10 flex items-center justify-between">
           <div>
+            {/*
+              Estes não são "destaques" por nenhum critério de relevância:
+              são os primeiros da listagem, em ordem alfabética. O título diz
+              exatamente isso enquanto não existe um ranking real no backend.
+            */}
             <h2 className="text-2xl font-bold text-slate-900">
-              Parlamentares em exercício
+              Comece por aqui
             </h2>
             <p className="mt-1 text-slate-500">
-              Acesse o perfil completo e fiscalize o mandato.
+              Uma amostra da lista em ordem alfabética
+              {meta.total > 0 ? ` — ${meta.total} parlamentares no total` : ''}.
+              Use a busca para ir direto a um perfil.
             </p>
           </div>
 
