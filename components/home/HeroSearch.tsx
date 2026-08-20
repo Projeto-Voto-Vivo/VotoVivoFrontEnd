@@ -13,9 +13,11 @@ export function HeroSearch() {
     (e: FormEvent) => {
       e.preventDefault();
       const query = termo.trim();
+      // `busca` procura o termo em nome, partido e UF. Antes ia só para
+      // `nome`, então "PT" e "SP" nunca encontravam ninguém.
       router.push(
         query
-          ? `/parlamentares?nome=${encodeURIComponent(query)}`
+          ? `/parlamentares?busca=${encodeURIComponent(query)}`
           : '/parlamentares',
       );
     },

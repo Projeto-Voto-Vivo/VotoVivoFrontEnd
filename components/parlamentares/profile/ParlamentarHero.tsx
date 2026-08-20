@@ -10,6 +10,14 @@ interface ParlamentarHeroProps {
 export function ParlamentarHero({ profile }: ParlamentarHeroProps) {
   const { parlamentar } = profile;
 
+  // Situação do mandato vem de `condicao_mandato`. Sem o dado, dizemos isso —
+  // não afirmamos "Em exercício".
+  const situacao = parlamentar.situacaoMandato ?? parlamentar.situacao ?? null;
+  const situacaoLabel = situacao ?? 'Situação do mandato não informada';
+  const situacaoClasses = situacao
+    ? 'border-brasil-green/10 bg-brasil-green/10 text-brasil-green'
+    : 'border-slate-200 bg-slate-100 text-slate-500';
+
   return (
     <section className="grid gap-6 xl:grid-cols-[1.45fr_0.85fr]">
       <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
@@ -37,8 +45,8 @@ export function ParlamentarHero({ profile }: ParlamentarHeroProps) {
                   <span className="rounded-full bg-brasil-blue/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-brasil-blue">
                     Perfil do parlamentar
                   </span>
-                  <span className="rounded-full border border-brasil-green/10 bg-brasil-green/10 px-3 py-1 text-xs font-medium text-brasil-green">
-                    {parlamentar.situacaoMandato ?? parlamentar.situacao}
+                  <span className={`rounded-full border px-3 py-1 text-xs font-medium ${situacaoClasses}`}>
+                    {situacaoLabel}
                   </span>
                 </div>
               </div>
@@ -70,8 +78,8 @@ export function ParlamentarHero({ profile }: ParlamentarHeroProps) {
                 <span className="rounded-full bg-brasil-blue/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-brasil-blue">
                   Perfil do parlamentar
                 </span>
-                <span className="rounded-full border border-brasil-green/10 bg-brasil-green/10 px-3 py-1 text-xs font-medium text-brasil-green">
-                  {parlamentar.situacaoMandato ?? parlamentar.situacao}
+                <span className={`rounded-full border px-3 py-1 text-xs font-medium ${situacaoClasses}`}>
+                  {situacaoLabel}
                 </span>
               </div>
 
@@ -94,9 +102,11 @@ export function ParlamentarHero({ profile }: ParlamentarHeroProps) {
                 <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 font-medium text-slate-700 md:px-4 md:py-2">
                   {parlamentar.casaLegislativa ?? 'Poder Legislativo'}
                 </span>
-                <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 font-medium text-slate-700 md:px-4 md:py-2">
-                  {parlamentar.legislatura ?? 'Legislatura atual'}
-                </span>
+                {parlamentar.legislatura ? (
+                  <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 font-medium text-slate-700 md:px-4 md:py-2">
+                    {parlamentar.legislatura}
+                  </span>
+                ) : null}
               </div>
 
               {profile.resumo ? (

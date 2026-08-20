@@ -7,8 +7,12 @@ export interface Parlamentar {
   cargo?: string;
   casaLegislativa?: string;
   legislatura?: string;
-  situacaoMandato?: string;
-  situacao?: string;
+  /**
+   * Vem de `parlamentar.condicao_mandato` no banco. `null` quando o backend
+   * ainda não expõe o campo — nunca assumir "Em exercício".
+   */
+  situacaoMandato?: string | null;
+  situacao?: string | null;
 }
 
 export type Deputado = Parlamentar;
@@ -35,7 +39,7 @@ export interface ParlamentarDetalhe extends Parlamentar {
   nomeCivil: string;
   dataNascimento: string;
   email: string;
-  situacao: string;
+  situacao: string | null;
   gabinete: Gabinete;
   redesSociais: RedeSocial[];
 }
@@ -54,6 +58,8 @@ export interface GastoResumo {
   tipoDespesa: string;
   total: number;
 }
+
+export type CasaLegislativaFiltro = 'camara' | 'senado';
 
 export interface ListaParlamentaresMeta {
   total: number;
@@ -85,22 +91,32 @@ export interface ProposicaoPerfil {
   ano: string;
   titulo: string;
   resumo: string;
-  papel: string;
+  /** Só é preenchido quando o backend informa o papel real do parlamentar. */
+  papel: string | null;
   situacao: string;
-  tema: string;
-  impactoCidadao: string;
-  data: string;
+  /** Temas oficiais (`temaProposicao`). Vazio quando o backend não informa. */
+  temas: string[];
+  casa: string | null;
+  dataApresentacao: string | null;
 }
 
 export interface VotacaoPerfil {
   id: string;
   titulo: string;
   data: string;
-  tema: string;
+  descricao: string;
   resumo: string;
   voto: string;
+  /** Valor bruto do enum de voto, para lógica (não exibir ao cidadão). */
+  votoOriginal: string | null;
   resultado: string;
-  orientacaoCasa: string;
+  tipoVotacao: string;
+  casa: string | null;
+  /** Orientação do partido do parlamentar na data da votação. */
+  orientacaoPartido: string | null;
+  siglaPartidoNaData: string | null;
+  /** `null` quando não há orientação registrada ou o voto não é comparável. */
+  seguiuOrientacao: boolean | null;
 }
 
 export interface CategoriaDespesaPerfil {
@@ -120,30 +136,77 @@ export interface ItemDespesaPerfil {
 
 export interface DespesasPerfil {
   totalAno: number;
-  mediaMensal: number;
+  /** `null` quando não há base para calcular (nunca dividir por 12 fixo). */
+  mediaMensal: number | null;
+  mesesConsiderados: number | null;
   maiorReembolso: number;
   categorias: CategoriaDespesaPerfil[];
   itensRecentes: ItemDespesaPerfil[];
   totalRegistros: number;
   paginaAtual: number;
   totalPaginas: number;
+  itensPorPagina: number;
   anoReferencia?: number | null;
 }
 
+/**
+ * Uma taxa de presença sempre carrega a metodologia que a produziu:
+ * plenário e comissão não são a mesma medida, e Câmara e Senado não são
+ * comparáveis entre si sem rótulo.
+ */
 export interface PresencaDetalhe {
-  taxa: number;
+  /** `null` = sem dados. Nunca 0% para ausência de informação. */
+  taxa: number | null;
   totalEventos: number;
   faltas: number;
+  metodologia: string | null;
+}
+
+export interface PresencaPerfil {
+  plenario: PresencaDetalhe;
+  comissoes: PresencaDetalhe;
+  casa: string | null;
+  observacao: string | null;
 }
 
 export interface VotacoesPerfil {
-  presenca: PresencaDetalhe;
+  presenca: PresencaPerfil;
+  /** Percentual de aderência à orientação do partido. `null` = sem dados. */
   alinhamento: number | null;
+  alinhamentoBase: number;
   destaques: VotacaoPerfil[];
   leituraRapida: string;
   totalRegistros: number;
   paginaAtual: number;
   totalPaginas: number;
+  itensPorPagina: number;
+}
+
+export interface ComissaoPerfil {
+  id: number;
+  nome: string;
+  sigla: string | null;
+  tipoOrgao: string | null;
+  papel: string | null;
+  dataInicio: string | null;
+  dataFim: string | null;
+}
+
+export interface FiliacaoPartidariaPerfil {
+  id: number;
+  siglaPartido: string;
+  nomePartido: string | null;
+  dataInicio: string | null;
+  dataFim: string | null;
+}
+
+export interface MandatoExercicioPerfil {
+  id: number;
+  casa: string | null;
+  legislatura: string | null;
+  dataInicio: string | null;
+  dataFim: string | null;
+  condicao: string | null;
 }
 
 export interface EmendaResumoPerfil {
@@ -163,8 +226,10 @@ export interface EmendaResumoPerfil {
   valorRestoInscrito?: number;
   valorRestoCancelado?: number;
   valorRestoPago?: number;
+  /** Como o vínculo emenda↔parlamentar foi estabelecido (heurístico). */
   metodoVinculo?: string | null;
-  confiancaVinculo?: number;
+  /** 0–1. Vínculos abaixo de 1 são inferidos, não declarados na fonte. */
+  confiancaVinculo?: number | null;
 }
 
 export interface DocumentoEmendaPerfil {
@@ -188,7 +253,7 @@ export interface EmendaParlamentarVinculado {
   uf: string | null;
   fotoUrl: string | null;
   metodoVinculo: string | null;
-  confiancaVinculo: number;
+  confiancaVinculo: number | null;
 }
 
 export interface EmendasPerfil {
@@ -199,18 +264,24 @@ export interface EmendasPerfil {
   totalRestoInscrito: number;
   principalTipo: string;
   principalLocalidade: string;
+  /** Primeira página vinda do servidor — não a lista inteira. */
   destaques: EmendaResumoPerfil[];
   documentosRecentes: DocumentoEmendaPerfil[];
   leituraRapida: string;
+  /** Quantas emendas do conjunto têm vínculo inferido (confiança < 1). */
+  vinculosInferidos: number;
+  paginaAtual: number;
+  totalPaginas: number;
+  itensPorPagina: number;
 }
 
 export interface ParlamentarPerfil {
   parlamentar: ParlamentarDetalhe;
   subtitulo: string;
   resumo: string;
-  biografia: string;
-  temasPrioritarios: string[];
-  comissoes: string[];
+  comissoes: ComissaoPerfil[];
+  filiacoes: FiliacaoPartidariaPerfil[];
+  mandatos: MandatoExercicioPerfil[];
   indicadores: PerfilIndicador[];
   proposicoes: ProposicaoPerfil[];
   votacoes: VotacoesPerfil;
