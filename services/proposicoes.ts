@@ -5,15 +5,21 @@ import {
   AutorProposicao,
   DocumentoProposicao,
   EtapaTramitacao,
+  FiltrosProposicao,
   JornadaProposicao,
+  OpcoesFiltroProposicoes,
   OrgaoTramitacao,
   OrientacaoBancada,
   PassagemPorOrgao,
   PlacarVotacao,
   ProposicaoDetalhe,
   ProposicaoRef,
+  ProposicaoResultado,
+  ResultadoBuscaProposicoes,
   VotacaoProposicao,
 } from '@/types';
+
+const PROPOSICOES_POR_PAGINA = 20;
 
 /**
  * Cada votação exige uma requisição extra para montar o placar
@@ -432,6 +438,184 @@ async function detalharVotacao(
     return base;
   }
 }
+
+/* ------------------------------------------------------------------ *
+ * Busca de proposições
+ * ------------------------------------------------------------------ */
+
+type BackendProposicaoResultado = {
+  id?: number | null;
+  casa?: string | null;
+  sigla?: string | null;
+  numero?: string | number | null;
+  ano?: number | null;
+  ementa?: string | null;
+  situacao?: string | null;
+  dataApresentacao?: string | null;
+  temas?: (string | { descricao?: string | null; nome?: string | null })[] | null;
+};
+
+type BackendOpcoesFiltro = {
+  tipos?: { sigla?: string | null; nome?: string | null; casa?: string | null }[] | null;
+  anos?: { ano?: number | null; total?: number | null }[] | null;
+  situacoes?: { situacao?: string | null; total?: number | null }[] | null;
+  casas?: { casa?: string | null; total?: number | null }[] | null;
+  temas?: { tema?: string | null; total?: number | null }[] | null;
+};
+
+function mapResultado(item: BackendProposicaoResultado): ProposicaoResultado {
+  return {
+    id: Number(item.id ?? 0),
+    casa: formatCasa(item.casa),
+    sigla: textoOuNulo(item.sigla ?? null),
+    numero:
+      item.numero === null || item.numero === undefined ? null : String(item.numero),
+    ano: item.ano ?? null,
+    titulo: montarTitulo(item.sigla, item.numero, item.ano),
+    ementa: textoOuNulo(item.ementa ?? null) ?? 'Ementa não informada.',
+    situacao: textoOuNulo(item.situacao ?? null),
+    dataApresentacao: item.dataApresentacao ?? null,
+    temas: mapTemas(item.temas),
+  };
+}
+
+function montarQueryBusca(filtros: FiltrosProposicao, pagina: number) {
+  const params = new URLSearchParams();
+
+  params.set('pagina', String(pagina));
+  params.set('limite', String(PROPOSICOES_POR_PAGINA));
+
+  if (filtros.busca) params.set('busca', filtros.busca);
+  if (filtros.tipo) params.set('tipo', filtros.tipo);
+  if (filtros.ano) params.set('ano', String(filtros.ano));
+  if (filtros.casa) params.set('casa', filtros.casa);
+  if (filtros.situacao) params.set('situacao', filtros.situacao);
+  if (filtros.tema) params.set('tema', filtros.tema);
+
+  return params.toString();
+}
+
+/**
+ * Busca no servidor. A alternativa — baixar as proposições e filtrar no
+ * navegador — só enxerga a página corrente, então o termo procurado quase
+ * sempre está numa página que o navegador não tem.
+ */
+export async function buscarProposicoes(
+  filtros: FiltrosProposicao = {},
+  pagina: number = 1,
+): Promise<ResultadoBuscaProposicoes> {
+  try {
+    const res = await api.get(`/proposicoes?${montarQueryBusca(filtros, pagina)}`);
+    const payload = res.data as {
+      data?: BackendProposicaoResultado[];
+      meta?: {
+        total?: number;
+        page?: number;
+        pagina?: number;
+        lastPage?: number;
+        totalPaginas?: number;
+        limit?: number;
+        limite?: number;
+      };
+    };
+
+    const itens = Array.isArray(payload?.data) ? payload.data : [];
+    const meta = payload?.meta;
+    const itensPorPagina =
+      Number(meta?.limit ?? meta?.limite ?? PROPOSICOES_POR_PAGINA) ||
+      PROPOSICOES_POR_PAGINA;
+    const total = Number(meta?.total ?? itens.length) || 0;
+    const totalPaginasBruto = Number(meta?.lastPage ?? meta?.totalPaginas ?? 0);
+
+    return {
+      data: itens.map(mapResultado),
+      total,
+      pagina: Number(meta?.page ?? meta?.pagina ?? pagina) || pagina,
+      totalPaginas:
+        totalPaginasBruto > 0
+          ? totalPaginasBruto
+          : Math.max(1, Math.ceil(total / itensPorPagina)),
+      itensPorPagina,
+    };
+  } catch {
+    console.warn('Não foi possível buscar proposições no backend.');
+
+    return {
+      data: [],
+      total: 0,
+      pagina,
+      totalPaginas: 1,
+      itensPorPagina: PROPOSICOES_POR_PAGINA,
+      aviso:
+        'Não conseguimos consultar as proposições agora. Tente novamente em alguns instantes.',
+    };
+  }
+}
+
+const OPCOES_VAZIAS: OpcoesFiltroProposicoes = {
+  tipos: [],
+  anos: [],
+  situacoes: [],
+  casas: [],
+  temas: [],
+  disponivel: false,
+};
+
+/**
+ * Domínios dos filtros. `situacao` é texto livre vindo da Câmara e do Senado,
+ * com dezenas de redações — sem esta lista qualquer valor fixo no código
+ * geraria filtros que não encontram nada.
+ */
+export const getOpcoesFiltroProposicoes = cache(
+  async function getOpcoesFiltroProposicoes(): Promise<OpcoesFiltroProposicoes> {
+    try {
+      const res = await api.get('/proposicoes/filtros');
+      const payload = (res.data ?? {}) as BackendOpcoesFiltro;
+
+      return {
+        tipos: (payload.tipos ?? [])
+          .map((item) => ({
+            sigla: textoOuNulo(item.sigla ?? null) ?? '',
+            nome: textoOuNulo(item.nome ?? null),
+            casa: formatCasa(item.casa),
+          }))
+          .filter((item) => item.sigla),
+        anos: (payload.anos ?? [])
+          .map((item) => ({ ano: Number(item.ano ?? 0), total: Number(item.total ?? 0) }))
+          .filter((item) => item.ano > 0),
+        situacoes: (payload.situacoes ?? [])
+          .map((item) => ({
+            situacao: textoOuNulo(item.situacao ?? null) ?? '',
+            total: Number(item.total ?? 0),
+          }))
+          .filter((item) => item.situacao),
+        // O valor bruto (`Camara`) é o que o filtro aceita; o rótulo é só
+        // para leitura — trocar um pelo outro faz a API responder 400.
+        casas: (payload.casas ?? [])
+          .map((item) => {
+            const bruto = textoOuNulo(item.casa ?? null) ?? '';
+
+            return {
+              casa: bruto,
+              rotulo: formatCasa(bruto) ?? bruto,
+              total: Number(item.total ?? 0),
+            };
+          })
+          .filter((item) => item.casa),
+        temas: (payload.temas ?? [])
+          .map((item) => ({
+            tema: textoOuNulo(item.tema ?? null) ?? '',
+            total: Number(item.total ?? 0),
+          }))
+          .filter((item) => item.tema),
+        disponivel: true,
+      };
+    } catch {
+      console.warn('Não foi possível carregar as opções de filtro de proposições.');
+      return OPCOES_VAZIAS;
+    }
+  },
+);
 
 /**
  * Memoizado por requisição: `generateMetadata` e a página chamam a mesma

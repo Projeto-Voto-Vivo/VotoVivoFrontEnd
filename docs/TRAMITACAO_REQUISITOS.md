@@ -8,6 +8,27 @@ A página já funciona sem nenhuma das mudanças abaixo: cada bloco sem dado mos
 um estado explícito de ausência, nunca um vazio silencioso. Os itens estão
 ordenados por custo — os primeiros são só expor o que já está gravado.
 
+## 0. Já resolvido pelo backend
+
+`GET /proposicoes` passou a aceitar `tipo`, `ano`, `casa`, `situacao`, `tema` e
+`busca`, e `GET /proposicoes/filtros` devolve os domínios de cada um com
+contadores. A busca de proposições do frontend (`/proposicoes`) foi construída
+em cima disso — filtro e paginação acontecem no servidor, sobre o universo
+completo, e não sobre a página que o navegador por acaso baixou.
+
+**Falta um filtro: `autor`.** O painel de proposições dentro do perfil do
+parlamentar continua carregando várias páginas de
+`GET /parlamentares/:id/proposicoes` e filtrando em memória, porque nenhuma das
+duas rotas permite cruzar autor com tipo/ano/situação:
+
+- `/proposicoes` filtra por tudo, menos por autor;
+- `/parlamentares/:id/proposicoes` só aceita `pagina` e `limite`.
+
+Qualquer um dos dois resolve — `/proposicoes?autor=:id` (via
+`autoriaProposicao`) ou os mesmos filtros em `/parlamentares/:id/proposicoes`.
+Com isso o painel deixa de truncar e o aviso de "mostrando as N mais recentes"
+some.
+
 ---
 
 ## 1. Já está no banco, falta expor na API

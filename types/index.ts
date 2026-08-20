@@ -300,6 +300,55 @@ export interface EmendaDetalhe extends EmendaResumoPerfil {
 }
 
 /* ------------------------------------------------------------------ *
+ * Busca de proposições
+ * ------------------------------------------------------------------ */
+
+export interface FiltrosProposicao {
+  /** Texto livre: casa com a ementa e com o número da proposição. */
+  busca?: string;
+  /** Sigla do tipo: PL, PEC, MPV... */
+  tipo?: string;
+  ano?: number;
+  casa?: string;
+  situacao?: string;
+  tema?: string;
+}
+
+export interface ProposicaoResultado {
+  id: number;
+  casa: string | null;
+  sigla: string | null;
+  numero: string | null;
+  ano: number | null;
+  titulo: string;
+  ementa: string;
+  situacao: string | null;
+  dataApresentacao: string | null;
+  temas: string[];
+}
+
+export interface ResultadoBuscaProposicoes {
+  data: ProposicaoResultado[];
+  total: number;
+  pagina: number;
+  totalPaginas: number;
+  itensPorPagina: number;
+  /** Mensagem para o usuário quando algo impediu a busca. */
+  aviso?: string;
+}
+
+export interface OpcoesFiltroProposicoes {
+  tipos: { sigla: string; nome: string | null; casa: string | null }[];
+  anos: { ano: number; total: number }[];
+  situacoes: { situacao: string; total: number }[];
+  /** `casa` é o valor aceito pelo filtro; `rotulo` é o nome exibido. */
+  casas: { casa: string; rotulo: string; total: number }[];
+  temas: { tema: string; total: number }[];
+  /** `false` quando não foi possível carregar os domínios de filtro. */
+  disponivel: boolean;
+}
+
+/* ------------------------------------------------------------------ *
  * Tramitação de proposições
  * ------------------------------------------------------------------ */
 

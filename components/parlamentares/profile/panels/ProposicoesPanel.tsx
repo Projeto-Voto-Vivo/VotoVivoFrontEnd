@@ -216,10 +216,13 @@ export function ProposicoesPanel({ profile }: ProposicoesPanelProps) {
 
         {truncado && (
           <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-800">
-            Este parlamentar tem {totalNoBackend} proposições registradas. Para
-            não disparar dezenas de requisições, apenas as{' '}
-            {todasProposicoes.length} primeiras foram carregadas — os filtros
-            abaixo se aplicam só a elas.
+            Este parlamentar tem {totalNoBackend} proposições. Mostramos as{' '}
+            {todasProposicoes.length} mais recentes aqui, e os filtros acima se
+            aplicam só a elas. Para procurar em todas,{' '}
+            <Link href="/proposicoes" className="font-semibold underline">
+              use a busca de proposições
+            </Link>
+            .
           </div>
         )}
 
