@@ -1,5 +1,6 @@
 export const dynamic = 'force-dynamic';
 
+import { cache } from 'react';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { ArrowLeft } from 'lucide-react';
@@ -13,6 +14,13 @@ import { OrgaosPercorridos } from '@/components/proposicoes/OrgaosPercorridos';
 import { ProposicaoHero } from '@/components/proposicoes/ProposicaoHero';
 import { TramitacaoTimeline } from '@/components/proposicoes/TramitacaoTimeline';
 import { VotacoesProposicao } from '@/components/proposicoes/VotacoesProposicao';
+
+/**
+ * `generateMetadata` e a página pedem a mesma proposição, e cada pedido dispara
+ * várias requisições. `cache` mora aqui, e não no serviço, porque é API de
+ * componente de servidor e o serviço também roda no navegador.
+ */
+const carregarProposicao = cache(getProposicaoDetalhe);
 
 type PaginaProps = {
   params: Promise<{ id: string }>;
@@ -29,7 +37,7 @@ export async function generateMetadata({ params }: PaginaProps): Promise<Metadat
 
   if (!proposicaoId) return { title: 'Proposição não encontrada' };
 
-  const proposicao = await getProposicaoDetalhe(proposicaoId);
+  const proposicao = await carregarProposicao(proposicaoId);
 
   if (!proposicao) return { title: 'Proposição não encontrada' };
 
@@ -47,7 +55,7 @@ export default async function TramitacaoProposicaoPage({ params }: PaginaProps) 
     notFound();
   }
 
-  const proposicao = await getProposicaoDetalhe(proposicaoId);
+  const proposicao = await carregarProposicao(proposicaoId);
 
   if (!proposicao) {
     notFound();
@@ -75,7 +83,10 @@ export default async function TramitacaoProposicaoPage({ params }: PaginaProps) 
 
         <VotacoesProposicao votacoes={proposicao.votacoes} />
 
-        <AutoresProposicao autores={proposicao.autores} />
+        <AutoresProposicao
+          autores={proposicao.autores}
+          observacao={proposicao.autoriaObservacao}
+        />
 
         <DocumentosProposicao
           documentos={proposicao.documentos}

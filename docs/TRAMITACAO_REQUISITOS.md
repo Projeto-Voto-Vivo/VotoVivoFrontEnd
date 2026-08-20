@@ -4,9 +4,13 @@ Levantamento feito ao construir `/proposicoes/[id]`, conferindo o schema do
 agregador (`VotoVivoDataAggregator/popular/schema.sql`), o `schema.prisma` e os
 controllers do `VotoVivoBackEnd`.
 
-A página já funciona sem nenhuma das mudanças abaixo: cada bloco sem dado mostra
-um estado explícito de ausência, nunca um vazio silencioso. Os itens estão
-ordenados por custo — os primeiros são só expor o que já está gravado.
+A página funciona com ou sem cada um destes dados: todo bloco sem informação
+mostra um estado explícito de ausência, nunca um vazio silencioso.
+
+> **Estado em agosto/2026.** O backend implementou quase tudo o que este
+> documento pedia. O que continua pendente está na seção 2 (dados que não
+> existem no banco) e no item 1.5. O frontend já consome tudo o que foi
+> entregue.
 
 ## 0. Já resolvido pelo backend
 
@@ -16,109 +20,49 @@ contadores. A busca de proposições do frontend (`/proposicoes`) foi construíd
 em cima disso — filtro e paginação acontecem no servidor, sobre o universo
 completo, e não sobre a página que o navegador por acaso baixou.
 
-**Falta um filtro: `autor`.** O painel de proposições dentro do perfil do
-parlamentar continua carregando várias páginas de
-`GET /parlamentares/:id/proposicoes` e filtrando em memória, porque nenhuma das
-duas rotas permite cruzar autor com tipo/ano/situação:
+**Entregue também:** o filtro `autor` em `GET /proposicoes`, que cruza autoria
+com tipo, ano, casa, situação, tema e busca no banco. O painel de proposições do
+perfil passou a usá-lo: mostra todas as proposições do parlamentar, paginadas e
+filtradas no servidor, sem o recorte em memória e sem truncar.
 
-- `/proposicoes` filtra por tudo, menos por autor;
-- `/parlamentares/:id/proposicoes` só aceita `pagina` e `limite`.
+Além disso, agora estão disponíveis e em uso:
 
-Qualquer um dos dois resolve — `/proposicoes?autor=:id` (via
-`autoriaProposicao`) ou os mesmos filtros em `/parlamentares/:id/proposicoes`.
-Com isso o painel deixa de truncar e o aviso de "mostrando as N mais recentes"
-some.
+- `GET /proposicoes/:id/tramitacoes` — paginado, com órgão e regime resolvidos.
+  O frontend segue as páginas até um teto de 10.
+- `apiId`, `autores` e o bloco `autoria` em `GET /proposicoes/:id`.
+- `placar` agregado e `orgao` em cada votação da proposição. Isso eliminou uma
+  requisição por votação: só a orientação das bancadas ainda exige ida a
+  `/votacoes/:id`, e apenas nas primeiras votações.
+
+**Uma observação de uso:** `/proposicoes/filtros` devolve domínios globais, não
+facetados por autor. No painel do perfil isso significa que o usuário pode
+escolher uma situação que aquele parlamentar não tem, e receber lista vazia. É
+um efeito aceitável — a alternativa custaria uma query por dimensão a cada
+requisição —, mas se incomodar, o caminho é aceitar `autor` também em
+`/proposicoes/filtros`.
 
 ---
 
-## 1. Já está no banco, falta expor na API
+## 1. Estava no banco e foi exposto — histórico
 
-### 1.1 Histórico de tramitação — **é o coração da página**
+Todos os itens desta seção foram entregues e já são consumidos pelo frontend.
+Ficam registrados porque explicam decisões que continuam valendo.
 
-A tabela `tramitacao` existe e está mapeada no Prisma (`Proposition.tramitacao`),
-com `sequencia`, `dataHora`, `descricaoTramitacao`, `descricaoSituacao` e
-`despacho`. Nenhuma rota devolve esses dados.
+| Item | Como ficou |
+|------|-----------|
+| Histórico de tramitação | `GET /proposicoes/:id/tramitacoes`, paginado, ordenado por `sequencia` com `dataHora` de desempate. |
+| Órgão e regime de cada etapa | Resolvidos por consulta separada, e não por `@relation`: `tramitacao.idOrgao` e `idTipoTramitacao` não têm FK no banco, e declarar a relação no Prisma faria o schema divergir de produção. A correção de raiz continua sendo adicionar FK e índice no agregador. |
+| Autoria e `apiId` da proposição | No payload de `GET /proposicoes/:id`. O `apiId` é o que permite montar o link para a ficha oficial. |
+| Órgão da votação | No bloco `votacoes`. Saber que foi na CCJC e não no Plenário muda a leitura do placar. |
+| Placar agregado | Um `groupBy` por proposição, com as sete chaves sempre presentes. Antes exigia baixar até 513 objetos de voto por votação. |
 
-**Rota esperada pelo frontend:**
+**O que restou deste bloco:** `votos` em `GET /votacoes/:id` ainda vem sem
+paginação — é a última listagem sem `take`. O frontend só a consulta para pegar
+a orientação das bancadas, e apenas nas primeiras votações de cada proposição.
 
-```
-GET /proposicoes/:id/tramitacoes  ->  { data: Etapa[], meta: {...} }
-```
-
-```jsonc
-{
-  "id": 1,
-  "sequencia": 3,
-  "dataHora": "2026-04-02T10:30:00",
-  "descricaoTramitacao": "Recebimento pela CCTCI",
-  "descricaoSituacao": "Aguardando designação de relator",
-  "despacho": "...",
-  "regime": "Prioridade",                    // tipoTramitacao.regime
-  "orgao": { "id": 12, "sigla": "CCTCI", "nome": "...", "tipoOrgao": "Comissão Permanente", "casa": "Camara" }
-}
-```
-
-A página também aceita a tramitação embutida em `GET /proposicoes/:id`, como
-array `tramitacao` ou `tramitacoes` — o que for mais conveniente para o backend.
-
-**Bloqueio no Prisma.** `tramitacao.idTipoTramitacao` e `tramitacao.idOrgao` são
-`Int?` soltos, sem `@relation`. Sem elas não dá para fazer `include` do órgão nem
-do regime, que são justamente o que dá sentido à etapa. É preciso declarar:
-
-```prisma
-model tramitacao {
-  // ...
-  tipoTramitacao tipoTramitacao? @relation(fields: [idTipoTramitacao], references: [idTipoTramitacao])
-  orgao          orgao?          @relation(fields: [idOrgao], references: [idOrgao])
-}
-```
-
-No banco, `tramitacao.idOrgao` também não tem FK nem índice — vale adicionar os
-dois (o índice importa: a consulta filtra por proposição e junta órgão).
-
-Ordenar por `sequencia` quando houver, caindo para `dataHora`. A página reordena
-de qualquer jeito, mas ordenado na origem evita surpresa.
-
-### 1.2 Autoria no payload da proposição
-
-`autoriaProposicao` / `PropositionAuthor` já está mapeado e não é devolvido.
-Basta incluir em `GET /proposicoes/:id`:
-
-```jsonc
-"autores": [
-  { "id": 1, "nomeParlamentar": "...", "siglaPartido": "PT", "uf": "SP", "urlFoto": "..." }
-]
-```
-
-### 1.3 `apiId` da proposição
-
-`proposicao.idApi` existe, mas `getPropositionById` não o devolve. Com ele a
-página monta o link para a ficha oficial (Câmara e Senado têm URL determinística
-a partir desse id). Sem ele, o botão "ver na fonte oficial" não aparece.
-
-### 1.4 Órgão da votação
-
-`Voting` **já tem** a relação `orgao` no Prisma — falta só o `include` e o campo
-no payload de `/votacoes/:id` e no bloco `votacoes` da proposição. Saber que a
-votação foi na CCJC e não no Plenário muda a leitura do placar.
-
-### 1.5 Placar agregado da votação
-
-Hoje o único jeito de montar o placar é `GET /votacoes/:id`, que devolve a lista
-inteira de votos — até 513 objetos por votação. A página limita o detalhamento às
-8 primeiras votações por isso, e avisa na interface quando não detalhou.
-
-**Pedido:** um agregado calculado em SQL, no mesmo payload:
-
-```jsonc
-"placar": { "SIM": 312, "NAO": 121, "ABSTENCAO": 9, "OBSTRUCAO": 24,
-            "AUSENCIA JUSTIFICADA": 7, "AUSENTE": 40, "NAO REGISTRADO": 0 }
-```
-
-A página já prefere esse campo quando ele existe e só cai na contagem manual se
-ele faltar. Com ele, dá para detalhar todas as votações sem custo.
-
-Enquanto isso, `votos` deveria ser paginado — é a última listagem sem `take`.
+Um detalhe de contrato: o placar usa as chaves do enum do Prisma
+(`AUSENCIA_JUSTIFICADA`, `NAO_REGISTRADO`, com underscore), enquanto o banco
+grava com espaço. O frontend normaliza as duas grafias, então qualquer uma serve.
 
 ---
 
@@ -171,6 +115,8 @@ CREATE TABLE relatoriaProposicao (
 `autoriaProposicao` só liga proposição a `parlamentar`. Projeto do Executivo, do
 Judiciário, de comissão ou de iniciativa popular fica **sem autor nenhum** — e a
 página não tem como distinguir "não tem autor" de "o autor não é parlamentar".
+O backend passou a devolver um bloco `autoria.observacao` avisando disso, e a
+página o exibe — mas é um remendo: o dado em si continua faltando.
 
 Sugestão: `autoriaProposicao.tipoAutor` (`PARLAMENTAR`, `ORGAO`, `EXECUTIVO`,
 `JUDICIARIO`, `POPULAR`) e `nomeAutorExterno` para os casos sem `idParlamentar`.
@@ -183,7 +129,7 @@ inexistente — o `PRIMARY KEY (idParlamentar, idProposicao)` não guarda ordem.
 - **Justificativa e palavras-chave**: só existe `ementa`. A justificativa é o que
   explica o projeto em linguagem de gente.
 - **Data da situação atual**: `statusAtual` é texto solto sem data. Hoje a página
-  deduz a data pela última etapa da tramitação — só funciona com o item 1.1.
+  deduz a data pela última etapa da tramitação.
 - **Urgência / regime atual**: existe por etapa (`tipoTramitacao.regime`), não
   como estado corrente da proposição.
 

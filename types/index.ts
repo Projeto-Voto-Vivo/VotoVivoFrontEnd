@@ -312,6 +312,8 @@ export interface FiltrosProposicao {
   casa?: string;
   situacao?: string;
   tema?: string;
+  /** Id do parlamentar autor. Cruza autoria com os demais filtros no banco. */
+  autor?: number;
 }
 
 export interface ProposicaoResultado {
@@ -414,11 +416,11 @@ export interface VotacaoProposicao {
   resumo: string;
   resultado: string;
   tipo: string;
-  /** `null` quando o detalhe da votação não foi carregado ou não tem votos. */
+  /** Onde a votação aconteceu — muda a leitura do placar. */
+  orgao: OrgaoTramitacao | null;
+  /** `null` quando a votação não registrou votos individuais (simbólica). */
   placar: PlacarVotacao | null;
   orientacoes: OrientacaoBancada[];
-  /** Detalhe não buscado (limite de requisições) — não confundir com "sem votos". */
-  detalheCarregado: boolean;
 }
 
 export interface AutorProposicao {
@@ -457,6 +459,11 @@ export interface ProposicaoDetalhe {
   dataApresentacao: string | null;
   temas: string[];
   autores: AutorProposicao[];
+  /**
+   * Lista vazia de autores não quer dizer "sem autor": a base só registra
+   * autoria parlamentar. Esta observação vem da própria API.
+   */
+  autoriaObservacao: string | null;
   /** Ordenadas da mais antiga para a mais recente. */
   tramitacao: EtapaTramitacao[];
   /** `false` = a API ainda não publica o histórico (≠ "não tramitou"). */

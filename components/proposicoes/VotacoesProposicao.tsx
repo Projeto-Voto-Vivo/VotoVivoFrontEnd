@@ -82,8 +82,15 @@ export function VotacoesProposicao({ votacoes }: VotacoesProposicaoProps) {
                 <div>
                   <p className="text-sm font-semibold text-brasil-blue">
                     {votacao.tipo}
-                    {votacao.casa ? ` · ${votacao.casa}` : ''}
+                    {votacao.orgao
+                      ? ` · ${votacao.orgao.sigla ?? votacao.orgao.nome}`
+                      : votacao.casa
+                        ? ` · ${votacao.casa}`
+                        : ''}
                   </p>
+                  {votacao.orgao?.nome && votacao.orgao.nome !== votacao.orgao.sigla ? (
+                    <p className="text-xs text-slate-500">{votacao.orgao.nome}</p>
+                  ) : null}
                   <h3 className="mt-1 text-base font-bold leading-6 text-slate-900">
                     {votacao.resumo}
                   </h3>
@@ -103,16 +110,11 @@ export function VotacoesProposicao({ votacoes }: VotacoesProposicaoProps) {
 
               {votacao.placar ? (
                 <Placar placar={votacao.placar} />
-              ) : votacao.detalheCarregado ? (
-                <p className="mt-3 text-sm leading-6 text-slate-500">
+              ) : (
+                <p className="mt-3 flex items-start gap-2 text-sm leading-6 text-slate-500">
+                  <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
                   Sem votos individuais registrados — típico de votação
                   simbólica, em que a casa aprova sem registrar voto a voto.
-                </p>
-              ) : (
-                <p className="mt-3 flex items-start gap-2 text-xs leading-5 text-slate-500">
-                  <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                  Para a página abrir rápido, detalhamos o placar apenas das
-                  primeiras votações desta proposição.
                 </p>
               )}
 

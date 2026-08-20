@@ -5,9 +5,11 @@ import { SectionShell } from '@/components/parlamentares/profile/shared/SectionS
 
 interface AutoresProposicaoProps {
   autores: AutorProposicao[];
+  /** Ressalva da própria API sobre o alcance do dado de autoria. */
+  observacao: string | null;
 }
 
-export function AutoresProposicao({ autores }: AutoresProposicaoProps) {
+export function AutoresProposicao({ autores, observacao }: AutoresProposicaoProps) {
   return (
     <SectionShell icon={<Users className="h-6 w-6" />} title="Autoria">
       {autores.length === 0 ? (
@@ -23,6 +25,14 @@ export function AutoresProposicao({ autores }: AutoresProposicaoProps) {
           </div>
         </div>
       ) : (
+        <>
+        {observacao ? (
+          <p className="mb-4 text-xs leading-5 text-slate-500">
+            Mostramos apenas a autoria de deputados e senadores. Uma proposta
+            também pode ter partido do Executivo, do Judiciário, de uma comissão
+            ou de iniciativa popular.
+          </p>
+        ) : null}
         <ul className="flex flex-wrap gap-2">
           {autores.map((autor, index) => {
             const rotulo = [autor.siglaPartido, autor.uf].filter(Boolean).join('/');
@@ -51,6 +61,7 @@ export function AutoresProposicao({ autores }: AutoresProposicaoProps) {
             );
           })}
         </ul>
+        </>
       )}
     </SectionShell>
   );

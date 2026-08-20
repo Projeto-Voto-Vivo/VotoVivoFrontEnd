@@ -2,12 +2,20 @@ export const dynamic = 'force-dynamic';
 
 import Link from 'next/link';
 import { ArrowRight, FileText, Search } from 'lucide-react';
+import { cache } from 'react';
 import {
   buscarProposicoes,
-  getOpcoesFiltroProposicoes,
+  carregarOpcoesFiltroProposicoes,
 } from '@/services/proposicoes';
 import { FiltrosProposicao } from '@/types';
 import { formatDate } from '@/components/parlamentares/profile/shared/formatters';
+
+/**
+ * Memoizado por requisição. `cache` é API de componente de servidor, por isso
+ * mora aqui e não no serviço — que agora também roda no navegador, no painel
+ * de proposições do perfil.
+ */
+const getOpcoesFiltro = cache(carregarOpcoesFiltroProposicoes);
 
 type PaginaProps = {
   searchParams?: Promise<{
@@ -52,7 +60,7 @@ export default async function BuscaProposicoesPage({ searchParams }: PaginaProps
 
   const [resultado, opcoes] = await Promise.all([
     buscarProposicoes(filtros, pagina),
-    getOpcoesFiltroProposicoes(),
+    getOpcoesFiltro(),
   ]);
 
   const temFiltro = Object.values(filtros).some(Boolean);

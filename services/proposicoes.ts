@@ -1,6 +1,5 @@
-import { cache } from 'react';
 import api from './api';
-import { formatCasa } from './parlamentares';
+import { formatCasa, formatVotingType } from './parlamentares';
 import {
   AutorProposicao,
   DocumentoProposicao,
@@ -22,12 +21,17 @@ import {
 const PROPOSICOES_POR_PAGINA = 20;
 
 /**
- * Cada votação exige uma requisição extra para montar o placar
- * (`GET /votacoes/:id` devolve a lista completa de votos). Uma proposição
- * muito votada renderia dezenas de chamadas, então o detalhamento é limitado
- * e as votações não detalhadas são marcadas como tal na interface.
+ * A API já devolve o placar agregado junto da proposição. A orientação das
+ * bancadas ainda mora em `GET /votacoes/:id`, então buscamos esse complemento
+ * só para as primeiras votações — o placar, que é o essencial, vem para todas.
  */
-const MAX_VOTACOES_DETALHADAS = 8;
+const MAX_ORIENTACOES_DETALHADAS = 8;
+
+/** Etapas por página em `GET /proposicoes/:id/tramitacoes`. */
+const TRAMITACOES_POR_PAGINA = 100;
+
+/** Teto de páginas de tramitação — protege contra processos gigantes. */
+const MAX_PAGINAS_TRAMITACAO = 10;
 
 type BackendProposicaoRef = {
   id?: number | null;
@@ -71,6 +75,10 @@ type BackendVotacaoDaProposicao = {
   resumo?: string | null;
   resultado?: string | null;
   tipo?: string | null;
+  orgao?: BackendOrgao | null;
+  /** Placar agregado no banco: evita baixar até 513 votos por votação. */
+  placar?: Record<string, string | number | null> | null;
+  totalVotos?: number | null;
 };
 
 type BackendVotacaoDetalhe = {
@@ -121,6 +129,7 @@ type BackendProposicaoDetalhe = {
   tramitacoes?: BackendTramitacao[] | null;
   documentos?: BackendDocumento[] | null;
   votacoes?: BackendVotacaoDaProposicao[] | null;
+  autoria?: { somenteParlamentares?: boolean; observacao?: string | null } | null;
   jornada?: {
     mesmaMateria?: BackendProposicaoRef[] | null;
     principal?: BackendProposicaoRef | null;
@@ -293,7 +302,10 @@ function montarPlacar(detalhe: BackendVotacaoDetalhe): PlacarVotacao | null {
       encontrou = true;
     });
 
-    if (encontrou) return placar;
+    // Placar zerado nas sete chaves = votação sem voto individual (simbólica).
+    // Devolver o objeto zerado renderizaria uma barra vazia e "0 votos", como
+    // se ninguém tivesse votado numa votação que de fato aconteceu.
+    if (encontrou) return placar.total > 0 ? placar : null;
   }
 
   const votos = detalhe.votos ?? [];
@@ -375,18 +387,43 @@ function montarUrlOficial(casa: string | null, apiId: string | null) {
 }
 
 /**
- * Histórico de tramitação. A API ainda não publica esta rota; enquanto isso a
- * página mostra o estado "sem dados" em vez de fingir que não houve tramitação.
+ * Histórico de tramitação, paginado na origem. Um processo antigo passa de
+ * cem etapas, e mostrar meio caminho seria pior do que não mostrar nenhum —
+ * então seguimos as páginas até o teto e declaramos se algo ficou de fora.
  */
 async function getTramitacao(id: number): Promise<{
   etapas: EtapaTramitacao[];
   disponivel: boolean;
 }> {
-  try {
-    const res = await api.get(`/proposicoes/${id}/tramitacoes`);
-    const itens = unwrapArray<BackendTramitacao>(res.data);
+  const buscarPagina = async (pagina: number) => {
+    const params = new URLSearchParams({
+      pagina: String(pagina),
+      limite: String(TRAMITACOES_POR_PAGINA),
+      limit: String(TRAMITACOES_POR_PAGINA),
+    });
 
-    return { etapas: itens.map(mapEtapa), disponivel: true };
+    const res = await api.get(`/proposicoes/${id}/tramitacoes?${params.toString()}`);
+    const itens = unwrapArray<BackendTramitacao>(res.data);
+    const meta = (res.data as { meta?: { lastPage?: number; totalPaginas?: number } })
+      ?.meta;
+
+    return {
+      itens,
+      ultimaPagina: Number(meta?.lastPage ?? meta?.totalPaginas ?? 1) || 1,
+    };
+  };
+
+  try {
+    const primeira = await buscarPagina(1);
+    const etapas = [...primeira.itens];
+    const ultima = Math.min(primeira.ultimaPagina, MAX_PAGINAS_TRAMITACAO);
+
+    for (let pagina = 2; pagina <= ultima; pagina += 1) {
+      const proxima = await buscarPagina(pagina);
+      etapas.push(...proxima.itens);
+    }
+
+    return { etapas: etapas.map(mapEtapa), disponivel: true };
   } catch {
     return { etapas: [], disponivel: false };
   }
@@ -406,9 +443,14 @@ async function getDocumentos(id: number): Promise<{
   }
 }
 
+/**
+ * O placar já vem agregado com a proposição. A ida a `/votacoes/:id` serve
+ * apenas para a orientação das bancadas — e só nas primeiras votações, para
+ * a página não abrir uma requisição por votação.
+ */
 async function detalharVotacao(
   votacao: BackendVotacaoDaProposicao,
-  detalhar: boolean,
+  buscarOrientacoes: boolean,
 ): Promise<VotacaoProposicao> {
   const base: VotacaoProposicao = {
     id: Number(votacao.id ?? 0),
@@ -416,13 +458,14 @@ async function detalharVotacao(
     data: votacao.data ?? null,
     resumo: textoOuNulo(votacao.resumo ?? null) ?? 'Resumo não informado.',
     resultado: textoOuNulo(votacao.resultado ?? null) ?? 'Resultado não informado',
-    tipo: textoOuNulo(votacao.tipo ?? null) ?? 'Votação',
-    placar: null,
+    // NOMINAL/SIMBOLICA/SECRETA são valores de banco; o cidadão lê o rótulo.
+    tipo: formatVotingType(votacao.tipo),
+    orgao: mapOrgao(votacao.orgao),
+    placar: montarPlacar({ placar: votacao.placar ?? null }),
     orientacoes: [],
-    detalheCarregado: false,
   };
 
-  if (!detalhar || !base.id) return base;
+  if (!buscarOrientacoes || !base.id) return base;
 
   try {
     const res = await api.get(`/votacoes/${base.id}`);
@@ -430,9 +473,9 @@ async function detalharVotacao(
 
     return {
       ...base,
-      placar: montarPlacar(detalhe),
+      // Se a proposição não trouxe placar, o detalhe da votação ainda resolve.
+      placar: base.placar ?? montarPlacar(detalhe),
       orientacoes: mapOrientacoes(detalhe),
-      detalheCarregado: true,
     };
   } catch {
     return base;
@@ -491,6 +534,7 @@ function montarQueryBusca(filtros: FiltrosProposicao, pagina: number) {
   if (filtros.casa) params.set('casa', filtros.casa);
   if (filtros.situacao) params.set('situacao', filtros.situacao);
   if (filtros.tema) params.set('tema', filtros.tema);
+  if (filtros.autor) params.set('autor', String(filtros.autor));
 
   return params.toString();
 }
@@ -566,8 +610,7 @@ const OPCOES_VAZIAS: OpcoesFiltroProposicoes = {
  * com dezenas de redações — sem esta lista qualquer valor fixo no código
  * geraria filtros que não encontram nada.
  */
-export const getOpcoesFiltroProposicoes = cache(
-  async function getOpcoesFiltroProposicoes(): Promise<OpcoesFiltroProposicoes> {
+export async function carregarOpcoesFiltroProposicoes(): Promise<OpcoesFiltroProposicoes> {
     try {
       const res = await api.get('/proposicoes/filtros');
       const payload = (res.data ?? {}) as BackendOpcoesFiltro;
@@ -614,14 +657,9 @@ export const getOpcoesFiltroProposicoes = cache(
       console.warn('Não foi possível carregar as opções de filtro de proposições.');
       return OPCOES_VAZIAS;
     }
-  },
-);
+}
 
-/**
- * Memoizado por requisição: `generateMetadata` e a página chamam a mesma
- * função, e cada chamada dispara várias requisições ao backend.
- */
-export const getProposicaoDetalhe = cache(async function getProposicaoDetalhe(
+export async function getProposicaoDetalhe(
   id: number,
 ): Promise<ProposicaoDetalhe | null> {
   let payload: BackendProposicaoDetalhe;
@@ -648,7 +686,7 @@ export const getProposicaoDetalhe = cache(async function getProposicaoDetalhe(
     Array.isArray(payload.documentos) ? null : getDocumentos(id),
     Promise.all(
       votacoesBrutas.map((votacao, index) =>
-        detalharVotacao(votacao, index < MAX_VOTACOES_DETALHADAS),
+        detalharVotacao(votacao, index < MAX_ORIENTACOES_DETALHADAS),
       ),
     ),
   ]);
@@ -695,6 +733,7 @@ export const getProposicaoDetalhe = cache(async function getProposicaoDetalhe(
     dataApresentacao: payload.dataApresentacao ?? null,
     temas: mapTemas(payload.temas),
     autores: (payload.autores ?? []).map(mapAutor),
+    autoriaObservacao: textoOuNulo(payload.autoria?.observacao ?? null),
     tramitacao: etapas,
     tramitacaoDisponivel,
     orgaosPercorridos: resumirOrgaos(etapas),
@@ -704,4 +743,4 @@ export const getProposicaoDetalhe = cache(async function getProposicaoDetalhe(
     jornada,
     urlFonteOficial: montarUrlOficial(casa, apiId),
   };
-});
+}

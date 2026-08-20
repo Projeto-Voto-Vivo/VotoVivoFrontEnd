@@ -32,14 +32,6 @@ const VOTACOES_PAGE_SIZE = 5;
 const EMENDAS_PAGE_SIZE = 5;
 const PROPOSICOES_PAGE_SIZE = 20;
 
-/**
- * A cobertura de proposições do agregador passou a ser o universo completo
- * (dumps anuais da Câmara e listagem anual do Senado). Carregar "todas" as
- * páginas de um parlamentar prolífico significaria dezenas de requisições em
- * sequência, então o carregamento é limitado e o truncamento é declarado.
- */
-const MAX_PAGINAS_PROPOSICOES = 15;
-
 /** Páginas por dimensão (nome/partido/UF) na busca livre da home. */
 const MAX_PAGINAS_BUSCA = 5;
 
@@ -548,7 +540,7 @@ export function formatVotingChoice(choice?: string | null) {
   return VOTO_LABELS[normalized] || 'Não informado';
 }
 
-function formatVotingType(type?: string | null) {
+export function formatVotingType(type?: string | null) {
   const normalized = normalizeToken(type);
 
   const labels: Record<string, string> = {
@@ -1414,31 +1406,6 @@ export async function getProposicoesParlamentar(
       meta: { total: 0, page, lastPage: 1, limit: PROPOSICOES_PAGE_SIZE },
     };
   }
-}
-
-export type ProposicoesCarregadas = {
-  data: ProposicaoPerfil[];
-  total: number;
-  truncado: boolean;
-};
-
-export async function getTodasProposicoesParlamentar(
-  id: number,
-): Promise<ProposicoesCarregadas> {
-  const primeira = await getProposicoesParlamentar(id, 1);
-  const todas = [...primeira.data];
-  const ultimaPagina = Math.min(primeira.meta.lastPage, MAX_PAGINAS_PROPOSICOES);
-
-  for (let pagina = 2; pagina <= ultimaPagina; pagina += 1) {
-    const proxima = await getProposicoesParlamentar(id, pagina);
-    todas.push(...proxima.data);
-  }
-
-  return {
-    data: todas,
-    total: primeira.meta.total,
-    truncado: primeira.meta.lastPage > MAX_PAGINAS_PROPOSICOES,
-  };
 }
 
 export async function getResumoEmendasParlamentar(parlamentarId: number) {
