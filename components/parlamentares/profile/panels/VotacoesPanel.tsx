@@ -39,8 +39,8 @@ function BarraPresenca({ detalhe, titulo }: { detalhe: PresencaDetalhe; titulo: 
 
       {semDados ? (
         <p className="mt-2 text-xs leading-5 text-slate-500">
-          O backend não informou presença para esta medida. Ausência de dado não
-          significa ausência do parlamentar.
+          Ainda não temos os registros de presença desta medida. Falta de dado
+          não quer dizer que o parlamentar faltou.
         </p>
       ) : (
         <div className="mt-2 flex flex-wrap gap-2 text-xs font-medium text-slate-500">

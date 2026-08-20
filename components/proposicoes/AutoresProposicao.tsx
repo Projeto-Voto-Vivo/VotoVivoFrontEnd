@@ -16,10 +16,9 @@ export function AutoresProposicao({ autores }: AutoresProposicaoProps) {
           <div>
             <p className="font-semibold text-slate-800">Autoria não informada.</p>
             <p className="mt-1">
-              A base registra autoria apenas de parlamentares
-              (<code>autoriaProposicao</code>). Proposições do Executivo, do
-              Judiciário, de comissões ou de iniciativa popular ficam sem autor
-              identificado.
+              Por enquanto só conseguimos identificar autoria de deputados e
+              senadores. Propostas que nascem do Executivo, do Judiciário, de
+              uma comissão ou de iniciativa popular ainda aparecem sem autor.
             </p>
           </div>
         </div>

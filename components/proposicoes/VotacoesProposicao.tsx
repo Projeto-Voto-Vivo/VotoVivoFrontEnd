@@ -111,8 +111,8 @@ export function VotacoesProposicao({ votacoes }: VotacoesProposicaoProps) {
               ) : (
                 <p className="mt-3 flex items-start gap-2 text-xs leading-5 text-slate-500">
                   <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                  Placar não carregado: só detalhamos as primeiras votações para
-                  não disparar uma requisição por votação.
+                  Para a página abrir rápido, detalhamos o placar apenas das
+                  primeiras votações desta proposição.
                 </p>
               )}
 

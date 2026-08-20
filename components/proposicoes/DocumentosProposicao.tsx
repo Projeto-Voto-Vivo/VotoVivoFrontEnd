@@ -25,12 +25,12 @@ export function DocumentosProposicao({
           <Info className="mt-0.5 h-5 w-5 shrink-0 text-slate-400" aria-hidden="true" />
           <div>
             <p className="font-semibold text-slate-800">
-              Os documentos da proposição ainda não estão na base.
+              Os documentos desta proposição ainda não estão disponíveis aqui.
             </p>
             <p className="mt-1">
-              O banco guarda documentos apenas de emendas orçamentárias
-              (<code>emendaDocumento</code>); não há tabela equivalente para
-              proposições, nem campo de inteiro teor.
+              O texto do projeto, os pareceres e os relatórios ainda não foram
+              reunidos na nossa base. Por enquanto, eles podem ser consultados
+              direto na fonte oficial.
             </p>
             {urlFonteOficial ? (
               <a

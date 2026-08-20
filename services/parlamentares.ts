@@ -889,7 +889,7 @@ async function buscarPorTermoLivre(
       aviso: unificados.length === 0
         ? `Nenhum parlamentar encontrado para "${termoNormalizado}" em nome, partido ou UF.`
         : truncado
-          ? 'Muitos resultados: a busca combinada mostra apenas os primeiros. Use os filtros para refinar.'
+          ? 'Encontramos muitos resultados e estamos mostrando os primeiros. Use os filtros para chegar a quem você procura.'
           : undefined,
     },
   };
@@ -925,7 +925,7 @@ export async function getParlamentaresLista(
         fonte: 'api',
         aviso:
           primeira.itens.length === 0
-            ? 'Nenhum parlamentar foi retornado pelo backend para os filtros informados.'
+            ? 'Nenhum parlamentar encontrado para os filtros informados.'
             : undefined,
       },
     };
@@ -940,7 +940,7 @@ export async function getParlamentaresLista(
         pagina: page,
         fonte: 'api',
         aviso:
-          'Não foi possível carregar os parlamentares do backend. Verifique se a API está rodando.',
+          'Não conseguimos carregar os parlamentares agora. Tente novamente em alguns instantes.',
       },
     };
   }
@@ -1016,7 +1016,7 @@ async function listarComFiltroEmMemoria(
       ...paginado.meta,
       aviso:
         filtrados.length === 0
-          ? 'Nenhum parlamentar foi retornado pelo backend para os filtros informados.'
+          ? 'Nenhum parlamentar encontrado para os filtros informados.'
           : undefined,
     },
   };
@@ -1250,7 +1250,7 @@ export async function getPresencaParlamentar(id: number): Promise<PresencaPerfil
         payload.observacao?.trim() ||
         payload.metodologia?.trim() ||
         (usandoFormatoAntigo
-          ? 'O backend ainda devolve plenário e comissão somados; a taxa exibida agrega as duas.'
+          ? 'A taxa exibida junta plenário e comissões: ainda não conseguimos separar as duas para este parlamentar.'
           : null),
     };
   } catch {
@@ -1543,7 +1543,7 @@ function montarIndicadores(
       valor: temPresenca ? `${presencaPlenario.taxa}%` : 'Sem dados',
       apoio: temPresenca
         ? `${presencaPlenario.totalEventos} sessões deliberativas · ${presencaPlenario.faltas} ausências`
-        : 'O backend não informou presença para este parlamentar.',
+        : 'Ainda não temos registro de presença para este parlamentar.',
       destaque: !temPresenca
         ? 'neutro'
         : (presencaPlenario.taxa as number) > 85

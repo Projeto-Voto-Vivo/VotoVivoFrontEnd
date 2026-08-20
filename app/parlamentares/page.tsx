@@ -192,9 +192,12 @@ export default async function ParlamentaresPage({
         </div>
 
         {data.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center text-slate-500">
-            Nenhum parlamentar encontrado para os filtros informados.
-          </div>
+          // O aviso acima já explica o que houve; repetir aqui só confunde.
+          meta.aviso ? null : (
+            <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center text-slate-500">
+              Nenhum parlamentar encontrado para os filtros informados.
+            </div>
+          )
         ) : (
           <section className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4">
             {data.map((parlamentar) => (

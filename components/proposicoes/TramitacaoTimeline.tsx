@@ -29,12 +29,12 @@ export function TramitacaoTimeline({ etapas, disponivel }: TramitacaoTimelinePro
           <Info className="mt-0.5 h-5 w-5 shrink-0 text-slate-400" aria-hidden="true" />
           <div>
             <p className="font-semibold text-slate-800">
-              O histórico de tramitação ainda não é publicado pela API.
+              O histórico de tramitação ainda não está disponível aqui.
             </p>
             <p className="mt-1">
-              Os dados existem no banco (tabela <code>tramitacao</code>), mas não
-              há endpoint que os devolva. Isso não significa que a proposição não
-              tramitou — significa que ainda não conseguimos mostrar o caminho.
+              Estamos trabalhando para trazer o caminho completo da proposição.
+              Isso não quer dizer que ela não tramitou — só que ainda não
+              conseguimos mostrar por onde ela passou.
             </p>
           </div>
         </div>
