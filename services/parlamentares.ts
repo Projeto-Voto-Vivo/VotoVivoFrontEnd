@@ -929,9 +929,10 @@ export async function getParlamentaresLista(
             : undefined,
       },
     };
-  } catch {
+  } catch (error){
     console.warn('Não foi possível carregar a lista de parlamentares do backend.');
-    return {
+    console.error("Network or Parse Error:", error);
+		return {
       data: [],
       meta: {
         total: 0,
