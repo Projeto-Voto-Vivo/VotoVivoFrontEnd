@@ -43,7 +43,7 @@ export async function Destaques() {
 
         {parlamentares.length === 0 ? (
           <div className="rounded-xl border border-dashed border-slate-300 p-10 text-center text-slate-500">
-            Não foi possível carregar a lista de parlamentares. Verifique sua conexão ou a API.
+            Não conseguimos carregar os parlamentares agora. Verifique sua conexão e tente novamente.
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">

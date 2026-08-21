@@ -87,7 +87,7 @@ export function VisaoGeralPanel({ profile }: VisaoGeralPanelProps) {
               </div>
             ) : (
               <p className="mt-4 text-sm leading-6 text-slate-500">
-                Nenhuma emenda vinculada nesta base.
+                Nenhuma emenda vinculada a este parlamentar.
               </p>
             )}
           </article>
@@ -108,7 +108,7 @@ export function VisaoGeralPanel({ profile }: VisaoGeralPanelProps) {
             </div>
 
             <p className="mt-4 text-sm leading-6 text-slate-600">
-              {proposicaoDestaque?.resumo ?? 'Nenhuma proposição vinculada nesta base.'}
+              {proposicaoDestaque?.resumo ?? 'Nenhuma proposição vinculada a este parlamentar.'}
             </p>
 
             {proposicaoDestaque && (
@@ -167,7 +167,7 @@ export function VisaoGeralPanel({ profile }: VisaoGeralPanelProps) {
               </div>
             ) : (
               <p className="mt-4 text-sm leading-6 text-slate-500">
-                Nenhuma votação nominal registrada nesta base.
+                Nenhuma votação nominal registrada para este parlamentar.
               </p>
             )}
           </article>
@@ -178,7 +178,7 @@ export function VisaoGeralPanel({ profile }: VisaoGeralPanelProps) {
         <SectionShell
           icon={<Users className="h-6 w-6" />}
           title="Órgãos e comissões"
-          description="Composição oficial registrada no banco de dados legislativo."
+          description="Participação oficial em comissões e outros órgãos do Congresso."
         >
           <ul className="grid gap-3 md:grid-cols-2">
             {comissoes.map((comissao) => {

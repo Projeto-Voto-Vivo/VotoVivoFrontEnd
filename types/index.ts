@@ -299,6 +299,183 @@ export interface EmendaDetalhe extends EmendaResumoPerfil {
   nomeParlamentar: string;
 }
 
+/* ------------------------------------------------------------------ *
+ * Busca de proposições
+ * ------------------------------------------------------------------ */
+
+export interface FiltrosProposicao {
+  /** Texto livre: casa com a ementa e com o número da proposição. */
+  busca?: string;
+  /** Sigla do tipo: PL, PEC, MPV... */
+  tipo?: string;
+  ano?: number;
+  casa?: string;
+  situacao?: string;
+  tema?: string;
+  /** Id do parlamentar autor. Cruza autoria com os demais filtros no banco. */
+  autor?: number;
+}
+
+export interface ProposicaoResultado {
+  id: number;
+  casa: string | null;
+  sigla: string | null;
+  numero: string | null;
+  ano: number | null;
+  titulo: string;
+  ementa: string;
+  situacao: string | null;
+  dataApresentacao: string | null;
+  temas: string[];
+}
+
+export interface ResultadoBuscaProposicoes {
+  data: ProposicaoResultado[];
+  total: number;
+  pagina: number;
+  totalPaginas: number;
+  itensPorPagina: number;
+  /** Mensagem para o usuário quando algo impediu a busca. */
+  aviso?: string;
+}
+
+export interface OpcoesFiltroProposicoes {
+  tipos: { sigla: string; nome: string | null; casa: string | null }[];
+  anos: { ano: number; total: number }[];
+  situacoes: { situacao: string; total: number }[];
+  /** `casa` é o valor aceito pelo filtro; `rotulo` é o nome exibido. */
+  casas: { casa: string; rotulo: string; total: number }[];
+  temas: { tema: string; total: number }[];
+  /** `false` quando não foi possível carregar os domínios de filtro. */
+  disponivel: boolean;
+}
+
+/* ------------------------------------------------------------------ *
+ * Tramitação de proposições
+ * ------------------------------------------------------------------ */
+
+/** Referência curta a outra proposição (jornada bicameral, apensados). */
+export interface ProposicaoRef {
+  id: number;
+  casa: string | null;
+  sigla: string | null;
+  numero: string | null;
+  ano: number | null;
+  titulo: string;
+}
+
+export interface OrgaoTramitacao {
+  id: number | null;
+  sigla: string | null;
+  nome: string | null;
+  tipoOrgao: string | null;
+  casa: string | null;
+}
+
+/** Um passo do caminho da proposição (tabela `tramitacao`). */
+export interface EtapaTramitacao {
+  id: string;
+  sequencia: number | null;
+  data: string | null;
+  orgao: OrgaoTramitacao | null;
+  descricao: string | null;
+  situacao: string | null;
+  despacho: string | null;
+  regime: string | null;
+}
+
+/** Agregado derivado das etapas: por onde a proposição passou e quando. */
+export interface PassagemPorOrgao {
+  chave: string;
+  orgao: OrgaoTramitacao;
+  etapas: number;
+  primeiraData: string | null;
+  ultimaData: string | null;
+}
+
+export interface PlacarVotacao {
+  sim: number;
+  nao: number;
+  abstencao: number;
+  obstrucao: number;
+  ausenciaJustificada: number;
+  ausente: number;
+  naoRegistrado: number;
+  total: number;
+}
+
+export interface OrientacaoBancada {
+  bancada: string;
+  orientacao: string;
+}
+
+export interface VotacaoProposicao {
+  id: number;
+  casa: string | null;
+  data: string | null;
+  resumo: string;
+  resultado: string;
+  tipo: string;
+  /** Onde a votação aconteceu — muda a leitura do placar. */
+  orgao: OrgaoTramitacao | null;
+  /** `null` quando a votação não registrou votos individuais (simbólica). */
+  placar: PlacarVotacao | null;
+  orientacoes: OrientacaoBancada[];
+}
+
+export interface AutorProposicao {
+  id: number | null;
+  nome: string;
+  siglaPartido: string | null;
+  uf: string | null;
+  urlFoto: string | null;
+}
+
+export interface DocumentoProposicao {
+  id: string;
+  titulo: string;
+  tipo: string | null;
+  data: string | null;
+  url: string | null;
+}
+
+export interface JornadaProposicao {
+  mesmaMateria: ProposicaoRef[];
+  principal: ProposicaoRef | null;
+  anteriores: ProposicaoRef[];
+  posteriores: ProposicaoRef[];
+}
+
+export interface ProposicaoDetalhe {
+  id: number;
+  apiId: string | null;
+  casa: string | null;
+  sigla: string | null;
+  numero: string | null;
+  ano: number | null;
+  titulo: string;
+  ementa: string;
+  situacao: string | null;
+  dataApresentacao: string | null;
+  temas: string[];
+  autores: AutorProposicao[];
+  /**
+   * Lista vazia de autores não quer dizer "sem autor": a base só registra
+   * autoria parlamentar. Esta observação vem da própria API.
+   */
+  autoriaObservacao: string | null;
+  /** Ordenadas da mais antiga para a mais recente. */
+  tramitacao: EtapaTramitacao[];
+  /** `false` = a API ainda não publica o histórico (≠ "não tramitou"). */
+  tramitacaoDisponivel: boolean;
+  orgaosPercorridos: PassagemPorOrgao[];
+  votacoes: VotacaoProposicao[];
+  documentos: DocumentoProposicao[];
+  documentosDisponiveis: boolean;
+  jornada: JornadaProposicao;
+  urlFonteOficial: string | null;
+}
+
 export const UFs = [
   'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA',
   'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN',

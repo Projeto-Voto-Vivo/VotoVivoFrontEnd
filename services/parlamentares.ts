@@ -32,14 +32,6 @@ const VOTACOES_PAGE_SIZE = 5;
 const EMENDAS_PAGE_SIZE = 5;
 const PROPOSICOES_PAGE_SIZE = 20;
 
-/**
- * A cobertura de proposições do agregador passou a ser o universo completo
- * (dumps anuais da Câmara e listagem anual do Senado). Carregar "todas" as
- * páginas de um parlamentar prolífico significaria dezenas de requisições em
- * sequência, então o carregamento é limitado e o truncamento é declarado.
- */
-const MAX_PAGINAS_PROPOSICOES = 15;
-
 /** Páginas por dimensão (nome/partido/UF) na busca livre da home. */
 const MAX_PAGINAS_BUSCA = 5;
 
@@ -548,7 +540,7 @@ export function formatVotingChoice(choice?: string | null) {
   return VOTO_LABELS[normalized] || 'Não informado';
 }
 
-function formatVotingType(type?: string | null) {
+export function formatVotingType(type?: string | null) {
   const normalized = normalizeToken(type);
 
   const labels: Record<string, string> = {
@@ -560,7 +552,7 @@ function formatVotingType(type?: string | null) {
   return labels[normalized] || type || 'Votação';
 }
 
-function formatCasa(casa?: string | null) {
+export function formatCasa(casa?: string | null) {
   const normalized = normalizeToken(casa);
   if (!normalized) return null;
   if (normalized.includes('SENADO')) return 'Senado Federal';
@@ -889,7 +881,7 @@ async function buscarPorTermoLivre(
       aviso: unificados.length === 0
         ? `Nenhum parlamentar encontrado para "${termoNormalizado}" em nome, partido ou UF.`
         : truncado
-          ? 'Muitos resultados: a busca combinada mostra apenas os primeiros. Use os filtros para refinar.'
+          ? 'Encontramos muitos resultados e estamos mostrando os primeiros. Use os filtros para chegar a quem você procura.'
           : undefined,
     },
   };
@@ -925,7 +917,7 @@ export async function getParlamentaresLista(
         fonte: 'api',
         aviso:
           primeira.itens.length === 0
-            ? 'Nenhum parlamentar foi retornado pelo backend para os filtros informados.'
+            ? 'Nenhum parlamentar encontrado para os filtros informados.'
             : undefined,
       },
     };
@@ -940,7 +932,7 @@ export async function getParlamentaresLista(
         pagina: page,
         fonte: 'api',
         aviso:
-          'Não foi possível carregar os parlamentares do backend. Verifique se a API está rodando.',
+          'Não conseguimos carregar os parlamentares agora. Tente novamente em alguns instantes.',
       },
     };
   }
@@ -1016,7 +1008,7 @@ async function listarComFiltroEmMemoria(
       ...paginado.meta,
       aviso:
         filtrados.length === 0
-          ? 'Nenhum parlamentar foi retornado pelo backend para os filtros informados.'
+          ? 'Nenhum parlamentar encontrado para os filtros informados.'
           : undefined,
     },
   };
@@ -1250,7 +1242,7 @@ export async function getPresencaParlamentar(id: number): Promise<PresencaPerfil
         payload.observacao?.trim() ||
         payload.metodologia?.trim() ||
         (usandoFormatoAntigo
-          ? 'O backend ainda devolve plenário e comissão somados; a taxa exibida agrega as duas.'
+          ? 'A taxa exibida junta plenário e comissões: ainda não conseguimos separar as duas para este parlamentar.'
           : null),
     };
   } catch {
@@ -1416,31 +1408,6 @@ export async function getProposicoesParlamentar(
   }
 }
 
-export type ProposicoesCarregadas = {
-  data: ProposicaoPerfil[];
-  total: number;
-  truncado: boolean;
-};
-
-export async function getTodasProposicoesParlamentar(
-  id: number,
-): Promise<ProposicoesCarregadas> {
-  const primeira = await getProposicoesParlamentar(id, 1);
-  const todas = [...primeira.data];
-  const ultimaPagina = Math.min(primeira.meta.lastPage, MAX_PAGINAS_PROPOSICOES);
-
-  for (let pagina = 2; pagina <= ultimaPagina; pagina += 1) {
-    const proxima = await getProposicoesParlamentar(id, pagina);
-    todas.push(...proxima.data);
-  }
-
-  return {
-    data: todas,
-    total: primeira.meta.total,
-    truncado: primeira.meta.lastPage > MAX_PAGINAS_PROPOSICOES,
-  };
-}
-
 export async function getResumoEmendasParlamentar(parlamentarId: number) {
   try {
     const res = await api.get(`/parlamentares/${parlamentarId}/emendas/resumo`);
@@ -1543,7 +1510,7 @@ function montarIndicadores(
       valor: temPresenca ? `${presencaPlenario.taxa}%` : 'Sem dados',
       apoio: temPresenca
         ? `${presencaPlenario.totalEventos} sessões deliberativas · ${presencaPlenario.faltas} ausências`
-        : 'O backend não informou presença para este parlamentar.',
+        : 'Ainda não temos registro de presença para este parlamentar.',
       destaque: !temPresenca
         ? 'neutro'
         : (presencaPlenario.taxa as number) > 85
