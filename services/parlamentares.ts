@@ -802,22 +802,44 @@ function mapEmendaParlamentar(
   };
 }
 
+/**
+ * O `metodoVinculo` do banco é uma etiqueta técnica
+ * (`match_exato_nomeUrna_normalizado`) que não diz nada a quem lê — e mostrá-la
+ * crua tira a credibilidade da informação em vez de sustentá-la. Aqui ela vira
+ * frase, e o único pedaço realmente informativo dela, qual nome casou, é o que
+ * sobrevive.
+ *
+ * Nenhum destes vínculos é "declarado na fonte oficial": o Portal da
+ * Transparência publica o nome do autor em texto livre, e a ligação com o
+ * parlamentar é sempre feita por correspondência de nome. Confiança alta
+ * significa que só um parlamentar casou com aquele nome, não que a fonte
+ * afirmou a autoria.
+ */
 export function descreveVinculoEmenda(
   metodo?: string | null,
   confianca?: number | null,
 ): string | null {
+  const chave = (metodo ?? '').toLowerCase().replace(/[^a-z]/g, '');
+  const campo = chave.includes('nomeurna')
+    ? 'nome de urna'
+    : chave.includes('nomecivil')
+      ? 'nome civil'
+      : null;
+
+  const porNome = campo
+    ? `pela correspondência do ${campo} publicado pelo Portal da Transparência`
+    : 'pela correspondência do nome publicado pelo Portal da Transparência';
+
   if (confianca === null || confianca === undefined) {
-    return metodo ? `Vínculo estabelecido por ${metodo.toLowerCase()}.` : null;
+    return metodo ? `Vínculo feito ${porNome}.` : null;
   }
 
+  // A confiança chega como 0–1 ou 0–100 conforme a origem.
   const percentual = Math.round((confianca > 1 ? confianca / 100 : confianca) * 100);
-  const base = metodo
-    ? `Vínculo por ${metodo.toLowerCase()} · confiança ${percentual}%`
-    : `Confiança do vínculo: ${percentual}%`;
 
   return percentual >= 100
-    ? `${base}. Autoria declarada na fonte oficial.`
-    : `${base}. Autoria inferida por correspondência de nome — pode conter erro.`;
+    ? `Vínculo feito ${porNome}, sem outro parlamentar de nome igual.`
+    : `Vínculo feito ${porNome}, com nome semelhante ao de outros parlamentares — pode conter erro.`;
 }
 
 export async function getParlamentarById(id: number): Promise<ParlamentarDetalhe | null> {

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { ChevronLeft, ChevronRight, Info, Loader2, Receipt } from 'lucide-react';
 import { EmendaResumoPerfil, ParlamentarPerfil } from '@/types';
-import { descreveVinculoEmenda, getEmendasParlamentar } from '@/services/parlamentares';
+import { getEmendasParlamentar } from '@/services/parlamentares';
 import { MicroInfoCard } from '../shared/MicroInfoCard';
 import { SectionShell } from '../shared/SectionShell';
 import { formatCurrency } from '../shared/formatters';
@@ -58,13 +58,6 @@ export function EmendasPanel({ parlamentarId, profile }: EmendasPanelProps) {
     ? Math.min(inicioPagina + itens.length - 1, totalRegistros)
     : 0;
 
-  const temVinculoInferido = itens.some(
-    (emenda) =>
-      emenda.confiancaVinculo !== null &&
-      emenda.confiancaVinculo !== undefined &&
-      emenda.confiancaVinculo < 1,
-  );
-
   return (
     <SectionShell
       icon={<Receipt className="h-6 w-6" />}
@@ -82,14 +75,17 @@ export function EmendasPanel({ parlamentarId, profile }: EmendasPanelProps) {
         cofres públicos.
       </p>
 
-      {temVinculoInferido && (
-        <p className="mt-3 flex items-start gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-5 text-amber-800">
-          <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-          Parte destes vínculos entre emenda e parlamentar é inferida por
-          correspondência de nome, não declarada na fonte oficial. A confiança de
-          cada vínculo está indicada em cada emenda.
-        </p>
-      )}
+      {/*
+        Um aviso só, no topo: vale para toda emenda da lista, e repetir a
+        procedência linha a linha virava ruído. O detalhe de cada emenda diz
+        como aquele vínculo específico foi feito.
+      */}
+      <p className="mt-3 flex items-start gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs leading-5 text-slate-500">
+        <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+        O Portal da Transparência publica o nome do autor da emenda em texto
+        livre; a ligação com o parlamentar é feita por correspondência de nome.
+        Abra uma emenda para ver como o vínculo dela foi estabelecido.
+      </p>
 
       {carregando && (
         <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-brasil-blue/10 bg-brasil-blue/5 px-4 py-2 text-sm font-semibold text-brasil-blue" aria-live="polite">
@@ -105,11 +101,6 @@ export function EmendasPanel({ parlamentarId, profile }: EmendasPanelProps) {
           </div>
         ) : (
           itens.map((emenda) => {
-            const vinculo = descreveVinculoEmenda(
-              emenda.metodoVinculo,
-              emenda.confiancaVinculo,
-            );
-
             return (
               <article
                 key={emenda.id}
@@ -139,10 +130,6 @@ export function EmendasPanel({ parlamentarId, profile }: EmendasPanelProps) {
                   <MicroInfoCard label="Liquidado" value={formatCurrency(emenda.valorLiquidado)} />
                   <MicroInfoCard label="Pago" value={formatCurrency(emenda.valorPago)} />
                 </div>
-
-                {vinculo ? (
-                  <p className="mt-3 text-xs leading-5 text-slate-500">{vinculo}</p>
-                ) : null}
 
                 <div className="mt-5 flex justify-end">
                   <Link

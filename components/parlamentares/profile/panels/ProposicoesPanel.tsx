@@ -48,7 +48,8 @@ export function ProposicoesPanel({ profile }: ProposicoesPanelProps) {
   const [pagina, setPagina] = useState(1);
   const [totalPaginas, setTotalPaginas] = useState<number | null>(1);
   const [temProximaPagina, setTemProximaPagina] = useState(false);
-  const [itensPorPagina, setItensPorPagina] = useState(20);
+  // Valor inicial só até a primeira resposta chegar; depois vem de `meta.limit`.
+  const [itensPorPagina, setItensPorPagina] = useState(10);
   const [aviso, setAviso] = useState<string | undefined>();
   const [carregando, setCarregando] = useState(true);
 

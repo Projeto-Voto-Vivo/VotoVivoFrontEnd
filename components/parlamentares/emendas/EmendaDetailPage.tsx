@@ -3,6 +3,7 @@ import { EmendaDetalhe } from '@/types';
 import { descreveVinculoEmenda } from '@/services/parlamentares';
 import { BackButton } from '@/components/layout/BackButton';
 import { NavLink } from '@/components/layout/NavLink';
+import { VoltarLink } from '@/components/layout/VoltarLink';
 
 interface EmendaDetailPageProps {
   emenda: EmendaDetalhe;
@@ -34,13 +35,15 @@ export function EmendaDetailPage({ emenda }: EmendaDetailPageProps) {
     <section className="min-h-screen bg-slate-50 py-8 md:py-10">
       <div className="mx-auto w-full max-w-7xl px-4">
 
-        {/* Voltar — link estático no topo */}
-        <div className="mb-6">
+        {/* Voltar para de onde se veio, com o perfil como destino explícito. */}
+        <div className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-2">
+          <VoltarLink fallbackHref={backHref} />
+
           <NavLink
             href={backHref}
-            className="inline-flex items-center gap-2 text-sm font-semibold text-brasil-blue hover:underline"
+            className="text-sm font-medium text-slate-400 transition-colors hover:text-brasil-blue"
           >
-            ← Voltar para o perfil do parlamentar
+            Ver o perfil do parlamentar
           </NavLink>
         </div>
 
@@ -115,9 +118,9 @@ export function EmendaDetailPage({ emenda }: EmendaDetailPageProps) {
 
             <p className="mt-3 text-xs leading-5 text-slate-400">
               O Portal da Transparência publica o nome do autor da emenda em
-              texto livre. Quando a correspondência com o cadastro parlamentar é
-              feita por semelhança de nome, o vínculo é uma inferência — e vem
-              com o grau de confiança acima.
+              texto livre, sem identificador. A ligação com o parlamentar é
+              sempre feita comparando esse nome com o cadastro — é uma
+              inferência, não uma autoria declarada pela fonte.
             </p>
           </section>
         )}
@@ -275,7 +278,7 @@ export function EmendaDetailPage({ emenda }: EmendaDetailPageProps) {
       </div>
 
       {/* Botão flutuante de voltar */}
-      <BackButton href={backHref} label="Voltar ao perfil" />
+      <BackButton label="Voltar" />
     </section>
   );
 }
