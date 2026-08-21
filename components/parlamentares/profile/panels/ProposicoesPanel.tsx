@@ -141,6 +141,13 @@ export function ProposicoesPanel({ profile }: ProposicoesPanelProps) {
 
   return (
     <div className="space-y-6">
+      {/*
+        O panorama por tema vem antes da lista: responde "sobre o que ele
+        legisla" de uma olhada, e é o enquadramento para ler as proposições
+        item a item logo abaixo.
+      */}
+      <TemasAutoriaDashboard parlamentarId={parlamentarId} />
+
       <SectionShell
         icon={<FileText className="h-6 w-6" />}
         title="Proposições"
@@ -404,8 +411,6 @@ export function ProposicoesPanel({ profile }: ProposicoesPanelProps) {
           </div>
         )}
       </SectionShell>
-
-      <TemasAutoriaDashboard parlamentarId={parlamentarId} />
     </div>
   );
 }
