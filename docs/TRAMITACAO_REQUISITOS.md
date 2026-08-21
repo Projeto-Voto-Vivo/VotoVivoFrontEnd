@@ -140,3 +140,8 @@ inexistente — o `PRIMARY KEY (idParlamentar, idProposicao)` não guarda ordem.
 `notFound()` renderiza a página 404 corretamente, mas a resposta sai com status
 HTTP 200 — inclusive nas rotas que já existiam (`/parlamentares/abc`). Buscadores
 indexam página de erro como se fosse conteúdo. Merece uma correção própria.
+
+---
+
+Ver também [`VOTACOES_REQUISITOS.md`](./VOTACOES_REQUISITOS.md), com o que falta
+para exibir a orientação de votação com precisão.
