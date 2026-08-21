@@ -153,7 +153,6 @@ export function VotacoesPanel({ profile }: VotacoesPanelProps) {
   const presenca = votacoesPerfil.presenca;
 
   return (
-    <div className="space-y-6">
     <div className="grid items-start gap-6 xl:grid-cols-[1.2fr_0.8fr]">
       <SectionShell icon={<Vote className="h-6 w-6" />} title="Votações">
         {carregando && (
@@ -323,8 +322,14 @@ export function VotacoesPanel({ profile }: VotacoesPanelProps) {
         )}
       </SectionShell>
 
+      {/*
+        Coluna direita como bloco: presença no topo, temas logo abaixo, as duas
+        ao lado da lista de votações. Antes o painel de temas ficava solto na
+        largura inteira, quebrando o pareamento das colunas.
+      */}
+      <div className="space-y-6">
       <SectionShell icon={<BadgeCheck className="h-6 w-6" />} title="Presença e alinhamento">
-        <div className="grid gap-3 md:grid-cols-2">
+        <div className="grid gap-3">
           <MicroInfoCard
             label="Votações registradas"
             value={String(totalRegistros)}
@@ -409,9 +414,9 @@ export function VotacoesPanel({ profile }: VotacoesPanelProps) {
           ) : null}
         </div>
       </SectionShell>
-    </div>
 
-    <TemasVotacaoDashboard parlamentarId={parlamentar.id} />
+      <TemasVotacaoDashboard parlamentarId={parlamentar.id} />
+      </div>
     </div>
   );
 }

@@ -222,8 +222,9 @@ export function TemasVotacaoDashboard({ parlamentarId }: TemasVotacaoDashboardPr
       title="Temas dos votos"
       description="Proporção de votos SIM e NÃO dentro de cada tema, entre os temas em que o parlamentar mais se posicionou."
     >
+      {/* Destaques empilhados: o painel agora vive numa coluna estreita. */}
       {maisSim && maisNao && maisSim.tema !== maisNao.tema ? (
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3">
           <DestaqueTema
             rotulo="Mais votos SIM, proporcionalmente"
             tema={maisSim.tema}
