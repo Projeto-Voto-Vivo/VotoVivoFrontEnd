@@ -331,9 +331,16 @@ export interface ProposicaoResultado {
 
 export interface ResultadoBuscaProposicoes {
   data: ProposicaoResultado[];
-  total: number;
+  /**
+   * `null` quando a busca pediu para pular a contagem (`contarTotal=false`):
+   * o `COUNT(*)` com os mesmos filtros é uma segunda varredura da tabela.
+   */
+  total: number | null;
   pagina: number;
-  totalPaginas: number;
+  /** `null` junto com `total` — sem contagem não há última página conhecida. */
+  totalPaginas: number | null;
+  /** Sempre disponível: é o que permite avançar sem saber o total. */
+  temProximaPagina: boolean;
   itensPorPagina: number;
   /** Mensagem para o usuário quando algo impediu a busca. */
   aviso?: string;

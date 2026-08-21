@@ -539,11 +539,27 @@ function mapResultado(item: BackendProposicaoResultado): ProposicaoResultado {
   };
 }
 
-function montarQueryBusca(filtros: FiltrosProposicao, pagina: number) {
+export type OpcoesBusca = {
+  /**
+   * `false` pula o `COUNT(*)` no servidor — uma segunda varredura da tabela com
+   * os mesmos filtros, que numa busca textual chega a dobrar o custo. Em troca,
+   * `total` e `totalPaginas` voltam `null` e a navegação passa a depender só de
+   * `temProximaPagina`. Vale onde o número de resultados não é a informação
+   * principal.
+   */
+  contarTotal?: boolean;
+};
+
+function montarQueryBusca(
+  filtros: FiltrosProposicao,
+  pagina: number,
+  opcoes: OpcoesBusca,
+) {
   const params = new URLSearchParams();
 
   params.set('pagina', String(pagina));
   params.set('limite', String(PROPOSICOES_POR_PAGINA));
+  if (opcoes.contarTotal === false) params.set('contarTotal', 'false');
 
   if (filtros.busca) params.set('busca', filtros.busca);
   if (filtros.tipo) params.set('tipo', filtros.tipo);
@@ -564,19 +580,23 @@ function montarQueryBusca(filtros: FiltrosProposicao, pagina: number) {
 export async function buscarProposicoes(
   filtros: FiltrosProposicao = {},
   pagina: number = 1,
+  opcoes: OpcoesBusca = {},
 ): Promise<ResultadoBuscaProposicoes> {
   try {
-    const res = await api.get(`/proposicoes?${montarQueryBusca(filtros, pagina)}`);
+    const res = await api.get(
+      `/proposicoes?${montarQueryBusca(filtros, pagina, opcoes)}`,
+    );
     const payload = res.data as {
       data?: BackendProposicaoResultado[];
       meta?: {
-        total?: number;
+        total?: number | null;
         page?: number;
         pagina?: number;
-        lastPage?: number;
-        totalPaginas?: number;
+        lastPage?: number | null;
+        totalPaginas?: number | null;
         limit?: number;
         limite?: number;
+        temProximaPagina?: boolean;
       };
     };
 
@@ -585,17 +605,35 @@ export async function buscarProposicoes(
     const itensPorPagina =
       Number(meta?.limit ?? meta?.limite ?? PROPOSICOES_POR_PAGINA) ||
       PROPOSICOES_POR_PAGINA;
-    const total = Number(meta?.total ?? itens.length) || 0;
-    const totalPaginasBruto = Number(meta?.lastPage ?? meta?.totalPaginas ?? 0);
+    const paginaAtual = Number(meta?.page ?? meta?.pagina ?? pagina) || pagina;
+
+    // `null` explícito significa "não contei", e é diferente de "zero". Só o
+    // ausente (backend antigo) cai para a contagem local.
+    const totalBruto = meta?.total;
+    const total =
+      totalBruto === null
+        ? null
+        : Number(totalBruto ?? itens.length) || 0;
+
+    const ultimaPaginaBruta = meta?.lastPage ?? meta?.totalPaginas;
+    const totalPaginas =
+      total === null
+        ? null
+        : ultimaPaginaBruta
+          ? Number(ultimaPaginaBruta)
+          : Math.max(1, Math.ceil(total / itensPorPagina));
 
     return {
       data: itens.map(mapResultado),
       total,
-      pagina: Number(meta?.page ?? meta?.pagina ?? pagina) || pagina,
-      totalPaginas:
-        totalPaginasBruto > 0
-          ? totalPaginasBruto
-          : Math.max(1, Math.ceil(total / itensPorPagina)),
+      pagina: paginaAtual,
+      totalPaginas,
+      temProximaPagina:
+        meta?.temProximaPagina ??
+        // Backend antigo, sem o campo: deduz do total quando ele existe.
+        (totalPaginas !== null
+          ? paginaAtual < totalPaginas
+          : itens.length >= itensPorPagina),
       itensPorPagina,
     };
   } catch {
@@ -606,6 +644,7 @@ export async function buscarProposicoes(
       total: 0,
       pagina,
       totalPaginas: 1,
+      temProximaPagina: false,
       itensPorPagina: PROPOSICOES_POR_PAGINA,
       aviso:
         'Não conseguimos consultar as proposições agora. Tente novamente em alguns instantes.',

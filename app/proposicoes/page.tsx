@@ -59,9 +59,17 @@ export default async function BuscaProposicoesPage({ searchParams }: PaginaProps
       : 1;
 
   const [resultado, opcoes] = await Promise.all([
-    buscarProposicoes(filtros, pagina),
+    // Sem `COUNT(*)`: numa busca textual ele é uma segunda varredura da tabela
+    // e domina o tempo de resposta. Aqui o que importa é ver os resultados e
+    // conseguir avançar, não saber que existem 12.482 deles.
+    buscarProposicoes(filtros, pagina, { contarTotal: false }),
     getOpcoesFiltro(),
   ]);
+
+  const primeiroResultado =
+    resultado.data.length > 0
+      ? (resultado.pagina - 1) * resultado.itensPorPagina + 1
+      : 0;
 
   const temFiltro = Object.values(filtros).some(Boolean);
 
@@ -245,12 +253,17 @@ export default async function BuscaProposicoesPage({ searchParams }: PaginaProps
 
         <div className="mb-6 flex flex-wrap items-center justify-between gap-2">
           <p className="text-sm text-slate-500">
-            {resultado.total.toLocaleString('pt-BR')} proposição
-            {resultado.total === 1 ? '' : 'ões'} encontrada
-            {resultado.total === 1 ? '' : 's'}
+            {resultado.data.length > 0
+              ? `Resultados ${primeiroResultado.toLocaleString('pt-BR')}–${(
+                  primeiroResultado +
+                  resultado.data.length -
+                  1
+                ).toLocaleString('pt-BR')}`
+              : ''}
           </p>
           <p className="text-sm text-slate-500">
-            Página {resultado.pagina} de {resultado.totalPaginas}
+            Página {resultado.pagina}
+            {resultado.totalPaginas ? ` de ${resultado.totalPaginas}` : ''}
           </p>
         </div>
 
@@ -329,7 +342,12 @@ export default async function BuscaProposicoesPage({ searchParams }: PaginaProps
           </section>
         )}
 
-        {resultado.totalPaginas > 1 && (
+        {/*
+          Sem contagem não existe "última página": a navegação anda para frente
+          enquanto o servidor disser que há mais, que é o que `temProximaPagina`
+          responde — ele sai de buscar uma linha a mais, não de um COUNT.
+        */}
+        {(resultado.pagina > 1 || resultado.temProximaPagina) && (
           <nav className="mt-10 flex items-center justify-center gap-3">
             <Link
               href={montarHref(Math.max(1, resultado.pagina - 1))}
@@ -344,14 +362,15 @@ export default async function BuscaProposicoesPage({ searchParams }: PaginaProps
             </Link>
 
             <span className="text-sm text-slate-500">
-              {resultado.pagina} / {resultado.totalPaginas}
+              {resultado.pagina}
+              {resultado.totalPaginas ? ` / ${resultado.totalPaginas}` : ''}
             </span>
 
             <Link
-              href={montarHref(Math.min(resultado.totalPaginas, resultado.pagina + 1))}
-              aria-disabled={resultado.pagina >= resultado.totalPaginas}
+              href={montarHref(resultado.pagina + 1)}
+              aria-disabled={!resultado.temProximaPagina}
               className={`rounded-xl px-4 py-2 text-sm font-medium ${
-                resultado.pagina >= resultado.totalPaginas
+                !resultado.temProximaPagina
                   ? 'pointer-events-none border border-slate-200 text-slate-300'
                   : 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-100'
               }`}
