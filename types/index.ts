@@ -155,18 +155,39 @@ export interface DespesasPerfil {
  * comparáveis entre si sem rótulo.
  */
 export interface PresencaDetalhe {
-  /** `null` = sem dados. Nunca 0% para ausência de informação. */
+  /** Presenças + ausências justificadas ÷ total. `null` = sem eventos. */
   taxa: number | null;
+  /** Só presenças efetivas: não abona a falta justificada. */
+  taxaEstrita: number | null;
   totalEventos: number;
+  presentes: number;
+  justificadas: number;
   faltas: number;
-  metodologia: string | null;
+}
+
+/** Plenário e comissão medem coisas diferentes; deliberativa e solene também. */
+export interface PresencaPorEscopo {
+  deliberativas: PresencaDetalhe;
+  naoDeliberativas: PresencaDetalhe;
+}
+
+export interface MetodologiaPresenca {
+  casa: string;
+  fonte: string;
+  observacao: string | null;
 }
 
 export interface PresencaPerfil {
-  plenario: PresencaDetalhe;
-  comissoes: PresencaDetalhe;
-  casa: string | null;
-  observacao: string | null;
+  plenario: PresencaPorEscopo;
+  comissoes: PresencaPorEscopo;
+  /** Eventos que ficaram fora de toda taxa, por falta de classificação. */
+  excluidos: { semClassificacao: number; semOrgao: number };
+  /**
+   * `false` quando não há períodos de mandato registrados: o denominador não
+   * pôde ser restrito ao exercício, e a taxa precisa ser lida com essa ressalva.
+   */
+  restritaAoExercicio: boolean;
+  metodologias: MetodologiaPresenca[];
 }
 
 export interface VotacoesPerfil {

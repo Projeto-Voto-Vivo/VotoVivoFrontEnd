@@ -43,19 +43,36 @@ function BarraPresenca({ detalhe, titulo }: { detalhe: PresencaDetalhe; titulo: 
           não quer dizer que o parlamentar faltou.
         </p>
       ) : (
-        <div className="mt-2 flex flex-wrap gap-2 text-xs font-medium text-slate-500">
-          <span className="rounded-full bg-slate-100 px-3 py-1">
-            Eventos considerados: {detalhe.totalEventos}
-          </span>
-          <span className="rounded-full bg-red-50 px-3 py-1 text-red-600">
-            Ausências: {detalhe.faltas}
-          </span>
-        </div>
-      )}
+        <>
+          <div className="mt-2 flex flex-wrap gap-2 text-xs font-medium text-slate-500">
+            <span className="rounded-full bg-slate-100 px-3 py-1">
+              Eventos considerados: {detalhe.totalEventos}
+            </span>
+            <span className="rounded-full bg-slate-100 px-3 py-1">
+              Presenças: {detalhe.presentes}
+            </span>
+            {detalhe.justificadas > 0 ? (
+              <span className="rounded-full bg-amber-50 px-3 py-1 text-amber-700">
+                Faltas justificadas: {detalhe.justificadas}
+              </span>
+            ) : null}
+            <span className="rounded-full bg-red-50 px-3 py-1 text-red-600">
+              Faltas: {detalhe.faltas}
+            </span>
+          </div>
 
-      {detalhe.metodologia ? (
-        <p className="mt-2 text-xs leading-5 text-slate-400">{detalhe.metodologia}</p>
-      ) : null}
+          {/*
+            A taxa abona a falta justificada — licença médica e missão oficial
+            não são o mesmo que sumir. Quem quiser a régua dura tem a estrita.
+          */}
+          {detalhe.justificadas > 0 && detalhe.taxaEstrita !== null ? (
+            <p className="mt-2 text-xs leading-5 text-slate-400">
+              As faltas justificadas contam como presença. Sem elas, a taxa é de{' '}
+              {detalhe.taxaEstrita}%.
+            </p>
+          ) : null}
+        </>
+      )}
     </div>
   );
 }
@@ -247,23 +264,80 @@ export function VotacoesPanel({ profile }: VotacoesPanelProps) {
           />
         </div>
 
+        {/*
+          Quatro medidas distintas, nunca somadas: onde o evento aconteceu
+          (plenário × comissão) cruzado com o que ele decidia (deliberativo ×
+          solene, audiência, debate).
+        */}
         <div className="mt-6 space-y-6">
-          <BarraPresenca detalhe={presenca.plenario} titulo="Presença em plenário" />
-          <BarraPresenca detalhe={presenca.comissoes} titulo="Presença em comissões" />
+          <BarraPresenca
+            detalhe={presenca.plenario.deliberativas}
+            titulo="Plenário — sessões deliberativas"
+          />
+          <BarraPresenca
+            detalhe={presenca.comissoes.deliberativas}
+            titulo="Comissões — reuniões deliberativas"
+          />
+
+          {presenca.plenario.naoDeliberativas.taxa !== null ? (
+            <BarraPresenca
+              detalhe={presenca.plenario.naoDeliberativas}
+              titulo="Plenário — sessões não deliberativas"
+            />
+          ) : null}
+
+          {presenca.comissoes.naoDeliberativas.taxa !== null ? (
+            <BarraPresenca
+              detalhe={presenca.comissoes.naoDeliberativas}
+              titulo="Comissões — reuniões não deliberativas"
+            />
+          ) : null}
         </div>
 
         <div className="mt-6 space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-600">
           <p>{votacoesPerfil.leituraRapida}</p>
 
           <p className="text-xs leading-5 text-slate-500">
-            Plenário e comissão são medidas distintas e não se somam. Câmara e
-            Senado apuram presença por metodologias diferentes: as taxas
-            {presenca.casa ? ` (aqui, ${presenca.casa})` : ''} não devem ser
-            comparadas entre casas.
+            Sessão deliberativa é onde se vota; solene e audiência pública não
+            decidem nada. Por isso as taxas aparecem separadas — e por isso
+            plenário e comissão não se somam.
           </p>
 
-          {presenca.observacao ? (
-            <p className="text-xs leading-5 text-slate-500">{presenca.observacao}</p>
+          {presenca.metodologias.length > 0 ? (
+            <div className="text-xs leading-5 text-slate-500">
+              <p className="font-semibold text-slate-600">
+                De onde vem cada taxa
+                {presenca.metodologias.length > 1
+                  ? ' — não compare entre casas'
+                  : ''}
+                :
+              </p>
+              <ul className="mt-1 space-y-1">
+                {presenca.metodologias.map((metodologia) => (
+                  <li key={metodologia.casa}>
+                    <strong className="font-semibold">{metodologia.casa}</strong>:{' '}
+                    {metodologia.fonte}
+                    {metodologia.observacao ? ` ${metodologia.observacao}` : ''}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
+          {!presenca.restritaAoExercicio ? (
+            <p className="text-xs leading-5 text-slate-500">
+              Não temos os períodos de mandato deste parlamentar, então a conta
+              considera todo o intervalo disponível. Quem assumiu no meio do
+              mandato pode aparecer com taxa menor do que a real.
+            </p>
+          ) : null}
+
+          {presenca.excluidos.semClassificacao + presenca.excluidos.semOrgao > 0 ? (
+            <p className="text-xs leading-5 text-slate-500">
+              {presenca.excluidos.semClassificacao + presenca.excluidos.semOrgao}{' '}
+              eventos ficaram fora das taxas por não ter tipo ou órgão
+              identificado — preferimos deixá-los de fora a chutar a categoria.
+            </p>
           ) : null}
         </div>
       </SectionShell>

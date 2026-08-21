@@ -20,6 +20,7 @@ import {
   PerfilIndicador,
   PresencaDetalhe,
   PresencaPerfil,
+  PresencaPorEscopo,
   ProposicaoPerfil,
   UFs,
   VotacaoPerfil,
@@ -131,22 +132,42 @@ type ListaVotacoesResponse = {
 };
 
 type BackendPresencaBloco = {
+  /** Presenças + justificadas ÷ total. */
   taxa?: string | number | null;
-  percentual?: string | number | null;
-  totalEventos?: string | number | null;
+  /** Só presenças efetivas. */
+  taxaEstrita?: string | number | null;
+  total?: string | number | null;
+  presentes?: string | number | null;
+  justificadas?: string | number | null;
   faltas?: string | number | null;
-  metodologia?: string | null;
+  /** Nome do denominador na versão anterior da API. */
+  totalEventos?: string | number | null;
+  percentual?: string | number | null;
+};
+
+/** Cada escopo vem separado por natureza do evento. */
+type BackendPresencaEscopo = {
+  deliberativas?: BackendPresencaBloco | null;
+  naoDeliberativas?: BackendPresencaBloco | null;
 };
 
 type BackendPresencaResponse = {
-  casa?: string | null;
-  observacao?: string | null;
-  metodologia?: string | null;
   presenca?: {
-    plenario?: BackendPresencaBloco | null;
-    comissoes?: BackendPresencaBloco | null;
-    /** Formato anterior (uma taxa só, plenário e comissão somados). */
-    sessoesDeliberativas?: BackendPresencaBloco | null;
+    plenario?: BackendPresencaEscopo | BackendPresencaBloco | null;
+    comissoes?: BackendPresencaEscopo | BackendPresencaBloco | null;
+    excluidos?: {
+      eventosSemClassificacao?: number | null;
+      eventosSemOrgao?: number | null;
+    } | null;
+    janela?: {
+      restritaAoExercicio?: boolean | null;
+      periodos?: { inicio?: string | null; fim?: string | null }[] | null;
+    } | null;
+    metodologia?: {
+      casa?: string | null;
+      fonte?: string | null;
+      observacao?: string | null;
+    }[] | null;
   } | null;
 };
 
@@ -1196,28 +1217,69 @@ export async function getVotacoesParlamentar(
 
 const PRESENCA_VAZIA: PresencaDetalhe = {
   taxa: null,
+  taxaEstrita: null,
   totalEventos: 0,
+  presentes: 0,
+  justificadas: 0,
   faltas: 0,
-  metodologia: null,
+};
+
+const ESCOPO_VAZIO: PresencaPorEscopo = {
+  deliberativas: { ...PRESENCA_VAZIA },
+  naoDeliberativas: { ...PRESENCA_VAZIA },
 };
 
 function mapPresencaBloco(
   bloco: BackendPresencaBloco | null | undefined,
-  metodologiaPadrao: string,
 ): PresencaDetalhe {
   if (!bloco) return { ...PRESENCA_VAZIA };
 
-  const taxa = parsePercent(bloco.taxa ?? bloco.percentual);
-  const totalEventos = Number(bloco.totalEventos ?? 0) || 0;
+  // A API chama de `total`; a versão anterior chamava de `totalEventos`.
+  const totalEventos = Number(bloco.total ?? bloco.totalEventos ?? 0) || 0;
 
   return {
     // Sem eventos no denominador não existe taxa — e "0%" mentiria.
-    taxa: totalEventos > 0 ? taxa : null,
+    taxa: totalEventos > 0 ? parsePercent(bloco.taxa ?? bloco.percentual) : null,
+    taxaEstrita: totalEventos > 0 ? parsePercent(bloco.taxaEstrita) : null,
     totalEventos,
+    presentes: Number(bloco.presentes ?? 0) || 0,
+    justificadas: Number(bloco.justificadas ?? 0) || 0,
     faltas: Number(bloco.faltas ?? 0) || 0,
-    metodologia: bloco.metodologia?.trim() || (totalEventos > 0 ? metodologiaPadrao : null),
   };
 }
+
+/**
+ * Aceita as duas formas do payload: a atual, com o escopo dividido em
+ * deliberativas e não deliberativas, e a anterior, em que `plenario` já era o
+ * próprio balde. Sem isso a divisão nova cai toda em "sem dados".
+ */
+function mapPresencaEscopo(
+  escopo: BackendPresencaEscopo | BackendPresencaBloco | null | undefined,
+): PresencaPorEscopo {
+  if (!escopo) return { ...ESCOPO_VAZIO };
+
+  const comEscopo = escopo as BackendPresencaEscopo;
+
+  if (comEscopo.deliberativas || comEscopo.naoDeliberativas) {
+    return {
+      deliberativas: mapPresencaBloco(comEscopo.deliberativas),
+      naoDeliberativas: mapPresencaBloco(comEscopo.naoDeliberativas),
+    };
+  }
+
+  return {
+    deliberativas: mapPresencaBloco(escopo as BackendPresencaBloco),
+    naoDeliberativas: { ...PRESENCA_VAZIA },
+  };
+}
+
+const PRESENCA_PERFIL_VAZIO: PresencaPerfil = {
+  plenario: { ...ESCOPO_VAZIO },
+  comissoes: { ...ESCOPO_VAZIO },
+  excluidos: { semClassificacao: 0, semOrgao: 0 },
+  restritaAoExercicio: false,
+  metodologias: [],
+};
 
 export async function getPresencaParlamentar(id: number): Promise<PresencaPerfil> {
   try {
@@ -1225,33 +1287,24 @@ export async function getPresencaParlamentar(id: number): Promise<PresencaPerfil
     const payload = (res.data ?? {}) as BackendPresencaResponse;
     const presenca = payload.presenca ?? {};
 
-    const plenarioBruto = presenca.plenario ?? presenca.sessoesDeliberativas ?? null;
-    const usandoFormatoAntigo = !presenca.plenario && Boolean(presenca.sessoesDeliberativas);
-
     return {
-      plenario: mapPresencaBloco(
-        plenarioBruto,
-        'Sessões deliberativas de plenário, dentro do período de exercício do mandato.',
-      ),
-      comissoes: mapPresencaBloco(
-        presenca.comissoes,
-        'Reuniões deliberativas de comissão, dentro do período de exercício do mandato.',
-      ),
-      casa: formatCasa(payload.casa),
-      observacao:
-        payload.observacao?.trim() ||
-        payload.metodologia?.trim() ||
-        (usandoFormatoAntigo
-          ? 'A taxa exibida junta plenário e comissões: ainda não conseguimos separar as duas para este parlamentar.'
-          : null),
+      plenario: mapPresencaEscopo(presenca.plenario),
+      comissoes: mapPresencaEscopo(presenca.comissoes),
+      excluidos: {
+        semClassificacao: Number(presenca.excluidos?.eventosSemClassificacao ?? 0) || 0,
+        semOrgao: Number(presenca.excluidos?.eventosSemOrgao ?? 0) || 0,
+      },
+      restritaAoExercicio: presenca.janela?.restritaAoExercicio !== false,
+      metodologias: (presenca.metodologia ?? [])
+        .map((item) => ({
+          casa: formatCasa(item.casa) ?? item.casa ?? '',
+          fonte: item.fonte?.trim() ?? '',
+          observacao: item.observacao?.trim() || null,
+        }))
+        .filter((item) => item.casa || item.fonte),
     };
   } catch {
-    return {
-      plenario: { ...PRESENCA_VAZIA },
-      comissoes: { ...PRESENCA_VAZIA },
-      casa: null,
-      observacao: null,
-    };
+    return { ...PRESENCA_PERFIL_VAZIO };
   }
 }
 
@@ -1501,7 +1554,8 @@ function montarIndicadores(
   emendas: EmendasPerfil,
   despesas: DespesasPerfil,
 ): PerfilIndicador[] {
-  const presencaPlenario = votacoes.presenca.plenario;
+  // O número-vitrine é o plenário deliberativo: é onde a casa decide.
+  const presencaPlenario = votacoes.presenca.plenario.deliberativas;
   const temPresenca = presencaPlenario.taxa !== null;
 
   return [
