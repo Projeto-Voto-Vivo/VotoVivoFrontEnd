@@ -203,11 +203,29 @@ export interface PresencaPerfil {
   metodologias: MetodologiaPresenca[];
 }
 
+/**
+ * "Seguiu a orientação do partido?" — comparando o voto com a orientação da
+ * bancada do partido **na data da votação**, não do partido atual.
+ */
+export interface AlinhamentoPartidario {
+  disponivel: boolean;
+  /** Por que não há taxa. `SENADO`: só a Câmara registra orientação. */
+  motivo: 'SENADO' | 'FALHA' | null;
+  taxa: number | null;
+  seguiu: number;
+  divergiu: number;
+  consideradas: number;
+  /** Votações em que o partido liberou a bancada — fora do denominador. */
+  liberadas: number;
+  /**
+   * `partidoAtual` significa que não havia histórico de filiação: quem trocou
+   * de partido foi comparado contra a bancada errada no período anterior.
+   */
+  fonteFiliacao: 'historico' | 'partidoAtual' | null;
+}
+
 export interface VotacoesPerfil {
   presenca: PresencaPerfil;
-  /** Percentual de aderência à orientação do partido. `null` = sem dados. */
-  alinhamento: number | null;
-  alinhamentoBase: number;
   destaques: VotacaoPerfil[];
   leituraRapida: string;
   totalRegistros: number;

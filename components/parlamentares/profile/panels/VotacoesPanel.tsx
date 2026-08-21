@@ -17,6 +17,7 @@ import { getVotacoesParlamentar, VOTO_EXPLICACOES } from '@/services/parlamentar
 import { MicroInfoCard } from '../shared/MicroInfoCard';
 import { SectionShell } from '../shared/SectionShell';
 import { formatDate } from '../shared/formatters';
+import { AderenciaPartidaria } from './AderenciaPartidaria';
 import { TemasVotacaoDashboard } from './TemasVotacaoDashboard';
 
 interface VotacoesPanelProps {
@@ -146,7 +147,6 @@ export function VotacoesPanel({ profile }: VotacoesPanelProps) {
     : 0;
 
   const presenca = votacoesPerfil.presenca;
-  const alinhamento = votacoesPerfil.alinhamento;
 
   return (
     <div className="space-y-6">
@@ -306,14 +306,7 @@ export function VotacoesPanel({ profile }: VotacoesPanelProps) {
             label="Votações registradas"
             value={String(totalRegistros)}
           />
-          <MicroInfoCard
-            label="Aderência à orientação do partido"
-            value={
-              alinhamento === null
-                ? 'Sem dados'
-                : `${alinhamento}% (${votacoesPerfil.alinhamentoBase} votações comparáveis)`
-            }
-          />
+          <AderenciaPartidaria parlamentarId={parlamentar.id} />
         </div>
 
         {/*

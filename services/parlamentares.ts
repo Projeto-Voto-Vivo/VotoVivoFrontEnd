@@ -1,5 +1,6 @@
 import api from './api';
 import {
+  AlinhamentoPartidario,
   CasaLegislativaFiltro,
   CategoriaDespesaPerfil,
   ComissaoPerfil,
@@ -1346,19 +1347,60 @@ export async function getPresencaParlamentar(id: number): Promise<PresencaPerfil
   }
 }
 
-function calcularAlinhamento(votacoes: VotacaoPerfil[]) {
-  const comparaveis = votacoes.filter((votacao) => votacao.seguiuOrientacao !== null);
+const ALINHAMENTO_INDISPONIVEL: AlinhamentoPartidario = {
+  disponivel: false,
+  motivo: 'FALHA',
+  taxa: null,
+  seguiu: 0,
+  divergiu: 0,
+  consideradas: 0,
+  liberadas: 0,
+  fonteFiliacao: null,
+};
 
-  if (comparaveis.length === 0) {
-    return { alinhamento: null, alinhamentoBase: 0 };
+/**
+ * Aderência à orientação do partido.
+ *
+ * Vem de `GET /parlamentares/:id/perfil`, que é o único lugar onde a API expõe
+ * este cálculo hoje — não há rota dedicada. É uma chamada cara (o perfil
+ * agregado roda todas as consultas do parlamentar), por isso a interface só a
+ * dispara quando o painel de votações abre, e não a cada visita ao perfil.
+ *
+ * O cálculo real mora no backend de propósito: ele compara o voto com a
+ * orientação da bancada do partido **na data da votação** e descarta as
+ * votações liberadas. Tentar refazer isso no navegador, a partir da página
+ * corrente de votações, daria um número errado com cara de certo.
+ */
+export async function getAlinhamentoParlamentar(
+  id: number,
+): Promise<AlinhamentoPartidario> {
+  try {
+    const res = await api.get(`/parlamentares/${id}/perfil`);
+    const bruto = (res.data as BackendPerfilAgregado)?.votacoes?.alinhamento;
+
+    if (!bruto) return { ...ALINHAMENTO_INDISPONIVEL };
+
+    if (bruto.disponivel === false) {
+      return {
+        ...ALINHAMENTO_INDISPONIVEL,
+        motivo: bruto.motivo?.includes('SENADO') ? 'SENADO' : 'FALHA',
+      };
+    }
+
+    return {
+      disponivel: true,
+      motivo: null,
+      taxa: parsePercent(bruto.taxa),
+      seguiu: Number(bruto.seguiu ?? 0) || 0,
+      divergiu: Number(bruto.divergiu ?? 0) || 0,
+      consideradas: Number(bruto.consideradas ?? 0) || 0,
+      liberadas: Number(bruto.liberadas ?? 0) || 0,
+      fonteFiliacao: bruto.fonteFiliacao ?? null,
+    };
+  } catch {
+    console.warn('Não foi possível carregar o alinhamento partidário.');
+    return { ...ALINHAMENTO_INDISPONIVEL };
   }
-
-  const seguiu = comparaveis.filter((votacao) => votacao.seguiuOrientacao).length;
-
-  return {
-    alinhamento: Math.round((seguiu / comparaveis.length) * 100),
-    alinhamentoBase: comparaveis.length,
-  };
 }
 
 export async function getVotacoesPerfil(id: number): Promise<VotacoesPerfil> {
@@ -1367,12 +1409,8 @@ export async function getVotacoesPerfil(id: number): Promise<VotacoesPerfil> {
     getPresencaParlamentar(id),
   ]);
 
-  const { alinhamento, alinhamentoBase } = calcularAlinhamento(votacoesResponse.data);
-
   return {
     presenca,
-    alinhamento,
-    alinhamentoBase,
     destaques: votacoesResponse.data,
     leituraRapida:
       votacoesResponse.meta.total > 0
@@ -1539,6 +1577,21 @@ async function getListaOpcional<TBackend, TFront>(
     return [];
   }
 }
+
+type BackendPerfilAgregado = {
+  votacoes?: {
+    alinhamento?: {
+      disponivel?: boolean;
+      motivo?: string | null;
+      taxa?: number | null;
+      seguiu?: number | null;
+      divergiu?: number | null;
+      consideradas?: number | null;
+      liberadas?: number | null;
+      fonteFiliacao?: 'historico' | 'partidoAtual' | null;
+    } | null;
+  } | null;
+};
 
 type BackendPerfilTematico = {
   votacoes?: {
