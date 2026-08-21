@@ -1594,6 +1594,11 @@ type BackendPerfilAgregado = {
 };
 
 type BackendPerfilTematico = {
+  proposicoes?: {
+    temas?: { tema?: string | null; total?: number | null }[] | null;
+    totalProposicoes?: number | null;
+    semTema?: number | null;
+  } | null;
   votacoes?: {
     temas?: {
       tema?: string | null;
@@ -1615,6 +1620,9 @@ type BackendPerfilTematico = {
 
 const PERFIL_TEMATICO_VAZIO: PerfilTematico = {
   temasVotados: [],
+  temasAutoria: [],
+  totalProposicoes: 0,
+  proposicoesSemTema: 0,
   totalVotos: 0,
   excluidos: { semProposicao: 0, emProposicaoSemTema: 0 },
   observacao: null,
@@ -1638,8 +1646,17 @@ export async function getPerfilTematicoParlamentar(
     const res = await api.get(`/parlamentares/${id}/temas?limite=${limite}`);
     const payload = (res.data ?? {}) as BackendPerfilTematico;
     const votacoes = payload.votacoes ?? {};
+    const proposicoes = payload.proposicoes ?? {};
 
     return {
+      temasAutoria: (proposicoes.temas ?? [])
+        .map((item) => ({
+          tema: item.tema?.trim() ?? '',
+          total: Number(item.total ?? 0) || 0,
+        }))
+        .filter((item) => item.tema && item.total > 0),
+      totalProposicoes: Number(proposicoes.totalProposicoes ?? 0) || 0,
+      proposicoesSemTema: Number(proposicoes.semTema ?? 0) || 0,
       temasVotados: (votacoes.temas ?? [])
         .map((item) => {
           const votosSim = Number(item.votosSim ?? 0) || 0;

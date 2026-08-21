@@ -24,6 +24,7 @@ import {
 import { MicroInfoCard } from '../shared/MicroInfoCard';
 import { SectionShell } from '../shared/SectionShell';
 import { formatDate } from '../shared/formatters';
+import { TemasAutoriaDashboard } from './TemasAutoriaDashboard';
 
 interface ProposicoesPanelProps {
   profile: ParlamentarPerfil;
@@ -402,6 +403,8 @@ export function ProposicoesPanel({ profile }: ProposicoesPanelProps) {
           </div>
         )}
       </SectionShell>
+
+      <TemasAutoriaDashboard parlamentarId={parlamentarId} />
     </div>
   );
 }

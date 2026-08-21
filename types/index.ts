@@ -249,9 +249,23 @@ export interface TemaVotado {
   totalVotos: number;
 }
 
+export interface TemaAutoria {
+  tema: string;
+  /** Proposições do parlamentar classificadas nesse tema. */
+  total: number;
+}
+
 export interface PerfilTematico {
   /** Ordenados por quantidade de votos com posição, como a API devolve. */
   temasVotados: TemaVotado[];
+  /**
+   * Temas em que ele mais assina proposições. Uma proposição conta em cada
+   * tema que tem, então a soma destes totais é maior que `totalProposicoes`.
+   */
+  temasAutoria: TemaAutoria[];
+  totalProposicoes: number;
+  /** Proposições sem tema registrado — fora de qualquer linha do gráfico. */
+  proposicoesSemTema: number;
   totalVotos: number;
   /** Votos que não entram em tema nenhum, contados à parte pela API. */
   excluidos: { semProposicao: number; emProposicaoSemTema: number };

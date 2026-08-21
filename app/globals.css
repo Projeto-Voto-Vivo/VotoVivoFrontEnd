@@ -24,6 +24,14 @@
   --color-voto-ausencia-justificada: #94a3b8;
   --color-voto-ausente: #cbd5e1;
   --color-voto-nao-registrado: #e2e8f0;
+
+  /*
+   * Autoria de proposições. Deliberadamente fora da família de voto: se
+   * usasse o azul de SIM, a barra de "quantas proposições ele assinou" leria
+   * como "quantas vezes votou a favor". A marca (#002776) não serve — reprova
+   * na faixa de luminância do validador, escura demais para preenchimento.
+   */
+  --color-tema-autoria: #4a3aa7;
 }
 
 html {
