@@ -18,9 +18,11 @@ import {
   ParlamentarDetalhe,
   ParlamentarPerfil,
   PerfilIndicador,
+  PerfilTematico,
   PresencaDetalhe,
   PresencaPerfil,
   PresencaPorEscopo,
+  ProposicaoDaVotacao,
   ProposicaoPerfil,
   UFs,
   VotacaoPerfil,
@@ -124,6 +126,15 @@ type BackendVotacaoResumo = {
   siglaPartido?: string | null;
   siglaPartidoNaData?: string | null;
   seguiuOrientacao?: boolean | null;
+  proposicao?: {
+    id?: number | null;
+    tipo?: string | null;
+    sigla?: string | null;
+    numero?: string | number | null;
+    ano?: number | null;
+    ementa?: string | null;
+    situacao?: string | null;
+  } | null;
 };
 
 type ListaVotacoesResponse = {
@@ -626,6 +637,32 @@ function resolveSeguiuOrientacao(
   return votoNormalizado === orientacaoNormalizada;
 }
 
+/**
+ * Toda votação nasce de alguma coisa, mas nem toda votação tem proposição:
+ * requerimento e questão de ordem não têm. `null` aqui é ausência de vínculo,
+ * não dado faltando — e a interface diz isso em vez de deixar o card mudo.
+ */
+function mapProposicaoDaVotacao(
+  proposicao: BackendVotacaoResumo['proposicao'],
+): ProposicaoDaVotacao | null {
+  const id = Number(proposicao?.id ?? 0);
+  if (!proposicao || !id) return null;
+
+  const sigla = (proposicao.tipo ?? proposicao.sigla ?? '').trim() || 'Proposição';
+  const numero =
+    proposicao.numero === null || proposicao.numero === undefined
+      ? 'S/N'
+      : String(proposicao.numero);
+  const ano = proposicao.ano ? String(proposicao.ano) : 's/ano';
+
+  return {
+    id,
+    titulo: `${sigla} ${numero}/${ano}`,
+    ementa: proposicao.ementa?.trim() || null,
+    situacao: proposicao.situacao?.trim() || null,
+  };
+}
+
 function mapVotacaoResumo(item: BackendVotacaoResumo, index: number): VotacaoPerfil {
   const id = String(item.id ?? `${item.data ?? 'votacao'}-${index}`);
   const resumo = item.resumo?.trim() || item.descricao?.trim() || 'Resumo não informado.';
@@ -639,6 +676,7 @@ function mapVotacaoResumo(item: BackendVotacaoResumo, index: number): VotacaoPer
     data: item.data || '',
     descricao: buildVotingHeadline(resumo),
     resumo,
+    proposicao: mapProposicaoDaVotacao(item.proposicao),
     voto: formatVotingChoice(item.voto),
     votoOriginal,
     resultado: item.resultado || 'Resultado não informado',
@@ -1499,6 +1537,84 @@ async function getListaOpcional<TBackend, TFront>(
     return itens.map(mapper);
   } catch {
     return [];
+  }
+}
+
+type BackendPerfilTematico = {
+  votacoes?: {
+    temas?: {
+      tema?: string | null;
+      votosSim?: number | null;
+      votosNao?: number | null;
+      saldo?: number | null;
+      abstencoes?: number | null;
+      obstrucoes?: number | null;
+      totalVotos?: number | null;
+    }[] | null;
+    totalVotos?: number | null;
+    excluidos?: {
+      votosSemProposicao?: number | null;
+      votosEmProposicaoSemTema?: number | null;
+    } | null;
+  } | null;
+  metadata?: { observacao?: string | null } | null;
+};
+
+const PERFIL_TEMATICO_VAZIO: PerfilTematico = {
+  temasVotados: [],
+  totalVotos: 0,
+  excluidos: { semProposicao: 0, emProposicaoSemTema: 0 },
+  observacao: null,
+  disponivel: false,
+};
+
+/**
+ * Como o parlamentar votou, agrupado por tema da proposição.
+ *
+ * A contagem é de votos SIM e NÃO em votações de proposições do tema — não é
+ * posição sobre o tema. A mesma votação pode ser sobre o texto principal, um
+ * destaque supressivo ou um requerimento de urgência, e o dado não distingue:
+ * votar NÃO num destaque que suprimia o artigo é votar A FAVOR do texto. A
+ * `observacao` da API carrega essa ressalva e a interface a exibe.
+ */
+export async function getPerfilTematicoParlamentar(
+  id: number,
+  limite = 8,
+): Promise<PerfilTematico> {
+  try {
+    const res = await api.get(`/parlamentares/${id}/temas?limite=${limite}`);
+    const payload = (res.data ?? {}) as BackendPerfilTematico;
+    const votacoes = payload.votacoes ?? {};
+
+    return {
+      temasVotados: (votacoes.temas ?? [])
+        .map((item) => {
+          const votosSim = Number(item.votosSim ?? 0) || 0;
+          const votosNao = Number(item.votosNao ?? 0) || 0;
+
+          return {
+            tema: item.tema?.trim() ?? '',
+            votosSim,
+            votosNao,
+            saldo: Number(item.saldo ?? votosSim - votosNao) || 0,
+            abstencoes: Number(item.abstencoes ?? 0) || 0,
+            obstrucoes: Number(item.obstrucoes ?? 0) || 0,
+            totalVotos: Number(item.totalVotos ?? 0) || 0,
+          };
+        })
+        .filter((item) => item.tema && item.votosSim + item.votosNao > 0),
+      totalVotos: Number(votacoes.totalVotos ?? 0) || 0,
+      excluidos: {
+        semProposicao: Number(votacoes.excluidos?.votosSemProposicao ?? 0) || 0,
+        emProposicaoSemTema:
+          Number(votacoes.excluidos?.votosEmProposicaoSemTema ?? 0) || 0,
+      },
+      observacao: payload.metadata?.observacao?.trim() || null,
+      disponivel: true,
+    };
+  } catch {
+    console.warn('Não foi possível carregar o perfil temático do parlamentar.');
+    return { ...PERFIL_TEMATICO_VAZIO };
   }
 }
 

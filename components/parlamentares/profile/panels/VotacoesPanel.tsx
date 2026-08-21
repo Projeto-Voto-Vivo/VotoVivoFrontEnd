@@ -1,12 +1,23 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { BadgeCheck, ChevronLeft, ChevronRight, Info, Loader2, Vote } from 'lucide-react';
+import Link from 'next/link';
+import {
+  ArrowRight,
+  BadgeCheck,
+  ChevronLeft,
+  ChevronRight,
+  FileText,
+  Info,
+  Loader2,
+  Vote,
+} from 'lucide-react';
 import { ParlamentarPerfil, PresencaDetalhe, VotacaoPerfil } from '@/types';
 import { getVotacoesParlamentar, VOTO_EXPLICACOES } from '@/services/parlamentares';
 import { MicroInfoCard } from '../shared/MicroInfoCard';
 import { SectionShell } from '../shared/SectionShell';
 import { formatDate } from '../shared/formatters';
+import { TemasVotacaoDashboard } from './TemasVotacaoDashboard';
 
 interface VotacoesPanelProps {
   profile: ParlamentarPerfil;
@@ -138,6 +149,7 @@ export function VotacoesPanel({ profile }: VotacoesPanelProps) {
   const alinhamento = votacoesPerfil.alinhamento;
 
   return (
+    <div className="space-y-6">
     <div className="grid items-start gap-6 xl:grid-cols-[1.2fr_0.8fr]">
       <SectionShell icon={<Vote className="h-6 w-6" />} title="Votações">
         {carregando && (
@@ -173,6 +185,46 @@ export function VotacoesPanel({ profile }: VotacoesPanelProps) {
                     </span>
                   ) : null}
                 </div>
+
+                {/*
+                  O que estava em jogo. Requerimento e questão de ordem não têm
+                  proposição — dizer isso é melhor que deixar o card mudo.
+                */}
+                {votacao.proposicao ? (
+                  <Link
+                    href={`/proposicoes/${votacao.proposicao.id}`}
+                    className="mt-3 flex items-start gap-2 rounded-2xl border border-slate-200 bg-white p-3 transition hover:border-brasil-blue"
+                  >
+                    <FileText
+                      className="mt-0.5 h-4 w-4 shrink-0 text-brasil-blue"
+                      aria-hidden="true"
+                    />
+                    <span className="min-w-0">
+                      <span className="block text-sm font-semibold text-brasil-blue">
+                        {votacao.proposicao.titulo}
+                      </span>
+                      {votacao.proposicao.ementa ? (
+                        <span className="mt-0.5 line-clamp-2 block text-xs leading-5 text-slate-600">
+                          {votacao.proposicao.ementa}
+                        </span>
+                      ) : null}
+                      {votacao.proposicao.situacao ? (
+                        <span className="mt-1 block text-xs text-slate-400">
+                          {votacao.proposicao.situacao}
+                        </span>
+                      ) : null}
+                    </span>
+                    <ArrowRight
+                      className="mt-0.5 h-4 w-4 shrink-0 text-slate-400"
+                      aria-hidden="true"
+                    />
+                  </Link>
+                ) : (
+                  <p className="mt-3 text-xs leading-5 text-slate-400">
+                    Sem proposição vinculada — típico de requerimento e questão
+                    de ordem, que decidem o rito e não uma matéria.
+                  </p>
+                )}
 
                 <div className="mt-4 grid gap-3 md:grid-cols-3">
                   <MicroInfoCard label="Voto do parlamentar" value={votacao.voto} />
@@ -341,6 +393,9 @@ export function VotacoesPanel({ profile }: VotacoesPanelProps) {
           ) : null}
         </div>
       </SectionShell>
+    </div>
+
+    <TemasVotacaoDashboard parlamentarId={parlamentar.id} />
     </div>
   );
 }

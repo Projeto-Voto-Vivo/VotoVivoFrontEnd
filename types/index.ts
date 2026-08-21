@@ -100,12 +100,25 @@ export interface ProposicaoPerfil {
   dataApresentacao: string | null;
 }
 
+/** A proposição que estava em jogo na votação. */
+export interface ProposicaoDaVotacao {
+  id: number;
+  titulo: string;
+  ementa: string | null;
+  situacao: string | null;
+}
+
 export interface VotacaoPerfil {
   id: string;
   titulo: string;
   data: string;
   descricao: string;
   resumo: string;
+  /**
+   * `null` em requerimento e questão de ordem, que não têm proposição
+   * vinculada — ausência de vínculo, não falha de dado.
+   */
+  proposicao: ProposicaoDaVotacao | null;
   voto: string;
   /** Valor bruto do enum de voto, para lógica (não exibir ao cidadão). */
   votoOriginal: string | null;
@@ -201,6 +214,32 @@ export interface VotacoesPerfil {
   paginaAtual: number;
   totalPaginas: number;
   itensPorPagina: number;
+}
+
+/* ------------------------------------------------------------------ *
+ * Perfil temático
+ * ------------------------------------------------------------------ */
+
+export interface TemaVotado {
+  tema: string;
+  votosSim: number;
+  votosNao: number;
+  /** `votosSim - votosNao`. Positivo = mais SIM que NÃO no tema. */
+  saldo: number;
+  abstencoes: number;
+  obstrucoes: number;
+  totalVotos: number;
+}
+
+export interface PerfilTematico {
+  /** Ordenados por quantidade de votos com posição, como a API devolve. */
+  temasVotados: TemaVotado[];
+  totalVotos: number;
+  /** Votos que não entram em tema nenhum, contados à parte pela API. */
+  excluidos: { semProposicao: number; emProposicaoSemTema: number };
+  /** Ressalva metodológica da própria API sobre o que os números significam. */
+  observacao: string | null;
+  disponivel: boolean;
 }
 
 export interface ComissaoPerfil {
