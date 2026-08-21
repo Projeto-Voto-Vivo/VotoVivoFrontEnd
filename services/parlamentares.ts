@@ -1,6 +1,7 @@
 import api from './api';
 import {
   AlinhamentoPartidario,
+  AlinhamentoPorTema,
   CasaLegislativaFiltro,
   CategoriaDespesaPerfil,
   ComissaoPerfil,
@@ -14,6 +15,7 @@ import {
   FiliacaoPartidariaPerfil,
   ItemDespesaPerfil,
   ListaParlamentaresResponse,
+  FiltrosVotacao,
   MandatoExercicioPerfil,
   MotivoSemAlinhamento,
   ObjetoVotacao,
@@ -142,9 +144,14 @@ type BackendVotacaoResumo = {
   } | null;
 };
 
-type ListaVotacoesResponse = {
+export type ListaVotacoesResponse = {
   data: VotacaoPerfil[];
   meta: PaginacaoNormalizada;
+  /**
+   * Votações sem proposição vinculada que os filtros deixaram de fora. Zero
+   * quando nenhum filtro está ativo — aí elas estão no resultado.
+   */
+  votacoesSemProposicaoExcluidas: number;
 };
 
 type BackendPresencaBloco = {
@@ -1278,11 +1285,20 @@ export async function getDespesasPerfil(
   return montarDespesasPerfil(resumoDespesas, despesasResponse, anoReferencia);
 }
 
-function buildVotingsQuery(page: number) {
+function buildVotingsQuery(page: number, filtros: FiltrosVotacao) {
   const params = new URLSearchParams();
   params.append('pagina', String(page));
   params.append('limit', String(VOTACOES_PAGE_SIZE));
   params.append('limite', String(VOTACOES_PAGE_SIZE));
+
+  // Todos recortam pela proposição votada, no banco — não sobre a página lida.
+  if (filtros.proposicao) params.append('proposicao', String(filtros.proposicao));
+  if (filtros.tipo) params.append('tipo', filtros.tipo);
+  if (filtros.ano) params.append('ano', String(filtros.ano));
+  if (filtros.tema) params.append('tema', filtros.tema);
+  if (filtros.busca) params.append('busca', filtros.busca);
+  if (filtros.objeto) params.append('objeto', filtros.objeto);
+  if (filtros.apenasMerito) params.append('apenasMerito', 'true');
 
   return params.toString();
 }
@@ -1290,22 +1306,28 @@ function buildVotingsQuery(page: number) {
 export async function getVotacoesParlamentar(
   id: number,
   page: number = 1,
+  filtros: FiltrosVotacao = {},
 ): Promise<ListaVotacoesResponse> {
   try {
     const res = await api.get(
-      `/parlamentares/${id}/votacoes?${buildVotingsQuery(page)}`,
+      `/parlamentares/${id}/votacoes?${buildVotingsQuery(page, filtros)}`,
     );
     const { itens, meta } = unwrapList<BackendVotacaoResumo>(res.data);
+
+    const excluidos = (res.data as { meta?: { excluidos?: { votacoesSemProposicao?: number } } })
+      ?.meta?.excluidos;
 
     return {
       data: itens.map(mapVotacaoResumo),
       meta: normalizeMeta(meta, page, VOTACOES_PAGE_SIZE, itens.length),
+      votacoesSemProposicaoExcluidas: Number(excluidos?.votacoesSemProposicao ?? 0) || 0,
     };
   } catch {
     console.warn('Não foi possível carregar votações do parlamentar.');
     return {
       data: [],
       meta: { total: 0, page, lastPage: 1, limit: VOTACOES_PAGE_SIZE },
+      votacoesSemProposicaoExcluidas: 0,
     };
   }
 }
@@ -1448,35 +1470,114 @@ const ALINHAMENTO_INDISPONIVEL: AlinhamentoPartidario = {
  * a partir da página corrente de votações, daria um número errado com cara de
  * certo.
  */
+/** O mesmo formato serve ao agregado e a cada tema. */
+function mapAlinhamento(bruto: BackendAlinhamento): AlinhamentoPartidario {
+  const motivoBruto = (bruto.motivo ?? '') as MotivoSemAlinhamento;
+  const motivo = MOTIVOS_CONHECIDOS.includes(motivoBruto) ? motivoBruto : null;
+  const taxa =
+    bruto.taxa === null || bruto.taxa === undefined ? null : parsePercent(bruto.taxa);
+
+  return {
+    disponivel: bruto.disponivel !== false,
+    taxa,
+    // Sem taxa e sem motivo reconhecido, a interface ainda precisa dizer algo.
+    motivo: taxa === null ? motivo ?? 'FALHA' : null,
+    seguiu: Number(bruto.seguiu ?? 0) || 0,
+    divergiu: Number(bruto.divergiu ?? 0) || 0,
+    consideradas: Number(bruto.consideradas ?? 0) || 0,
+    liberadas: Number(bruto.liberadas ?? 0) || 0,
+    bancadaNaoResolvida: Number(bruto.bancadaNaoResolvida ?? 0) || 0,
+    minimoParaTaxa: Number(bruto.minimoParaTaxa ?? 0) || 0,
+    fonteFiliacao: bruto.fonteFiliacao ?? null,
+  };
+}
+
 export async function getAlinhamentoParlamentar(
   id: number,
 ): Promise<AlinhamentoPartidario> {
   try {
     const res = await api.get(`/parlamentares/${id}/alinhamento`);
-    const bruto = (res.data ?? {}) as BackendAlinhamento;
 
-    const motivoBruto = (bruto.motivo ?? '') as MotivoSemAlinhamento;
-    const motivo = MOTIVOS_CONHECIDOS.includes(motivoBruto) ? motivoBruto : null;
-    const taxa = bruto.taxa === null || bruto.taxa === undefined
-      ? null
-      : parsePercent(bruto.taxa);
-
-    return {
-      disponivel: bruto.disponivel !== false,
-      taxa,
-      // Sem taxa e sem motivo reconhecido, a interface ainda precisa dizer algo.
-      motivo: taxa === null ? motivo ?? 'FALHA' : null,
-      seguiu: Number(bruto.seguiu ?? 0) || 0,
-      divergiu: Number(bruto.divergiu ?? 0) || 0,
-      consideradas: Number(bruto.consideradas ?? 0) || 0,
-      liberadas: Number(bruto.liberadas ?? 0) || 0,
-      bancadaNaoResolvida: Number(bruto.bancadaNaoResolvida ?? 0) || 0,
-      minimoParaTaxa: Number(bruto.minimoParaTaxa ?? 0) || 0,
-      fonteFiliacao: bruto.fonteFiliacao ?? null,
-    };
+    return mapAlinhamento((res.data ?? {}) as BackendAlinhamento);
   } catch {
     console.warn('Não foi possível carregar o alinhamento partidário.');
     return { ...ALINHAMENTO_INDISPONIVEL };
+  }
+}
+
+type BackendAlinhamentoPorTema = {
+  disponivel?: boolean;
+  geral?: BackendAlinhamento | null;
+  temas?: (BackendAlinhamento & { tema?: string | null })[] | null;
+  excluidos?: {
+    votosSemProposicao?: number | null;
+    votosEmProposicaoSemTema?: number | null;
+  } | null;
+  metadata?: {
+    temasComparados?: number | null;
+    minimoParaTaxa?: number | null;
+    filtro?: { apenasMerito?: boolean } | null;
+  } | null;
+};
+
+const ALINHAMENTO_POR_TEMA_VAZIO: AlinhamentoPorTema = {
+  disponivel: false,
+  geral: { ...ALINHAMENTO_INDISPONIVEL },
+  temas: [],
+  excluidos: { semProposicao: 0, emProposicaoSemTema: 0 },
+  temasComparados: 0,
+  minimoParaTaxa: 0,
+  apenasMerito: false,
+  carregado: false,
+};
+
+/**
+ * Fidelidade à orientação do partido, por tema.
+ *
+ * O `geral` vem no mesmo payload e sob o mesmo recorte: é a régua que dá
+ * sentido ao número de cada tema. "61% em meio ambiente" só quer dizer alguma
+ * coisa ao lado de "88% no mandato inteiro".
+ *
+ * A API ordena por número de comparações, não por taxa — o topo dela é onde há
+ * mais evidência. Quem reordenar por taxa precisa manter `consideradas` à
+ * vista, porque abaixo do mínimo a taxa vem nula de propósito.
+ */
+export async function getAlinhamentoPorTema(
+  id: number,
+  limite = 8,
+  apenasMerito = true,
+): Promise<AlinhamentoPorTema> {
+  try {
+    const params = new URLSearchParams({ limite: String(limite) });
+    if (apenasMerito) params.set('apenasMerito', 'true');
+
+    const res = await api.get(
+      `/parlamentares/${id}/alinhamento/temas?${params.toString()}`,
+    );
+    const payload = (res.data ?? {}) as BackendAlinhamentoPorTema;
+
+    return {
+      disponivel: payload.disponivel !== false,
+      geral: mapAlinhamento(payload.geral ?? {}),
+      temas: (payload.temas ?? [])
+        .map((item) => ({
+          ...mapAlinhamento(item),
+          tema: item.tema?.trim() ?? '',
+        }))
+        .filter((item) => item.tema),
+      excluidos: {
+        semProposicao: Number(payload.excluidos?.votosSemProposicao ?? 0) || 0,
+        emProposicaoSemTema:
+          Number(payload.excluidos?.votosEmProposicaoSemTema ?? 0) || 0,
+      },
+      temasComparados: Number(payload.metadata?.temasComparados ?? 0) || 0,
+      minimoParaTaxa: Number(payload.metadata?.minimoParaTaxa ?? 0) || 0,
+      apenasMerito: payload.metadata?.filtro?.apenasMerito === true,
+      carregado: true,
+    };
+  } catch {
+    console.warn('Não foi possível carregar o alinhamento por tema.');
+    return { ...ALINHAMENTO_POR_TEMA_VAZIO };
   }
 }
 

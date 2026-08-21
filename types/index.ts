@@ -260,6 +260,18 @@ export interface AlinhamentoPartidario {
   fonteFiliacao: 'historico' | 'partidoAtual' | null;
 }
 
+/** Filtros da listagem de votações — todos sobre a proposição votada. */
+export interface FiltrosVotacao {
+  /** Id de uma proposição específica. */
+  proposicao?: number;
+  tipo?: string;
+  ano?: number;
+  tema?: string;
+  busca?: string;
+  objeto?: ObjetoVotacao;
+  apenasMerito?: boolean;
+}
+
 export interface VotacoesPerfil {
   presenca: PresencaPerfil;
   destaques: VotacaoPerfil[];
@@ -273,6 +285,36 @@ export interface VotacoesPerfil {
 /* ------------------------------------------------------------------ *
  * Perfil temático
  * ------------------------------------------------------------------ */
+
+/** Fidelidade à orientação do partido dentro de um tema. */
+export interface AlinhamentoDoTema {
+  tema: string;
+  /** `null` abaixo do mínimo de comparações — o motivo diz por quê. */
+  taxa: number | null;
+  motivo: MotivoSemAlinhamento | null;
+  seguiu: number;
+  divergiu: number;
+  consideradas: number;
+  liberadas: number;
+  bancadaNaoResolvida: number;
+  minimoParaTaxa: number;
+}
+
+export interface AlinhamentoPorTema {
+  disponivel: boolean;
+  /**
+   * Taxa do mandato inteiro, sob o mesmo recorte dos temas. É a régua: sem ela,
+   * "61% em meio ambiente" não diz se é muito ou pouco para este parlamentar.
+   */
+  geral: AlinhamentoPartidario;
+  temas: AlinhamentoDoTema[];
+  excluidos: { semProposicao: number; emProposicaoSemTema: number };
+  /** Quantos temas tinham comparação, antes do corte por `limite`. */
+  temasComparados: number;
+  minimoParaTaxa: number;
+  apenasMerito: boolean;
+  carregado: boolean;
+}
 
 export interface TemaVotado {
   tema: string;

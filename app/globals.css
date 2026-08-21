@@ -32,6 +32,13 @@
    * na faixa de luminância do validador, escura demais para preenchimento.
    */
   --color-tema-autoria: #4a3aa7;
+
+  /*
+   * Fidelidade à orientação do partido. Quarta cor da família de dados, também
+   * validada contra as outras três: o pior par no teste de daltonismo fica em
+   * ΔE 21,5, bem acima do piso.
+   */
+  --color-fidelidade: #1baf7a;
 }
 
 html {

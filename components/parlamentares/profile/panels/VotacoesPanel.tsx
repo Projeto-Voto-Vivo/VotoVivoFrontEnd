@@ -8,16 +8,24 @@ import {
   ChevronLeft,
   ChevronRight,
   FileText,
+  Search,
   Info,
   Loader2,
   Vote,
 } from 'lucide-react';
-import { ParlamentarPerfil, PresencaDetalhe, VotacaoPerfil } from '@/types';
+import {
+  FiltrosVotacao,
+  OpcoesFiltroProposicoes,
+  ParlamentarPerfil,
+  PresencaDetalhe,
+  VotacaoPerfil,
+} from '@/types';
 import {
   getVotacoesParlamentar,
   OBJETO_VOTACAO_LABELS,
   VOTO_EXPLICACOES,
 } from '@/services/parlamentares';
+import { carregarOpcoesFiltroProposicoes } from '@/services/proposicoes';
 import { MicroInfoCard } from '../shared/MicroInfoCard';
 import { SectionShell } from '../shared/SectionShell';
 import { formatDate } from '../shared/formatters';
@@ -106,6 +114,14 @@ export function VotacoesPanel({ profile }: VotacoesPanelProps) {
     votacoesPerfil.itensPorPagina || votacoesPerfil.destaques.length || 1,
   );
   const [carregando, setCarregando] = useState(false);
+  const [semProposicaoExcluidas, setSemProposicaoExcluidas] = useState(0);
+  /** Contador que força a consulta a repetir quando só a página muda. */
+  const [recarregar, setRecarregar] = useState(0);
+
+  // Rascunho do formulário × filtros aplicados: digitar não dispara consulta.
+  const [rascunho, setRascunho] = useState<FiltrosVotacao>({});
+  const [filtros, setFiltros] = useState<FiltrosVotacao>({});
+  const [opcoes, setOpcoes] = useState<OpcoesFiltroProposicoes | null>(null);
 
   useEffect(() => {
     window.dispatchEvent(
@@ -121,29 +137,72 @@ export function VotacoesPanel({ profile }: VotacoesPanelProps) {
     };
   }, [carregando]);
 
-  async function carregarPagina(novaPagina: number) {
-    if (
-      novaPagina < 1 ||
-      novaPagina > totalPaginas ||
-      novaPagina === paginaAtual ||
-      carregando
-    ) {
-      return;
-    }
+  useEffect(() => {
+    let cancelado = false;
 
-    setCarregando(true);
+    carregarOpcoesFiltroProposicoes().then((resultado) => {
+      if (!cancelado) setOpcoes(resultado);
+    });
 
-    try {
-      const response = await getVotacoesParlamentar(parlamentar.id, novaPagina);
+    return () => {
+      cancelado = true;
+    };
+  }, []);
+
+  const temFiltro = Object.values(filtros).some(Boolean);
+
+  // Filtro e página descrevem a consulta; o efeito só a resolve.
+  useEffect(() => {
+    // Sem filtro na primeira página, o perfil já trouxe os dados do servidor.
+    if (!temFiltro && paginaAtual === 1 && !recarregar) return;
+
+    let cancelado = false;
+
+    getVotacoesParlamentar(parlamentar.id, paginaAtual, filtros).then((response) => {
+      if (cancelado) return;
+
       setVotacoes(response.data);
-      setPaginaAtual(response.meta.page);
       setTotalPaginas(response.meta.lastPage);
       setTotalRegistros(response.meta.total);
       setItensPorPagina(response.meta.limit);
-    } finally {
+      setSemProposicaoExcluidas(response.votacoesSemProposicaoExcluidas);
       setCarregando(false);
-    }
+    });
+
+    return () => {
+      cancelado = true;
+    };
+  }, [parlamentar.id, filtros, paginaAtual, temFiltro, recarregar]);
+
+  function aplicarFiltros(evento: React.FormEvent) {
+    evento.preventDefault();
+    setCarregando(true);
+    setPaginaAtual(1);
+    setFiltros(rascunho);
+    setRecarregar((n) => n + 1);
   }
+
+  function limparFiltros() {
+    setCarregando(true);
+    setRascunho({});
+    setPaginaAtual(1);
+    setFiltros({});
+    setRecarregar((n) => n + 1);
+  }
+
+  function carregarPagina(novaPagina: number) {
+    if (novaPagina < 1 || novaPagina > totalPaginas || carregando) return;
+
+    setCarregando(true);
+    setPaginaAtual(novaPagina);
+    setRecarregar((n) => n + 1);
+  }
+
+  const atualizarRascunho = (campo: keyof FiltrosVotacao, valor: string) =>
+    setRascunho((atual) => ({
+      ...atual,
+      [campo]: valor === '' ? undefined : campo === 'ano' ? Number(valor) : valor,
+    }));
 
   const inicioPagina = votacoes.length ? (paginaAtual - 1) * itensPorPagina + 1 : 0;
   const fimPagina = votacoes.length
@@ -155,6 +214,139 @@ export function VotacoesPanel({ profile }: VotacoesPanelProps) {
   return (
     <div className="grid items-start gap-6 xl:grid-cols-[1.2fr_0.8fr]">
       <SectionShell icon={<Vote className="h-6 w-6" />} title="Votações">
+        {/*
+          Os filtros recortam pela proposição votada, no banco. Sem eles, achar
+          uma votação específica num mandato de centenas era folhear página a
+          página até topar com ela.
+        */}
+        <form onSubmit={aplicarFiltros} className="grid gap-3 md:grid-cols-4">
+          <label className="md:col-span-2">
+            <span className="sr-only">Buscar por assunto ou número</span>
+            <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 focus-within:border-brasil-blue">
+              <Search size={18} className="shrink-0 text-slate-400" aria-hidden="true" />
+              <input
+                type="text"
+                value={rascunho.busca ?? ''}
+                onChange={(evento) => atualizarRascunho('busca', evento.target.value)}
+                placeholder="Buscar proposição por assunto ou número"
+                className="w-full bg-transparent py-2.5 text-sm text-slate-700 outline-none"
+              />
+            </div>
+          </label>
+
+          <label>
+            <span className="sr-only">Tipo</span>
+            <select
+              value={rascunho.tipo ?? ''}
+              onChange={(evento) => atualizarRascunho('tipo', evento.target.value)}
+              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700"
+            >
+              <option value="">Todos os tipos</option>
+              {Array.from(new Set((opcoes?.tipos ?? []).map((t) => t.sigla))).map(
+                (sigla) => (
+                  <option key={sigla} value={sigla}>
+                    {sigla}
+                  </option>
+                ),
+              )}
+            </select>
+          </label>
+
+          <label>
+            <span className="sr-only">Ano</span>
+            <select
+              value={rascunho.ano ? String(rascunho.ano) : ''}
+              onChange={(evento) => atualizarRascunho('ano', evento.target.value)}
+              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700"
+            >
+              <option value="">Todos os anos</option>
+              {(opcoes?.anos ?? []).map((item) => (
+                <option key={item.ano} value={item.ano}>
+                  {item.ano}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="md:col-span-2">
+            <span className="sr-only">Tema</span>
+            <select
+              value={rascunho.tema ?? ''}
+              onChange={(evento) => atualizarRascunho('tema', evento.target.value)}
+              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700"
+            >
+              <option value="">Todos os temas</option>
+              {(opcoes?.temas ?? []).map((item) => (
+                <option key={item.tema} value={item.tema}>
+                  {item.tema}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label>
+            <span className="sr-only">Objeto da votação</span>
+            <select
+              value={rascunho.objeto ?? ''}
+              onChange={(evento) => atualizarRascunho('objeto', evento.target.value)}
+              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700"
+            >
+              <option value="">Qualquer votação</option>
+              {(
+                [
+                  'TEXTO_BASE',
+                  'PARECER',
+                  'EMENDA',
+                  'DESTAQUE',
+                  'REQUERIMENTO',
+                  'REDACAO_FINAL',
+                ] as const
+              ).map((objeto) => (
+                <option key={objeto} value={objeto}>
+                  {OBJETO_VOTACAO_LABELS[objeto]}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <button
+            type="submit"
+            disabled={carregando}
+            className="rounded-2xl bg-brasil-blue px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
+          >
+            Filtrar
+          </button>
+        </form>
+
+        {temFiltro && (
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-slate-500">
+              {totalRegistros}{' '}
+              {totalRegistros === 1 ? 'votação encontrada' : 'votações encontradas'}
+            </p>
+            <button
+              type="button"
+              onClick={limparFiltros}
+              className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-brasil-blue hover:text-brasil-blue"
+            >
+              Limpar filtros
+            </button>
+          </div>
+        )}
+
+        {/*
+          Requerimento e questão de ordem não têm proposição, então nenhum
+          filtro de proposição casa com eles. Dizer quantas saíram evita ler a
+          ausência como inexistência.
+        */}
+        {semProposicaoExcluidas > 0 && (
+          <p className="mt-3 flex items-start gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs leading-5 text-slate-500">
+            <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+            {semProposicaoExcluidas} votações sem proposição vinculada —
+            requerimentos e questões de ordem — ficaram fora deste recorte.
+          </p>
+        )}
+
         {carregando && (
           <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-brasil-blue/10 bg-brasil-blue/5 px-4 py-2 text-sm font-semibold text-brasil-blue" aria-live="polite">
             <Loader2 className="h-4 w-4 animate-spin" />
