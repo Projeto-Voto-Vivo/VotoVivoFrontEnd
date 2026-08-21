@@ -187,3 +187,52 @@ com a mesma técnica de lista explícita —, aí o rótulo pode mudar.
 - Orientação por votação na listagem (item 1): sem ela, dá para ver que o
   parlamentar divergiu em 51 votações, mas não **quais**.
 - `votos` em `GET /votacoes/:id` ainda vem sem paginação.
+
+---
+
+## 4. Filtros em `GET /parlamentares/:id/votacoes`
+
+**O caso de uso.** Hoje só dá para folhear as votações do parlamentar página a
+página. Quem quer conferir **uma votação específica** — "como ele votou naquele
+projeto da saúde de 2025?" — precisa clicar até achar. Com centenas de votações
+por mandato, na prática não acha.
+
+**O que a rota aceita hoje.** Apenas `pagina` e `limite`.
+
+**Pedido.** Os mesmos filtros que `GET /proposicoes` já tem, aplicados à
+proposição de cada votação:
+
+```
+GET /parlamentares/:id/votacoes?tipo=PL&ano=2025&tema=Saúde&busca=merenda
+GET /parlamentares/:id/votacoes?proposicao=1000
+```
+
+| Parâmetro | Efeito |
+|-----------|--------|
+| `proposicao` | Só as votações daquela proposição — o caso "quero ver esta matéria". |
+| `tipo` | Sigla do tipo da proposição votada (`PL`, `PEC`, `MPV`). |
+| `ano` | Ano da proposição votada. |
+| `tema` | Descrição do tema, como em `/proposicoes`. |
+| `busca` | Texto na ementa da proposição ou no resumo da votação. |
+| `objeto` / `apenasMerito` | Já existem em `/temas`; aqui separariam "como votou no texto" de "como votou no requerimento". |
+
+**Por que é barato.** O join necessário já existe em dois lugares:
+`listVotingsByParliamentarianId` já traz `voting.proposition` com
+`propositionType`, e `theme-profile.service` já junta `voto × temaProposicao`.
+É levar o `where` da busca de proposições para o `where` desta listagem.
+
+**Uma decisão de contrato.** Votação sem proposição — requerimento, questão de
+ordem — não casa com nenhum destes filtros. Ela deve **sair** do resultado
+quando qualquer filtro de proposição estiver ativo, e o `meta` idealmente diz
+quantas ficaram de fora, para o front não sugerir que elas não existem.
+
+**Opções dos filtros.** `GET /proposicoes/filtros` serve como está — o front já
+o consome no painel de proposições. Vale a mesma ressalva registrada lá: os
+domínios são globais, então dá para escolher um tema em que aquele parlamentar
+nunca votou e receber lista vazia. Aceitável; facetar por parlamentar custaria
+uma query por dimensão a cada requisição.
+
+**O que o frontend fará.** A mesma barra de filtros do painel de proposições,
+reaproveitada na aba de votações, com um campo de busca e os selects de tipo,
+ano, tema e objeto. Assim que os parâmetros existirem, é ligar — o componente de
+filtros e o de paginação já estão prontos e testados no painel vizinho.
