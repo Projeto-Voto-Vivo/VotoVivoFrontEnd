@@ -5,6 +5,11 @@ temático, conferindo `src/services/alignment.service.ts`,
 `src/services/theme-profile.service.ts`, `src/services/parliamentarian.service.ts`
 e o schema do agregador (`popular/schema.sql`).
 
+> **Estado em agosto/2026 — atendido.** O backend entregou os três pedidos, mais
+> a rota dedicada de alinhamento, e o frontend já consome tudo. O corpo do
+> documento fica como registro do raciocínio; a seção final diz o que mudou e o
+> que ficou de fora.
+
 Nada aqui bloqueia o que está no ar. Os três painéis funcionam hoje e declaram
 as próprias limitações na interface. O que estes pedidos mudam é o **teto de
 precisão**: com eles, dá para afirmar coisas que hoje precisam de ressalva.
@@ -145,3 +150,40 @@ chamado isoladamente lá dentro — falta só uma rota.
 
 Ver também [`TRAMITACAO_REQUISITOS.md`](./TRAMITACAO_REQUISITOS.md), que cobre o
 que falta para a página de tramitação da proposição.
+
+---
+
+## O que foi entregue
+
+| Pedido | Como ficou |
+|--------|-----------|
+| 1. Orientação por votação | Resolvido por outro caminho: em vez dos campos por linha, veio `GET /parlamentares/:id/alinhamento`, rota própria — o card de aderência deixou de pagar o perfil agregado inteiro. Os campos por votação continuam não existindo. |
+| 2. Todas as bancadas | Não veio na listagem de votações. `GET /votacoes/:id` segue sendo o único lugar com o bloco completo. |
+| 3. Objeto da votação | Entregue em `src/domain/objeto-votacao.ts`: oito valores, `INDEFINIDO` como falha segura, 0,8% de indefinido medido em 2.500 votações reais. As votações trazem `objeto` e `merito`, e `/parlamentares/:id/temas` aceita `objeto` e `apenasMerito`. |
+
+### O que o frontend passou a fazer
+
+- O painel de temas pede `apenasMerito=true` por padrão. Requerimento de
+  urgência, encaminhamento e redação final saíram da conta: neles o voto é sobre
+  o rito, não sobre o assunto.
+- Cada votação exibe o objeto como etiqueta, destacando as de mérito. É o
+  contexto que faltava para o voto significar alguma coisa na leitura.
+- A aderência distingue os quatro motivos de ausência de taxa em vez de colapsar
+  tudo em "sem dados", e declara as votações em que a bancada não foi resolvida.
+
+### O que ainda não dá para afirmar
+
+`DESTAQUE` está entre os objetos de mérito, e com razão — é decisão de conteúdo.
+Mas num destaque **supressivo** é o NÃO que preserva o texto. Enquanto o dado não
+separar destaque supressivo de aditivo, "os temas em que mais vota a favor"
+continua sendo uma afirmação que o dado não sustenta; por isso os rótulos seguem
+em "mais votos SIM". O recorte de mérito estreitou a ressalva, não a eliminou.
+
+Se a fonte publicar o sentido do destaque — ou se der para inferi-lo da descrição
+com a mesma técnica de lista explícita —, aí o rótulo pode mudar.
+
+### Pendências menores
+
+- Orientação por votação na listagem (item 1): sem ela, dá para ver que o
+  parlamentar divergiu em 51 votações, mas não **quais**.
+- `votos` em `GET /votacoes/:id` ainda vem sem paginação.

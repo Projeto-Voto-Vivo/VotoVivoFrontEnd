@@ -41,30 +41,30 @@ export function AderenciaPartidaria({ parlamentarId }: AderenciaPartidariaProps)
     );
   }
 
-  // Senador não tem taxa porque a orientação de bancada só existe na Câmara —
-  // é uma lacuna da fonte, não um parlamentar que nunca segue o partido.
-  if (!alinhamento.disponivel) {
-    return (
-      <MicroInfoCard
-        label={ROTULO}
-        value={
-          <span className="text-slate-500">
-            {alinhamento.motivo === 'SENADO'
-              ? 'Não disponível para senadores — só a Câmara publica orientação de bancada.'
-              : 'Não conseguimos calcular agora.'}
-          </span>
-        }
-      />
-    );
-  }
+  /*
+   * Cada motivo tem uma leitura diferente, e colapsá-los em "sem dados"
+   * apagaria a diferença entre "a fonte não publica", "não houve o que
+   * comparar" e "nós não conseguimos identificar a bancada". Nenhum deles
+   * significa um parlamentar que nunca segue o partido.
+   */
+  if (alinhamento.taxa === null) {
+    const explicacao: Record<string, string> = {
+      ORIENTACAO_INDISPONIVEL_SENADO:
+        'Não disponível para senadores — só a Câmara publica orientação de bancada.',
+      SEM_VOTOS_COMPARAVEIS:
+        'Nenhuma votação deste parlamentar teve orientação de bancada para comparar.',
+      BANCADA_NAO_RESOLVIDA:
+        'As votações têm orientação publicada, mas não conseguimos identificar a bancada dele — costuma acontecer quando o partido integra um bloco.',
+      AMOSTRA_INSUFICIENTE: `Poucas votações comparáveis (${alinhamento.consideradas}) para uma porcentagem significar algo; são necessárias ao menos ${alinhamento.minimoParaTaxa}.`,
+      FALHA: 'Não conseguimos calcular agora.',
+    };
 
-  if (alinhamento.taxa === null || alinhamento.consideradas === 0) {
     return (
       <MicroInfoCard
         label={ROTULO}
         value={
           <span className="text-slate-500">
-            Sem votações com orientação registrada.
+            {explicacao[alinhamento.motivo ?? 'FALHA'] ?? explicacao.FALHA}
           </span>
         }
       />
@@ -88,6 +88,15 @@ export function AderenciaPartidaria({ parlamentarId }: AderenciaPartidariaProps)
         <p className="mt-2 text-xs leading-5 text-slate-400">
           Outras {alinhamento.liberadas} votações ficaram de fora porque o
           partido liberou a bancada — sem orientação, não há o que seguir.
+        </p>
+      ) : null}
+
+      {/* Limitação nossa, não do dado: por isso aparece, em vez de sumir. */}
+      {alinhamento.bancadaNaoResolvida > 0 ? (
+        <p className="mt-2 text-xs leading-5 text-slate-400">
+          Em {alinhamento.bancadaNaoResolvida} votações havia orientação
+          publicada, mas não identificamos qual bancada era a dele — o nome do
+          bloco vem abreviado na fonte.
         </p>
       ) : null}
 

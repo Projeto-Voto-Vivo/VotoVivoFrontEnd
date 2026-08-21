@@ -269,16 +269,26 @@ export function TemasVotacaoDashboard({ parlamentarId }: TemasVotacaoDashboardPr
       <div className="mt-6 space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-xs leading-5 text-slate-500">
         <p className="flex items-start gap-2">
           <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-          <span>
-            <strong className="font-semibold text-slate-700">
-              Votar SIM não é ser a favor do tema.
-            </strong>{' '}
-            A votação pode ser sobre o texto principal, sobre um destaque que
-            suprime um trecho ou sobre um requerimento de urgência — e o dado não
-            distingue qual. Votar NÃO num destaque supressivo, por exemplo, é
-            votar a favor do texto. Os percentuais são do voto registrado, não
-            uma posição sobre o assunto.
-          </span>
+          {perfil.apenasMerito ? (
+            <span>
+              <strong className="font-semibold text-slate-700">
+                Só votações que decidem o conteúdo entram na conta.
+              </strong>{' '}
+              Requerimento de urgência, encaminhamento e redação final ficam de
+              fora: neles o voto é sobre o rito, não sobre o assunto. Uma
+              ressalva permanece — quando a votação é sobre um destaque que
+              suprime um trecho, é o NÃO que preserva o texto.
+            </span>
+          ) : (
+            <span>
+              <strong className="font-semibold text-slate-700">
+                Votar SIM não é ser a favor do tema.
+              </strong>{' '}
+              A conta mistura texto principal, destaque e requerimento de
+              urgência. Os percentuais são do voto registrado, não uma posição
+              sobre o assunto.
+            </span>
+          )}
         </p>
 
         <p>

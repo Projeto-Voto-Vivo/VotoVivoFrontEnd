@@ -100,6 +100,20 @@ export interface ProposicaoPerfil {
   dataApresentacao: string | null;
 }
 
+/**
+ * Sobre o que a votação decidia. Sem isto, SIM e NÃO não têm significado
+ * estável: num destaque supressivo, é o NÃO que preserva o texto.
+ */
+export type ObjetoVotacao =
+  | 'TEXTO_BASE'
+  | 'PARECER'
+  | 'EMENDA'
+  | 'DESTAQUE'
+  | 'REQUERIMENTO'
+  | 'REDACAO_FINAL'
+  | 'ENCAMINHAMENTO'
+  | 'INDEFINIDO';
+
 /** A proposição que estava em jogo na votação. */
 export interface ProposicaoDaVotacao {
   id: number;
@@ -119,6 +133,10 @@ export interface VotacaoPerfil {
    * vinculada — ausência de vínculo, não falha de dado.
    */
   proposicao: ProposicaoDaVotacao | null;
+  /** Sobre o que se votou. `null` quando a API não classificou. */
+  objeto: ObjetoVotacao | null;
+  /** Votação de mérito: decide o conteúdo, não o rito. */
+  merito: boolean;
   voto: string;
   /** Valor bruto do enum de voto, para lógica (não exibir ao cidadão). */
   votoOriginal: string | null;
@@ -207,16 +225,34 @@ export interface PresencaPerfil {
  * "Seguiu a orientação do partido?" — comparando o voto com a orientação da
  * bancada do partido **na data da votação**, não do partido atual.
  */
+/** Motivos pelos quais não há taxa, cada um com uma leitura diferente. */
+export type MotivoSemAlinhamento =
+  /** Só a Câmara publica orientação de bancada. */
+  | 'ORIENTACAO_INDISPONIVEL_SENADO'
+  /** Nenhum voto tem orientação correspondente para comparar. */
+  | 'SEM_VOTOS_COMPARAVEIS'
+  /** A orientação existe, mas não se identificou a bancada — limitação nossa. */
+  | 'BANCADA_NAO_RESOLVIDA'
+  /** Há comparações, mas poucas para uma percentagem significar algo. */
+  | 'AMOSTRA_INSUFICIENTE'
+  /** A consulta falhou. */
+  | 'FALHA';
+
 export interface AlinhamentoPartidario {
+  /** Há orientação de bancada para a casa deste parlamentar. */
   disponivel: boolean;
-  /** Por que não há taxa. `SENADO`: só a Câmara registra orientação. */
-  motivo: 'SENADO' | 'FALHA' | null;
   taxa: number | null;
+  /** Sempre preenchido quando `taxa` é `null`. */
+  motivo: MotivoSemAlinhamento | null;
   seguiu: number;
   divergiu: number;
   consideradas: number;
   /** Votações em que o partido liberou a bancada — fora do denominador. */
   liberadas: number;
+  /** Votações com orientação publicada cuja bancada não foi identificada. */
+  bancadaNaoResolvida: number;
+  /** Mínimo de comparações que a API exige para publicar uma taxa. */
+  minimoParaTaxa: number;
   /**
    * `partidoAtual` significa que não havia histórico de filiação: quem trocou
    * de partido foi comparado contra a bancada errada no período anterior.
@@ -271,6 +307,9 @@ export interface PerfilTematico {
   excluidos: { semProposicao: number; emProposicaoSemTema: number };
   /** Ressalva metodológica da própria API sobre o que os números significam. */
   observacao: string | null;
+  /** Recorte aplicado na origem: quais objetos de votação entraram na conta. */
+  apenasMerito: boolean;
+  objetosDeMerito: ObjetoVotacao[];
   disponivel: boolean;
 }
 

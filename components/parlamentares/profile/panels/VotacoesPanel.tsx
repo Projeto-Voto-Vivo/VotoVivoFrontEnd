@@ -13,7 +13,11 @@ import {
   Vote,
 } from 'lucide-react';
 import { ParlamentarPerfil, PresencaDetalhe, VotacaoPerfil } from '@/types';
-import { getVotacoesParlamentar, VOTO_EXPLICACOES } from '@/services/parlamentares';
+import {
+  getVotacoesParlamentar,
+  OBJETO_VOTACAO_LABELS,
+  VOTO_EXPLICACOES,
+} from '@/services/parlamentares';
 import { MicroInfoCard } from '../shared/MicroInfoCard';
 import { SectionShell } from '../shared/SectionShell';
 import { formatDate } from '../shared/formatters';
@@ -179,11 +183,30 @@ export function VotacoesPanel({ profile }: VotacoesPanelProps) {
                       <p className="mt-2 text-sm leading-6 text-slate-600">{votacao.resumo}</p>
                     ) : null}
                   </div>
-                  {votacao.data ? (
-                    <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600">
-                      {formatDate(votacao.data)}
-                    </span>
-                  ) : null}
+                  <div className="flex shrink-0 flex-wrap items-center gap-2">
+                    {/*
+                      O objeto muda o sentido do voto: num destaque supressivo,
+                      é o NÃO que preserva o texto. Sem essa etiqueta, o "Sim"
+                      abaixo fica sem referência.
+                    */}
+                    {votacao.objeto && votacao.objeto !== 'INDEFINIDO' ? (
+                      <span
+                        className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                          votacao.merito
+                            ? 'bg-brasil-blue/10 text-brasil-blue'
+                            : 'bg-slate-200/70 text-slate-600'
+                        }`}
+                      >
+                        {OBJETO_VOTACAO_LABELS[votacao.objeto]}
+                      </span>
+                    ) : null}
+
+                    {votacao.data ? (
+                      <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600">
+                        {formatDate(votacao.data)}
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
 
                 {/*

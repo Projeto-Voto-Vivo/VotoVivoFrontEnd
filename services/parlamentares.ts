@@ -15,6 +15,8 @@ import {
   ItemDespesaPerfil,
   ListaParlamentaresResponse,
   MandatoExercicioPerfil,
+  MotivoSemAlinhamento,
+  ObjetoVotacao,
   Parlamentar,
   ParlamentarDetalhe,
   ParlamentarPerfil,
@@ -127,6 +129,8 @@ type BackendVotacaoResumo = {
   siglaPartido?: string | null;
   siglaPartidoNaData?: string | null;
   seguiuOrientacao?: boolean | null;
+  objeto?: string | null;
+  merito?: boolean | null;
   proposicao?: {
     id?: number | null;
     tipo?: string | null;
@@ -664,6 +668,34 @@ function mapProposicaoDaVotacao(
   };
 }
 
+const OBJETOS_VOTACAO: ObjetoVotacao[] = [
+  'TEXTO_BASE',
+  'PARECER',
+  'EMENDA',
+  'DESTAQUE',
+  'REQUERIMENTO',
+  'REDACAO_FINAL',
+  'ENCAMINHAMENTO',
+  'INDEFINIDO',
+];
+
+/** Rótulos de leitura para o objeto da votação. */
+export const OBJETO_VOTACAO_LABELS: Record<ObjetoVotacao, string> = {
+  TEXTO_BASE: 'Texto-base',
+  PARECER: 'Parecer',
+  EMENDA: 'Emenda',
+  DESTAQUE: 'Destaque',
+  REQUERIMENTO: 'Requerimento',
+  REDACAO_FINAL: 'Redação final',
+  ENCAMINHAMENTO: 'Encaminhamento',
+  INDEFINIDO: 'Objeto não identificado',
+};
+
+function mapObjetoVotacao(valor?: string | null): ObjetoVotacao | null {
+  const chave = normalizeToken(valor).replace(/ /g, '_') as ObjetoVotacao;
+  return OBJETOS_VOTACAO.includes(chave) ? chave : null;
+}
+
 function mapVotacaoResumo(item: BackendVotacaoResumo, index: number): VotacaoPerfil {
   const id = String(item.id ?? `${item.data ?? 'votacao'}-${index}`);
   const resumo = item.resumo?.trim() || item.descricao?.trim() || 'Resumo não informado.';
@@ -678,6 +710,8 @@ function mapVotacaoResumo(item: BackendVotacaoResumo, index: number): VotacaoPer
     descricao: buildVotingHeadline(resumo),
     resumo,
     proposicao: mapProposicaoDaVotacao(item.proposicao),
+    objeto: mapObjetoVotacao(item.objeto),
+    merito: item.merito === true,
     voto: formatVotingChoice(item.voto),
     votoOriginal,
     resultado: item.resultado || 'Resultado não informado',
@@ -1369,54 +1403,75 @@ export async function getPresencaParlamentar(id: number): Promise<PresencaPerfil
   }
 }
 
+type BackendAlinhamento = {
+  disponivel?: boolean;
+  taxa?: number | null;
+  motivo?: string | null;
+  seguiu?: number | null;
+  divergiu?: number | null;
+  consideradas?: number | null;
+  liberadas?: number | null;
+  bancadaNaoResolvida?: number | null;
+  minimoParaTaxa?: number | null;
+  fonteFiliacao?: 'historico' | 'partidoAtual' | null;
+};
+
+const MOTIVOS_CONHECIDOS: MotivoSemAlinhamento[] = [
+  'ORIENTACAO_INDISPONIVEL_SENADO',
+  'SEM_VOTOS_COMPARAVEIS',
+  'BANCADA_NAO_RESOLVIDA',
+  'AMOSTRA_INSUFICIENTE',
+];
+
 const ALINHAMENTO_INDISPONIVEL: AlinhamentoPartidario = {
   disponivel: false,
-  motivo: 'FALHA',
   taxa: null,
+  motivo: 'FALHA',
   seguiu: 0,
   divergiu: 0,
   consideradas: 0,
   liberadas: 0,
+  bancadaNaoResolvida: 0,
+  minimoParaTaxa: 0,
   fonteFiliacao: null,
 };
 
 /**
- * Aderência à orientação do partido.
+ * Aderência à orientação do partido, da rota dedicada.
  *
- * Vem de `GET /parlamentares/:id/perfil`, que é o único lugar onde a API expõe
- * este cálculo hoje — não há rota dedicada. É uma chamada cara (o perfil
- * agregado roda todas as consultas do parlamentar), por isso a interface só a
- * dispara quando o painel de votações abre, e não a cada visita ao perfil.
+ * Antes vinha de `GET /parlamentares/:id/perfil`, que roda todas as consultas
+ * do parlamentar para preencher um card. Agora há rota própria.
  *
- * O cálculo real mora no backend de propósito: ele compara o voto com a
- * orientação da bancada do partido **na data da votação** e descarta as
- * votações liberadas. Tentar refazer isso no navegador, a partir da página
- * corrente de votações, daria um número errado com cara de certo.
+ * O cálculo mora no backend de propósito: compara o voto com a orientação da
+ * bancada do partido **na data da votação**, descarta as votações liberadas e
+ * só publica taxa acima de um mínimo de comparações. Refazer isso no navegador,
+ * a partir da página corrente de votações, daria um número errado com cara de
+ * certo.
  */
 export async function getAlinhamentoParlamentar(
   id: number,
 ): Promise<AlinhamentoPartidario> {
   try {
-    const res = await api.get(`/parlamentares/${id}/perfil`);
-    const bruto = (res.data as BackendPerfilAgregado)?.votacoes?.alinhamento;
+    const res = await api.get(`/parlamentares/${id}/alinhamento`);
+    const bruto = (res.data ?? {}) as BackendAlinhamento;
 
-    if (!bruto) return { ...ALINHAMENTO_INDISPONIVEL };
-
-    if (bruto.disponivel === false) {
-      return {
-        ...ALINHAMENTO_INDISPONIVEL,
-        motivo: bruto.motivo?.includes('SENADO') ? 'SENADO' : 'FALHA',
-      };
-    }
+    const motivoBruto = (bruto.motivo ?? '') as MotivoSemAlinhamento;
+    const motivo = MOTIVOS_CONHECIDOS.includes(motivoBruto) ? motivoBruto : null;
+    const taxa = bruto.taxa === null || bruto.taxa === undefined
+      ? null
+      : parsePercent(bruto.taxa);
 
     return {
-      disponivel: true,
-      motivo: null,
-      taxa: parsePercent(bruto.taxa),
+      disponivel: bruto.disponivel !== false,
+      taxa,
+      // Sem taxa e sem motivo reconhecido, a interface ainda precisa dizer algo.
+      motivo: taxa === null ? motivo ?? 'FALHA' : null,
       seguiu: Number(bruto.seguiu ?? 0) || 0,
       divergiu: Number(bruto.divergiu ?? 0) || 0,
       consideradas: Number(bruto.consideradas ?? 0) || 0,
       liberadas: Number(bruto.liberadas ?? 0) || 0,
+      bancadaNaoResolvida: Number(bruto.bancadaNaoResolvida ?? 0) || 0,
+      minimoParaTaxa: Number(bruto.minimoParaTaxa ?? 0) || 0,
       fonteFiliacao: bruto.fonteFiliacao ?? null,
     };
   } catch {
@@ -1600,21 +1655,6 @@ async function getListaOpcional<TBackend, TFront>(
   }
 }
 
-type BackendPerfilAgregado = {
-  votacoes?: {
-    alinhamento?: {
-      disponivel?: boolean;
-      motivo?: string | null;
-      taxa?: number | null;
-      seguiu?: number | null;
-      divergiu?: number | null;
-      consideradas?: number | null;
-      liberadas?: number | null;
-      fonteFiliacao?: 'historico' | 'partidoAtual' | null;
-    } | null;
-  } | null;
-};
-
 type BackendPerfilTematico = {
   proposicoes?: {
     temas?: { tema?: string | null; total?: number | null }[] | null;
@@ -1637,7 +1677,13 @@ type BackendPerfilTematico = {
       votosEmProposicaoSemTema?: number | null;
     } | null;
   } | null;
-  metadata?: { observacao?: string | null } | null;
+  metadata?: {
+    observacao?: string | null;
+    filtro?: {
+      apenasMerito?: boolean;
+      objetosDeMerito?: string[] | null;
+    } | null;
+  } | null;
 };
 
 const PERFIL_TEMATICO_VAZIO: PerfilTematico = {
@@ -1648,6 +1694,8 @@ const PERFIL_TEMATICO_VAZIO: PerfilTematico = {
   totalVotos: 0,
   excluidos: { semProposicao: 0, emProposicaoSemTema: 0 },
   observacao: null,
+  apenasMerito: false,
+  objetosDeMerito: [],
   disponivel: false,
 };
 
@@ -1663,12 +1711,22 @@ const PERFIL_TEMATICO_VAZIO: PerfilTematico = {
 export async function getPerfilTematicoParlamentar(
   id: number,
   limite = 8,
+  /**
+   * Recorta a contagem às votações de mérito. Ligado por padrão: sem ele, a
+   * conta mistura texto principal com requerimento de urgência e redação
+   * final, onde o voto é sobre o rito e não sobre o assunto.
+   */
+  apenasMerito = true,
 ): Promise<PerfilTematico> {
   try {
-    const res = await api.get(`/parlamentares/${id}/temas?limite=${limite}`);
+    const params = new URLSearchParams({ limite: String(limite) });
+    if (apenasMerito) params.set('apenasMerito', 'true');
+
+    const res = await api.get(`/parlamentares/${id}/temas?${params.toString()}`);
     const payload = (res.data ?? {}) as BackendPerfilTematico;
     const votacoes = payload.votacoes ?? {};
     const proposicoes = payload.proposicoes ?? {};
+    const filtro = payload.metadata?.filtro ?? {};
 
     return {
       temasAutoria: (proposicoes.temas ?? [])
@@ -1702,6 +1760,10 @@ export async function getPerfilTematicoParlamentar(
           Number(votacoes.excluidos?.votosEmProposicaoSemTema ?? 0) || 0,
       },
       observacao: payload.metadata?.observacao?.trim() || null,
+      apenasMerito: filtro.apenasMerito === true,
+      objetosDeMerito: (filtro.objetosDeMerito ?? [])
+        .map((item) => mapObjetoVotacao(item))
+        .filter((item): item is ObjetoVotacao => item !== null),
       disponivel: true,
     };
   } catch {
