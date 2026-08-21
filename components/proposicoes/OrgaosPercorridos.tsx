@@ -1,4 +1,7 @@
-import { Building2 } from 'lucide-react';
+'use client';
+
+import { useState } from 'react';
+import { Building2, ChevronDown, ChevronUp } from 'lucide-react';
 import { PassagemPorOrgao } from '@/types';
 import { SectionShell } from '@/components/parlamentares/profile/shared/SectionShell';
 import { formatDate } from '@/components/parlamentares/profile/shared/formatters';
@@ -6,6 +9,12 @@ import { formatDate } from '@/components/parlamentares/profile/shared/formatters
 interface OrgaosPercorridosProps {
   passagens: PassagemPorOrgao[];
 }
+
+/**
+ * Um processo que vai e volta entre plenário e comissões acumula dezenas de
+ * passagens. As primeiras já contam a história; o resto fica a um clique.
+ */
+const PASSAGENS_VISIVEIS = 10;
 
 function periodo(primeira: string | null, ultima: string | null) {
   if (!primeira && !ultima) return 'Período não informado';
@@ -17,7 +26,12 @@ function periodo(primeira: string | null, ultima: string | null) {
 }
 
 export function OrgaosPercorridos({ passagens }: OrgaosPercorridosProps) {
+  const [mostrarTodas, setMostrarTodas] = useState(false);
+
   if (passagens.length === 0) return null;
+
+  const excedente = passagens.length - PASSAGENS_VISIVEIS;
+  const visiveis = mostrarTodas ? passagens : passagens.slice(0, PASSAGENS_VISIVEIS);
 
   return (
     <SectionShell
@@ -26,7 +40,7 @@ export function OrgaosPercorridos({ passagens }: OrgaosPercorridosProps) {
       description="Órgãos na ordem em que receberam a proposição. Passagens consecutivas pelo mesmo órgão aparecem agrupadas."
     >
       <ol className="flex flex-wrap items-stretch gap-3">
-        {passagens.map((passagem, index) => (
+        {visiveis.map((passagem, index) => (
           <li
             key={`${passagem.chave}-${index}`}
             className="flex min-w-[15rem] flex-1 items-center gap-3 rounded-3xl border border-slate-200 bg-slate-50 p-4"
@@ -50,6 +64,28 @@ export function OrgaosPercorridos({ passagens }: OrgaosPercorridosProps) {
           </li>
         ))}
       </ol>
+
+      {excedente > 0 && (
+        <div className="mt-4 flex justify-center">
+          <button
+            type="button"
+            onClick={() => setMostrarTodas((atual) => !atual)}
+            className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-brasil-blue hover:text-brasil-blue"
+          >
+            {mostrarTodas ? (
+              <>
+                <ChevronUp size={16} />
+                Mostrar menos
+              </>
+            ) : (
+              <>
+                <ChevronDown size={16} />
+                Ver as outras {excedente} passagens
+              </>
+            )}
+          </button>
+        </div>
+      )}
     </SectionShell>
   );
 }

@@ -1,7 +1,14 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { ArrowDownUp, Building2, Info, Route } from 'lucide-react';
+import { useMemo, useRef, useState } from 'react';
+import {
+  ArrowDownUp,
+  Building2,
+  ChevronLeft,
+  ChevronRight,
+  Info,
+  Route,
+} from 'lucide-react';
 import { EtapaTramitacao } from '@/types';
 import { SectionShell } from '@/components/parlamentares/profile/shared/SectionShell';
 import { formatDate } from '@/components/parlamentares/profile/shared/formatters';
@@ -11,13 +18,44 @@ interface TramitacaoTimelineProps {
   disponivel: boolean;
 }
 
+/** Um processo antigo passa de cem etapas; a página inteira vira um paredão. */
+const ETAPAS_POR_PAGINA = 15;
+
 export function TramitacaoTimeline({ etapas, disponivel }: TramitacaoTimelineProps) {
   const [maisRecentePrimeiro, setMaisRecentePrimeiro] = useState(false);
+  const [pagina, setPagina] = useState(1);
+  const inicioDaLista = useRef<HTMLDivElement>(null);
 
   const ordenadas = useMemo(
     () => (maisRecentePrimeiro ? [...etapas].reverse() : etapas),
     [etapas, maisRecentePrimeiro],
   );
+
+  const totalPaginas = Math.max(1, Math.ceil(ordenadas.length / ETAPAS_POR_PAGINA));
+  const paginaSegura = Math.min(pagina, totalPaginas);
+  const primeiroIndice = (paginaSegura - 1) * ETAPAS_POR_PAGINA;
+
+  const visiveis = ordenadas.slice(
+    primeiroIndice,
+    primeiroIndice + ETAPAS_POR_PAGINA,
+  );
+
+  // A etapa mais recente é uma só no processo inteiro — não a primeira ou a
+  // última da página que por acaso está aberta.
+  const idMaisRecente = etapas[etapas.length - 1]?.id;
+
+  function irParaPagina(nova: number) {
+    if (nova < 1 || nova > totalPaginas) return;
+
+    setPagina(nova);
+    // Sem isto, trocar de página deixa o leitor no fim da lista anterior.
+    inicioDaLista.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function inverterOrdem() {
+    setMaisRecentePrimeiro((atual) => !atual);
+    setPagina(1);
+  }
 
   if (!disponivel) {
     return (
@@ -61,11 +99,24 @@ export function TramitacaoTimeline({ etapas, disponivel }: TramitacaoTimelinePro
       title="Caminho da proposição"
       description={`${etapas.length} etapa${etapas.length === 1 ? '' : 's'} registrada${etapas.length === 1 ? '' : 's'}, da apresentação até a movimentação mais recente.`}
     >
-      <div className="mb-5 flex justify-end">
+      <div
+        ref={inicioDaLista}
+        className="mb-5 flex scroll-mt-24 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+      >
+        {/* Com uma página só, o contador repete o que o título já disse. */}
+        {totalPaginas > 1 ? (
+          <p className="text-sm text-slate-500">
+            Mostrando {primeiroIndice + 1}–{primeiroIndice + visiveis.length} de{' '}
+            {etapas.length} etapas
+          </p>
+        ) : (
+          <span />
+        )}
+
         <button
           type="button"
-          onClick={() => setMaisRecentePrimeiro((atual) => !atual)}
-          className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-brasil-blue hover:text-brasil-blue"
+          onClick={inverterOrdem}
+          className="inline-flex w-fit items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-brasil-blue hover:text-brasil-blue"
         >
           <ArrowDownUp size={16} />
           {maisRecentePrimeiro ? 'Mais antiga primeiro' : 'Mais recente primeiro'}
@@ -73,10 +124,8 @@ export function TramitacaoTimeline({ etapas, disponivel }: TramitacaoTimelinePro
       </div>
 
       <ol className="relative space-y-4 border-l-2 border-slate-200 pl-6 md:pl-8">
-        {ordenadas.map((etapa, index) => {
-          const ehUltima = maisRecentePrimeiro
-            ? index === 0
-            : index === ordenadas.length - 1;
+        {visiveis.map((etapa) => {
+          const ehUltima = etapa.id === idMaisRecente;
 
           return (
             <li key={etapa.id} className="relative">
@@ -153,6 +202,39 @@ export function TramitacaoTimeline({ etapas, disponivel }: TramitacaoTimelinePro
           );
         })}
       </ol>
+
+      {totalPaginas > 1 && (
+        <nav
+          className="mt-6 flex flex-col gap-3 border-t border-slate-100 pt-4 sm:flex-row sm:items-center sm:justify-between"
+          aria-label="Paginação da tramitação"
+        >
+          <p className="text-sm text-slate-500">
+            Página {paginaSegura} de {totalPaginas}
+          </p>
+
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => irParaPagina(paginaSegura - 1)}
+              disabled={paginaSegura <= 1}
+              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-brasil-blue hover:text-brasil-blue disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <ChevronLeft size={16} />
+              Etapas anteriores
+            </button>
+
+            <button
+              type="button"
+              onClick={() => irParaPagina(paginaSegura + 1)}
+              disabled={paginaSegura >= totalPaginas}
+              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-brasil-blue hover:text-brasil-blue disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Próximas etapas
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        </nav>
+      )}
     </SectionShell>
   );
 }

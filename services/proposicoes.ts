@@ -205,17 +205,34 @@ function mapEtapa(item: BackendTramitacao, index: number): EtapaTramitacao {
   };
 }
 
-/** Do mais antigo para o mais recente: é assim que se lê um caminho. */
+/**
+ * Do mais antigo para o mais recente: é assim que se lê um caminho.
+ *
+ * `sequencia` é a ordem oficial do processo e vem primeiro. A data só entra
+ * como desempate: várias etapas acontecem no mesmo dia — despacho, recebimento
+ * e distribuição costumam sair juntos —, e ordenar por data antes da sequência
+ * embaralharia a ordem real dentro de cada dia.
+ */
 function ordenarEtapas(etapas: EtapaTramitacao[]) {
   return [...etapas].sort((a, b) => {
+    if (
+      a.sequencia !== null &&
+      b.sequencia !== null &&
+      a.sequencia !== b.sequencia
+    ) {
+      return a.sequencia - b.sequencia;
+    }
+
     const dataA = a.data ? new Date(a.data).getTime() : Number.NaN;
     const dataB = b.data ? new Date(b.data).getTime() : Number.NaN;
 
-    if (Number.isFinite(dataA) && Number.isFinite(dataB) && dataA !== dataB) {
-      return dataA - dataB;
-    }
+    if (Number.isFinite(dataA) && Number.isFinite(dataB)) return dataA - dataB;
 
-    return (a.sequencia ?? 0) - (b.sequencia ?? 0);
+    // Etapa sem data vai para o fim, e não para o começo do caminho.
+    if (Number.isFinite(dataA)) return -1;
+    if (Number.isFinite(dataB)) return 1;
+
+    return 0;
   });
 }
 
