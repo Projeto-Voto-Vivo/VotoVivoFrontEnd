@@ -40,9 +40,13 @@ export function ProposicoesPanel({ profile }: ProposicoesPanelProps) {
   const parlamentarId = profile.parlamentar.id;
 
   const [proposicoes, setProposicoes] = useState<ProposicaoResultado[]>([]);
-  const [total, setTotal] = useState(0);
+  // Aqui a contagem vale a pena: filtrada por autor, ela é barata e o número
+  // de proposições do parlamentar é informação, não enfeite. Ainda assim os
+  // tipos aceitam `null`, porque a mesma busca pode rodar sem contar.
+  const [total, setTotal] = useState<number | null>(0);
   const [pagina, setPagina] = useState(1);
-  const [totalPaginas, setTotalPaginas] = useState(1);
+  const [totalPaginas, setTotalPaginas] = useState<number | null>(1);
+  const [temProximaPagina, setTemProximaPagina] = useState(false);
   const [itensPorPagina, setItensPorPagina] = useState(20);
   const [aviso, setAviso] = useState<string | undefined>();
   const [carregando, setCarregando] = useState(true);
@@ -80,6 +84,7 @@ export function ProposicoesPanel({ profile }: ProposicoesPanelProps) {
         setProposicoes(resultado.data);
         setTotal(resultado.total);
         setTotalPaginas(resultado.totalPaginas);
+        setTemProximaPagina(resultado.temProximaPagina);
         setItensPorPagina(resultado.itensPorPagina);
         setAviso(resultado.aviso);
         setCarregando(false);
@@ -106,7 +111,9 @@ export function ProposicoesPanel({ profile }: ProposicoesPanelProps) {
   }
 
   function irParaPagina(novaPagina: number) {
-    if (novaPagina < 1 || novaPagina > totalPaginas || carregando) return;
+    if (novaPagina < 1 || carregando) return;
+    if (totalPaginas !== null && novaPagina > totalPaginas) return;
+    if (novaPagina > pagina && !temProximaPagina) return;
     setCarregando(true);
     setPagina(novaPagina);
   }
@@ -117,9 +124,7 @@ export function ProposicoesPanel({ profile }: ProposicoesPanelProps) {
   );
 
   const inicio = proposicoes.length ? (pagina - 1) * itensPorPagina + 1 : 0;
-  const fim = proposicoes.length
-    ? Math.min(inicio + proposicoes.length - 1, total)
-    : 0;
+  const fim = proposicoes.length ? inicio + proposicoes.length - 1 : 0;
 
   const atualizarRascunho = (campo: keyof FiltrosProposicao, valor: string) =>
     setRascunho((atual) => ({
@@ -249,9 +254,11 @@ export function ProposicoesPanel({ profile }: ProposicoesPanelProps) {
           <p className="text-sm text-slate-500">
             {carregando
               ? 'Carregando proposições…'
-              : `${total.toLocaleString('pt-BR')} proposição${total === 1 ? '' : 'ões'}${
-                  filtroAtivo ? ' com estes filtros' : ' de autoria deste parlamentar'
-                }`}
+              : total === null
+                ? `Proposições${filtroAtivo ? ' com estes filtros' : ' de autoria deste parlamentar'}`
+                : `${total.toLocaleString('pt-BR')} proposição${total === 1 ? '' : 'ões'}${
+                    filtroAtivo ? ' com estes filtros' : ' de autoria deste parlamentar'
+                  }`}
           </p>
 
           <div className="flex items-center gap-3">
@@ -362,13 +369,14 @@ export function ProposicoesPanel({ profile }: ProposicoesPanelProps) {
           )}
         </div>
 
-        {total > 0 && (
+        {proposicoes.length > 0 && (
           <div className="mt-5 flex flex-col gap-3 border-t border-slate-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-slate-500">
-              {inicio}–{fim} de {total.toLocaleString('pt-BR')} proposições
+              {inicio}–{fim}
+              {total === null ? '' : ` de ${total.toLocaleString('pt-BR')}`} proposições
             </p>
 
-            {totalPaginas > 1 && (
+            {(pagina > 1 || temProximaPagina) && (
               <div className="flex gap-2">
                 <button
                   type="button"
@@ -383,7 +391,7 @@ export function ProposicoesPanel({ profile }: ProposicoesPanelProps) {
                 <button
                   type="button"
                   onClick={() => irParaPagina(pagina + 1)}
-                  disabled={pagina >= totalPaginas || carregando}
+                  disabled={!temProximaPagina || carregando}
                   className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-brasil-blue hover:text-brasil-blue disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Próxima
