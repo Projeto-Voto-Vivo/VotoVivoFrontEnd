@@ -3,10 +3,10 @@ export const dynamic = 'force-dynamic';
 import { cache } from 'react';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import { ArrowLeft } from 'lucide-react';
 import { getProposicaoDetalhe } from '@/services/proposicoes';
 import { BackButton } from '@/components/layout/BackButton';
 import { NavLink } from '@/components/layout/NavLink';
+import { VoltarLink } from '@/components/layout/VoltarLink';
 import { AutoresProposicao } from '@/components/proposicoes/AutoresProposicao';
 import { DocumentosProposicao } from '@/components/proposicoes/DocumentosProposicao';
 import { JornadaBicameral } from '@/components/proposicoes/JornadaBicameral';
@@ -64,13 +64,17 @@ export default async function TramitacaoProposicaoPage({ params }: PaginaProps) 
   return (
     <main className="min-h-screen bg-slate-50 pb-20">
       <div className="container mx-auto space-y-6 px-4 py-8">
-        <NavLink
-          href="/parlamentares"
-          className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 transition-colors hover:text-brasil-blue"
-        >
-          <ArrowLeft size={16} />
-          Voltar para parlamentares
-        </NavLink>
+        {/* O destino natural daqui é a busca de proposições, não a de gente. */}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <VoltarLink fallbackHref="/proposicoes" />
+
+          <NavLink
+            href="/proposicoes"
+            className="text-sm font-medium text-slate-400 transition-colors hover:text-brasil-blue"
+          >
+            Buscar proposições
+          </NavLink>
+        </div>
 
         <ProposicaoHero proposicao={proposicao} />
 
@@ -96,7 +100,7 @@ export default async function TramitacaoProposicaoPage({ params }: PaginaProps) 
 
         <JornadaBicameral jornada={proposicao.jornada} />
 
-        <BackButton href="/parlamentares" label="Voltar para parlamentares" />
+        <BackButton label="Voltar" />
       </div>
     </main>
   );

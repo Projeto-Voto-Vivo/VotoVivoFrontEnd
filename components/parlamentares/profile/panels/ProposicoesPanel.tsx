@@ -24,6 +24,7 @@ import {
 import { MicroInfoCard } from '../shared/MicroInfoCard';
 import { SectionShell } from '../shared/SectionShell';
 import { formatDate } from '../shared/formatters';
+import { TemasAutoriaDashboard } from './TemasAutoriaDashboard';
 
 interface ProposicoesPanelProps {
   profile: ParlamentarPerfil;
@@ -47,7 +48,8 @@ export function ProposicoesPanel({ profile }: ProposicoesPanelProps) {
   const [pagina, setPagina] = useState(1);
   const [totalPaginas, setTotalPaginas] = useState<number | null>(1);
   const [temProximaPagina, setTemProximaPagina] = useState(false);
-  const [itensPorPagina, setItensPorPagina] = useState(20);
+  // Valor inicial só até a primeira resposta chegar; depois vem de `meta.limit`.
+  const [itensPorPagina, setItensPorPagina] = useState(10);
   const [aviso, setAviso] = useState<string | undefined>();
   const [carregando, setCarregando] = useState(true);
 
@@ -139,6 +141,13 @@ export function ProposicoesPanel({ profile }: ProposicoesPanelProps) {
 
   return (
     <div className="space-y-6">
+      {/*
+        O panorama por tema vem antes da lista: responde "sobre o que ele
+        legisla" de uma olhada, e é o enquadramento para ler as proposições
+        item a item logo abaixo.
+      */}
+      <TemasAutoriaDashboard parlamentarId={parlamentarId} />
+
       <SectionShell
         icon={<FileText className="h-6 w-6" />}
         title="Proposições"

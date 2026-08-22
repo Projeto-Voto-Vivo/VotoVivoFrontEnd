@@ -10,19 +10,31 @@ interface VotacoesProposicaoProps {
 /**
  * Só "Sim" e "Não" decidem a votação. Obstrução e ausências entram na barra
  * porque explicam o quórum, mas em cinza — não são posição sobre o mérito.
+ *
+ * Sim é azul, e não verde: verde↔vermelho fica a ΔE 5,1 na visão
+ * deuteranômala, indistinguível para ~1 em cada 12 homens. Os tokens
+ * `--color-voto-*` são a fonte única dessas cores, já validada.
  */
 const FAIXAS: {
   chave: keyof Omit<PlacarVotacao, 'total'>;
   rotulo: string;
   cor: string;
 }[] = [
-  { chave: 'sim', rotulo: 'Sim', cor: 'bg-brasil-green' },
-  { chave: 'nao', rotulo: 'Não', cor: 'bg-red-500' },
-  { chave: 'abstencao', rotulo: 'Abstenção', cor: 'bg-amber-400' },
-  { chave: 'obstrucao', rotulo: 'Obstrução', cor: 'bg-slate-500' },
-  { chave: 'ausenciaJustificada', rotulo: 'Ausência justificada', cor: 'bg-slate-400' },
-  { chave: 'ausente', rotulo: 'Ausente', cor: 'bg-slate-300' },
-  { chave: 'naoRegistrado', rotulo: 'Não registrado', cor: 'bg-slate-200' },
+  { chave: 'sim', rotulo: 'Sim', cor: 'var(--color-voto-sim)' },
+  { chave: 'nao', rotulo: 'Não', cor: 'var(--color-voto-nao)' },
+  { chave: 'abstencao', rotulo: 'Abstenção', cor: 'var(--color-voto-abstencao)' },
+  { chave: 'obstrucao', rotulo: 'Obstrução', cor: 'var(--color-voto-obstrucao)' },
+  {
+    chave: 'ausenciaJustificada',
+    rotulo: 'Ausência justificada',
+    cor: 'var(--color-voto-ausencia-justificada)',
+  },
+  { chave: 'ausente', rotulo: 'Ausente', cor: 'var(--color-voto-ausente)' },
+  {
+    chave: 'naoRegistrado',
+    rotulo: 'Não registrado',
+    cor: 'var(--color-voto-nao-registrado)',
+  },
 ];
 
 function Placar({ placar }: { placar: PlacarVotacao }) {
@@ -30,12 +42,15 @@ function Placar({ placar }: { placar: PlacarVotacao }) {
 
   return (
     <div className="mt-4">
-      <div className="flex h-3 overflow-hidden rounded-full bg-slate-100">
+      {/* Folga de 2px entre os segmentos: sem ela, duas faixas viram uma. */}
+      <div className="flex h-3 gap-[2px] overflow-hidden rounded-full bg-slate-100">
         {faixasComVoto.map((faixa) => (
           <div
             key={faixa.chave}
-            className={faixa.cor}
-            style={{ width: `${(placar[faixa.chave] / placar.total) * 100}%` }}
+            style={{
+              width: `${(placar[faixa.chave] / placar.total) * 100}%`,
+              background: faixa.cor,
+            }}
             title={`${faixa.rotulo}: ${placar[faixa.chave]}`}
           />
         ))}
@@ -47,7 +62,11 @@ function Placar({ placar }: { placar: PlacarVotacao }) {
             key={faixa.chave}
             className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600"
           >
-            <span className={`h-2 w-2 rounded-full ${faixa.cor}`} aria-hidden="true" />
+            <span
+              className="h-2 w-2 rounded-full"
+              style={{ background: faixa.cor }}
+              aria-hidden="true"
+            />
             {faixa.rotulo}: <strong className="text-slate-900">{placar[faixa.chave]}</strong>
           </span>
         ))}

@@ -18,7 +18,7 @@ import {
   VotacaoProposicao,
 } from '@/types';
 
-const PROPOSICOES_POR_PAGINA = 20;
+const PROPOSICOES_POR_PAGINA = 10;
 
 /**
  * A API já devolve o placar agregado junto da proposição. A orientação das

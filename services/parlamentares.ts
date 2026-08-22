@@ -1,5 +1,7 @@
 import api from './api';
 import {
+  AlinhamentoPartidario,
+  AlinhamentoPorTema,
   CasaLegislativaFiltro,
   CategoriaDespesaPerfil,
   ComissaoPerfil,
@@ -13,14 +15,19 @@ import {
   FiliacaoPartidariaPerfil,
   ItemDespesaPerfil,
   ListaParlamentaresResponse,
+  FiltrosVotacao,
   MandatoExercicioPerfil,
+  MotivoSemAlinhamento,
+  ObjetoVotacao,
   Parlamentar,
   ParlamentarDetalhe,
   ParlamentarPerfil,
   PerfilIndicador,
+  PerfilTematico,
   PresencaDetalhe,
   PresencaPerfil,
   PresencaPorEscopo,
+  ProposicaoDaVotacao,
   ProposicaoPerfil,
   UFs,
   VotacaoPerfil,
@@ -124,11 +131,27 @@ type BackendVotacaoResumo = {
   siglaPartido?: string | null;
   siglaPartidoNaData?: string | null;
   seguiuOrientacao?: boolean | null;
+  objeto?: string | null;
+  merito?: boolean | null;
+  proposicao?: {
+    id?: number | null;
+    tipo?: string | null;
+    sigla?: string | null;
+    numero?: string | number | null;
+    ano?: number | null;
+    ementa?: string | null;
+    situacao?: string | null;
+  } | null;
 };
 
-type ListaVotacoesResponse = {
+export type ListaVotacoesResponse = {
   data: VotacaoPerfil[];
   meta: PaginacaoNormalizada;
+  /**
+   * Votações sem proposição vinculada que os filtros deixaram de fora. Zero
+   * quando nenhum filtro está ativo — aí elas estão no resultado.
+   */
+  votacoesSemProposicaoExcluidas: number;
 };
 
 type BackendPresencaBloco = {
@@ -626,6 +649,60 @@ function resolveSeguiuOrientacao(
   return votoNormalizado === orientacaoNormalizada;
 }
 
+/**
+ * Toda votação nasce de alguma coisa, mas nem toda votação tem proposição:
+ * requerimento e questão de ordem não têm. `null` aqui é ausência de vínculo,
+ * não dado faltando — e a interface diz isso em vez de deixar o card mudo.
+ */
+function mapProposicaoDaVotacao(
+  proposicao: BackendVotacaoResumo['proposicao'],
+): ProposicaoDaVotacao | null {
+  const id = Number(proposicao?.id ?? 0);
+  if (!proposicao || !id) return null;
+
+  const sigla = (proposicao.tipo ?? proposicao.sigla ?? '').trim() || 'Proposição';
+  const numero =
+    proposicao.numero === null || proposicao.numero === undefined
+      ? 'S/N'
+      : String(proposicao.numero);
+  const ano = proposicao.ano ? String(proposicao.ano) : 's/ano';
+
+  return {
+    id,
+    titulo: `${sigla} ${numero}/${ano}`,
+    ementa: proposicao.ementa?.trim() || null,
+    situacao: proposicao.situacao?.trim() || null,
+  };
+}
+
+const OBJETOS_VOTACAO: ObjetoVotacao[] = [
+  'TEXTO_BASE',
+  'PARECER',
+  'EMENDA',
+  'DESTAQUE',
+  'REQUERIMENTO',
+  'REDACAO_FINAL',
+  'ENCAMINHAMENTO',
+  'INDEFINIDO',
+];
+
+/** Rótulos de leitura para o objeto da votação. */
+export const OBJETO_VOTACAO_LABELS: Record<ObjetoVotacao, string> = {
+  TEXTO_BASE: 'Texto-base',
+  PARECER: 'Parecer',
+  EMENDA: 'Emenda',
+  DESTAQUE: 'Destaque',
+  REQUERIMENTO: 'Requerimento',
+  REDACAO_FINAL: 'Redação final',
+  ENCAMINHAMENTO: 'Encaminhamento',
+  INDEFINIDO: 'Objeto não identificado',
+};
+
+function mapObjetoVotacao(valor?: string | null): ObjetoVotacao | null {
+  const chave = normalizeToken(valor).replace(/ /g, '_') as ObjetoVotacao;
+  return OBJETOS_VOTACAO.includes(chave) ? chave : null;
+}
+
 function mapVotacaoResumo(item: BackendVotacaoResumo, index: number): VotacaoPerfil {
   const id = String(item.id ?? `${item.data ?? 'votacao'}-${index}`);
   const resumo = item.resumo?.trim() || item.descricao?.trim() || 'Resumo não informado.';
@@ -639,6 +716,9 @@ function mapVotacaoResumo(item: BackendVotacaoResumo, index: number): VotacaoPer
     data: item.data || '',
     descricao: buildVotingHeadline(resumo),
     resumo,
+    proposicao: mapProposicaoDaVotacao(item.proposicao),
+    objeto: mapObjetoVotacao(item.objeto),
+    merito: item.merito === true,
     voto: formatVotingChoice(item.voto),
     votoOriginal,
     resultado: item.resultado || 'Resultado não informado',
@@ -763,22 +843,44 @@ function mapEmendaParlamentar(
   };
 }
 
+/**
+ * O `metodoVinculo` do banco é uma etiqueta técnica
+ * (`match_exato_nomeUrna_normalizado`) que não diz nada a quem lê — e mostrá-la
+ * crua tira a credibilidade da informação em vez de sustentá-la. Aqui ela vira
+ * frase, e o único pedaço realmente informativo dela, qual nome casou, é o que
+ * sobrevive.
+ *
+ * Nenhum destes vínculos é "declarado na fonte oficial": o Portal da
+ * Transparência publica o nome do autor em texto livre, e a ligação com o
+ * parlamentar é sempre feita por correspondência de nome. Confiança alta
+ * significa que só um parlamentar casou com aquele nome, não que a fonte
+ * afirmou a autoria.
+ */
 export function descreveVinculoEmenda(
   metodo?: string | null,
   confianca?: number | null,
 ): string | null {
+  const chave = (metodo ?? '').toLowerCase().replace(/[^a-z]/g, '');
+  const campo = chave.includes('nomeurna')
+    ? 'nome de urna'
+    : chave.includes('nomecivil')
+      ? 'nome civil'
+      : null;
+
+  const porNome = campo
+    ? `pela correspondência do ${campo} publicado pelo Portal da Transparência`
+    : 'pela correspondência do nome publicado pelo Portal da Transparência';
+
   if (confianca === null || confianca === undefined) {
-    return metodo ? `Vínculo estabelecido por ${metodo.toLowerCase()}.` : null;
+    return metodo ? `Vínculo feito ${porNome}.` : null;
   }
 
+  // A confiança chega como 0–1 ou 0–100 conforme a origem.
   const percentual = Math.round((confianca > 1 ? confianca / 100 : confianca) * 100);
-  const base = metodo
-    ? `Vínculo por ${metodo.toLowerCase()} · confiança ${percentual}%`
-    : `Confiança do vínculo: ${percentual}%`;
 
   return percentual >= 100
-    ? `${base}. Autoria declarada na fonte oficial.`
-    : `${base}. Autoria inferida por correspondência de nome — pode conter erro.`;
+    ? `Vínculo feito ${porNome}, sem outro parlamentar de nome igual.`
+    : `Vínculo feito ${porNome}, com nome semelhante ao de outros parlamentares — pode conter erro.`;
 }
 
 export async function getParlamentarById(id: number): Promise<ParlamentarDetalhe | null> {
@@ -1183,11 +1285,20 @@ export async function getDespesasPerfil(
   return montarDespesasPerfil(resumoDespesas, despesasResponse, anoReferencia);
 }
 
-function buildVotingsQuery(page: number) {
+function buildVotingsQuery(page: number, filtros: FiltrosVotacao) {
   const params = new URLSearchParams();
   params.append('pagina', String(page));
   params.append('limit', String(VOTACOES_PAGE_SIZE));
   params.append('limite', String(VOTACOES_PAGE_SIZE));
+
+  // Todos recortam pela proposição votada, no banco — não sobre a página lida.
+  if (filtros.proposicao) params.append('proposicao', String(filtros.proposicao));
+  if (filtros.tipo) params.append('tipo', filtros.tipo);
+  if (filtros.ano) params.append('ano', String(filtros.ano));
+  if (filtros.tema) params.append('tema', filtros.tema);
+  if (filtros.busca) params.append('busca', filtros.busca);
+  if (filtros.objeto) params.append('objeto', filtros.objeto);
+  if (filtros.apenasMerito) params.append('apenasMerito', 'true');
 
   return params.toString();
 }
@@ -1195,22 +1306,28 @@ function buildVotingsQuery(page: number) {
 export async function getVotacoesParlamentar(
   id: number,
   page: number = 1,
+  filtros: FiltrosVotacao = {},
 ): Promise<ListaVotacoesResponse> {
   try {
     const res = await api.get(
-      `/parlamentares/${id}/votacoes?${buildVotingsQuery(page)}`,
+      `/parlamentares/${id}/votacoes?${buildVotingsQuery(page, filtros)}`,
     );
     const { itens, meta } = unwrapList<BackendVotacaoResumo>(res.data);
+
+    const excluidos = (res.data as { meta?: { excluidos?: { votacoesSemProposicao?: number } } })
+      ?.meta?.excluidos;
 
     return {
       data: itens.map(mapVotacaoResumo),
       meta: normalizeMeta(meta, page, VOTACOES_PAGE_SIZE, itens.length),
+      votacoesSemProposicaoExcluidas: Number(excluidos?.votacoesSemProposicao ?? 0) || 0,
     };
   } catch {
     console.warn('Não foi possível carregar votações do parlamentar.');
     return {
       data: [],
       meta: { total: 0, page, lastPage: 1, limit: VOTACOES_PAGE_SIZE },
+      votacoesSemProposicaoExcluidas: 0,
     };
   }
 }
@@ -1308,19 +1425,160 @@ export async function getPresencaParlamentar(id: number): Promise<PresencaPerfil
   }
 }
 
-function calcularAlinhamento(votacoes: VotacaoPerfil[]) {
-  const comparaveis = votacoes.filter((votacao) => votacao.seguiuOrientacao !== null);
+type BackendAlinhamento = {
+  disponivel?: boolean;
+  taxa?: number | null;
+  motivo?: string | null;
+  seguiu?: number | null;
+  divergiu?: number | null;
+  consideradas?: number | null;
+  liberadas?: number | null;
+  bancadaNaoResolvida?: number | null;
+  minimoParaTaxa?: number | null;
+  fonteFiliacao?: 'historico' | 'partidoAtual' | null;
+};
 
-  if (comparaveis.length === 0) {
-    return { alinhamento: null, alinhamentoBase: 0 };
-  }
+const MOTIVOS_CONHECIDOS: MotivoSemAlinhamento[] = [
+  'ORIENTACAO_INDISPONIVEL_SENADO',
+  'SEM_VOTOS_COMPARAVEIS',
+  'BANCADA_NAO_RESOLVIDA',
+  'AMOSTRA_INSUFICIENTE',
+];
 
-  const seguiu = comparaveis.filter((votacao) => votacao.seguiuOrientacao).length;
+const ALINHAMENTO_INDISPONIVEL: AlinhamentoPartidario = {
+  disponivel: false,
+  taxa: null,
+  motivo: 'FALHA',
+  seguiu: 0,
+  divergiu: 0,
+  consideradas: 0,
+  liberadas: 0,
+  bancadaNaoResolvida: 0,
+  minimoParaTaxa: 0,
+  fonteFiliacao: null,
+};
+
+/**
+ * Aderência à orientação do partido, da rota dedicada.
+ *
+ * Antes vinha de `GET /parlamentares/:id/perfil`, que roda todas as consultas
+ * do parlamentar para preencher um card. Agora há rota própria.
+ *
+ * O cálculo mora no backend de propósito: compara o voto com a orientação da
+ * bancada do partido **na data da votação**, descarta as votações liberadas e
+ * só publica taxa acima de um mínimo de comparações. Refazer isso no navegador,
+ * a partir da página corrente de votações, daria um número errado com cara de
+ * certo.
+ */
+/** O mesmo formato serve ao agregado e a cada tema. */
+function mapAlinhamento(bruto: BackendAlinhamento): AlinhamentoPartidario {
+  const motivoBruto = (bruto.motivo ?? '') as MotivoSemAlinhamento;
+  const motivo = MOTIVOS_CONHECIDOS.includes(motivoBruto) ? motivoBruto : null;
+  const taxa =
+    bruto.taxa === null || bruto.taxa === undefined ? null : parsePercent(bruto.taxa);
 
   return {
-    alinhamento: Math.round((seguiu / comparaveis.length) * 100),
-    alinhamentoBase: comparaveis.length,
+    disponivel: bruto.disponivel !== false,
+    taxa,
+    // Sem taxa e sem motivo reconhecido, a interface ainda precisa dizer algo.
+    motivo: taxa === null ? motivo ?? 'FALHA' : null,
+    seguiu: Number(bruto.seguiu ?? 0) || 0,
+    divergiu: Number(bruto.divergiu ?? 0) || 0,
+    consideradas: Number(bruto.consideradas ?? 0) || 0,
+    liberadas: Number(bruto.liberadas ?? 0) || 0,
+    bancadaNaoResolvida: Number(bruto.bancadaNaoResolvida ?? 0) || 0,
+    minimoParaTaxa: Number(bruto.minimoParaTaxa ?? 0) || 0,
+    fonteFiliacao: bruto.fonteFiliacao ?? null,
   };
+}
+
+export async function getAlinhamentoParlamentar(
+  id: number,
+): Promise<AlinhamentoPartidario> {
+  try {
+    const res = await api.get(`/parlamentares/${id}/alinhamento`);
+
+    return mapAlinhamento((res.data ?? {}) as BackendAlinhamento);
+  } catch {
+    console.warn('Não foi possível carregar o alinhamento partidário.');
+    return { ...ALINHAMENTO_INDISPONIVEL };
+  }
+}
+
+type BackendAlinhamentoPorTema = {
+  disponivel?: boolean;
+  geral?: BackendAlinhamento | null;
+  temas?: (BackendAlinhamento & { tema?: string | null })[] | null;
+  excluidos?: {
+    votosSemProposicao?: number | null;
+    votosEmProposicaoSemTema?: number | null;
+  } | null;
+  metadata?: {
+    temasComparados?: number | null;
+    minimoParaTaxa?: number | null;
+    filtro?: { apenasMerito?: boolean } | null;
+  } | null;
+};
+
+const ALINHAMENTO_POR_TEMA_VAZIO: AlinhamentoPorTema = {
+  disponivel: false,
+  geral: { ...ALINHAMENTO_INDISPONIVEL },
+  temas: [],
+  excluidos: { semProposicao: 0, emProposicaoSemTema: 0 },
+  temasComparados: 0,
+  minimoParaTaxa: 0,
+  apenasMerito: false,
+  carregado: false,
+};
+
+/**
+ * Fidelidade à orientação do partido, por tema.
+ *
+ * O `geral` vem no mesmo payload e sob o mesmo recorte: é a régua que dá
+ * sentido ao número de cada tema. "61% em meio ambiente" só quer dizer alguma
+ * coisa ao lado de "88% no mandato inteiro".
+ *
+ * A API ordena por número de comparações, não por taxa — o topo dela é onde há
+ * mais evidência. Quem reordenar por taxa precisa manter `consideradas` à
+ * vista, porque abaixo do mínimo a taxa vem nula de propósito.
+ */
+export async function getAlinhamentoPorTema(
+  id: number,
+  limite = 8,
+  apenasMerito = true,
+): Promise<AlinhamentoPorTema> {
+  try {
+    const params = new URLSearchParams({ limite: String(limite) });
+    if (apenasMerito) params.set('apenasMerito', 'true');
+
+    const res = await api.get(
+      `/parlamentares/${id}/alinhamento/temas?${params.toString()}`,
+    );
+    const payload = (res.data ?? {}) as BackendAlinhamentoPorTema;
+
+    return {
+      disponivel: payload.disponivel !== false,
+      geral: mapAlinhamento(payload.geral ?? {}),
+      temas: (payload.temas ?? [])
+        .map((item) => ({
+          ...mapAlinhamento(item),
+          tema: item.tema?.trim() ?? '',
+        }))
+        .filter((item) => item.tema),
+      excluidos: {
+        semProposicao: Number(payload.excluidos?.votosSemProposicao ?? 0) || 0,
+        emProposicaoSemTema:
+          Number(payload.excluidos?.votosEmProposicaoSemTema ?? 0) || 0,
+      },
+      temasComparados: Number(payload.metadata?.temasComparados ?? 0) || 0,
+      minimoParaTaxa: Number(payload.metadata?.minimoParaTaxa ?? 0) || 0,
+      apenasMerito: payload.metadata?.filtro?.apenasMerito === true,
+      carregado: true,
+    };
+  } catch {
+    console.warn('Não foi possível carregar o alinhamento por tema.');
+    return { ...ALINHAMENTO_POR_TEMA_VAZIO };
+  }
 }
 
 export async function getVotacoesPerfil(id: number): Promise<VotacoesPerfil> {
@@ -1329,12 +1587,8 @@ export async function getVotacoesPerfil(id: number): Promise<VotacoesPerfil> {
     getPresencaParlamentar(id),
   ]);
 
-  const { alinhamento, alinhamentoBase } = calcularAlinhamento(votacoesResponse.data);
-
   return {
     presenca,
-    alinhamento,
-    alinhamentoBase,
     destaques: votacoesResponse.data,
     leituraRapida:
       votacoesResponse.meta.total > 0
@@ -1499,6 +1753,123 @@ async function getListaOpcional<TBackend, TFront>(
     return itens.map(mapper);
   } catch {
     return [];
+  }
+}
+
+type BackendPerfilTematico = {
+  proposicoes?: {
+    temas?: { tema?: string | null; total?: number | null }[] | null;
+    totalProposicoes?: number | null;
+    semTema?: number | null;
+  } | null;
+  votacoes?: {
+    temas?: {
+      tema?: string | null;
+      votosSim?: number | null;
+      votosNao?: number | null;
+      saldo?: number | null;
+      abstencoes?: number | null;
+      obstrucoes?: number | null;
+      totalVotos?: number | null;
+    }[] | null;
+    totalVotos?: number | null;
+    excluidos?: {
+      votosSemProposicao?: number | null;
+      votosEmProposicaoSemTema?: number | null;
+    } | null;
+  } | null;
+  metadata?: {
+    observacao?: string | null;
+    filtro?: {
+      apenasMerito?: boolean;
+      objetosDeMerito?: string[] | null;
+    } | null;
+  } | null;
+};
+
+const PERFIL_TEMATICO_VAZIO: PerfilTematico = {
+  temasVotados: [],
+  temasAutoria: [],
+  totalProposicoes: 0,
+  proposicoesSemTema: 0,
+  totalVotos: 0,
+  excluidos: { semProposicao: 0, emProposicaoSemTema: 0 },
+  observacao: null,
+  apenasMerito: false,
+  objetosDeMerito: [],
+  disponivel: false,
+};
+
+/**
+ * Como o parlamentar votou, agrupado por tema da proposição.
+ *
+ * A contagem é de votos SIM e NÃO em votações de proposições do tema — não é
+ * posição sobre o tema. A mesma votação pode ser sobre o texto principal, um
+ * destaque supressivo ou um requerimento de urgência, e o dado não distingue:
+ * votar NÃO num destaque que suprimia o artigo é votar A FAVOR do texto. A
+ * `observacao` da API carrega essa ressalva e a interface a exibe.
+ */
+export async function getPerfilTematicoParlamentar(
+  id: number,
+  limite = 8,
+  /**
+   * Recorta a contagem às votações de mérito. Ligado por padrão: sem ele, a
+   * conta mistura texto principal com requerimento de urgência e redação
+   * final, onde o voto é sobre o rito e não sobre o assunto.
+   */
+  apenasMerito = true,
+): Promise<PerfilTematico> {
+  try {
+    const params = new URLSearchParams({ limite: String(limite) });
+    if (apenasMerito) params.set('apenasMerito', 'true');
+
+    const res = await api.get(`/parlamentares/${id}/temas?${params.toString()}`);
+    const payload = (res.data ?? {}) as BackendPerfilTematico;
+    const votacoes = payload.votacoes ?? {};
+    const proposicoes = payload.proposicoes ?? {};
+    const filtro = payload.metadata?.filtro ?? {};
+
+    return {
+      temasAutoria: (proposicoes.temas ?? [])
+        .map((item) => ({
+          tema: item.tema?.trim() ?? '',
+          total: Number(item.total ?? 0) || 0,
+        }))
+        .filter((item) => item.tema && item.total > 0),
+      totalProposicoes: Number(proposicoes.totalProposicoes ?? 0) || 0,
+      proposicoesSemTema: Number(proposicoes.semTema ?? 0) || 0,
+      temasVotados: (votacoes.temas ?? [])
+        .map((item) => {
+          const votosSim = Number(item.votosSim ?? 0) || 0;
+          const votosNao = Number(item.votosNao ?? 0) || 0;
+
+          return {
+            tema: item.tema?.trim() ?? '',
+            votosSim,
+            votosNao,
+            saldo: Number(item.saldo ?? votosSim - votosNao) || 0,
+            abstencoes: Number(item.abstencoes ?? 0) || 0,
+            obstrucoes: Number(item.obstrucoes ?? 0) || 0,
+            totalVotos: Number(item.totalVotos ?? 0) || 0,
+          };
+        })
+        .filter((item) => item.tema && item.votosSim + item.votosNao > 0),
+      totalVotos: Number(votacoes.totalVotos ?? 0) || 0,
+      excluidos: {
+        semProposicao: Number(votacoes.excluidos?.votosSemProposicao ?? 0) || 0,
+        emProposicaoSemTema:
+          Number(votacoes.excluidos?.votosEmProposicaoSemTema ?? 0) || 0,
+      },
+      observacao: payload.metadata?.observacao?.trim() || null,
+      apenasMerito: filtro.apenasMerito === true,
+      objetosDeMerito: (filtro.objetosDeMerito ?? [])
+        .map((item) => mapObjetoVotacao(item))
+        .filter((item): item is ObjetoVotacao => item !== null),
+      disponivel: true,
+    };
+  } catch {
+    console.warn('Não foi possível carregar o perfil temático do parlamentar.');
+    return { ...PERFIL_TEMATICO_VAZIO };
   }
 }
 

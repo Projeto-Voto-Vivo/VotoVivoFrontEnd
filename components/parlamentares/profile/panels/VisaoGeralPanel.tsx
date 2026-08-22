@@ -1,6 +1,6 @@
-import { FileText, Landmark, Receipt, Users, Vote } from 'lucide-react';
+import { ArrowRight, FileText, Landmark, Receipt, Users, Vote } from 'lucide-react';
+import Link from 'next/link';
 import { ParlamentarPerfil } from '@/types';
-import { descreveVinculoEmenda } from '@/services/parlamentares';
 import { ParlamentarIndicators } from '../ParlamentarIndicators';
 import { SectionShell } from '../shared/SectionShell';
 import { formatCurrency, formatDate } from '../shared/formatters';
@@ -30,9 +30,6 @@ export function VisaoGeralPanel({ profile }: VisaoGeralPanelProps) {
 
   const proposicaoDestaque = proposicoes[0];
   const votacaoDestaque = votacoes.destaques[0];
-  const vinculoEmenda = emendaDestaque
-    ? descreveVinculoEmenda(emendaDestaque.metodoVinculo, emendaDestaque.confiancaVinculo)
-    : null;
 
   return (
     <div className="space-y-6">
@@ -81,9 +78,13 @@ export function VisaoGeralPanel({ profile }: VisaoGeralPanelProps) {
                     {formatCurrency(emendaDestaque.valorEmpenhado)}
                   </p>
                 </div>
-                {vinculoEmenda ? (
-                  <p className="text-xs leading-5 text-slate-500">{vinculoEmenda}</p>
-                ) : null}
+                <Link
+                  href={`/parlamentares/${profile.parlamentar.id}/emendas/${emendaDestaque.id}`}
+                  className="inline-flex items-center gap-2 text-sm font-semibold text-brasil-blue hover:underline"
+                >
+                  Ver detalhes da emenda
+                  <ArrowRight size={14} aria-hidden="true" />
+                </Link>
               </div>
             ) : (
               <p className="mt-4 text-sm leading-6 text-slate-500">
@@ -128,6 +129,16 @@ export function VisaoGeralPanel({ profile }: VisaoGeralPanelProps) {
                 ) : null}
               </div>
             )}
+
+            {proposicaoDestaque && (
+              <Link
+                href={`/proposicoes/${proposicaoDestaque.id}`}
+                className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-brasil-blue hover:underline"
+              >
+                Ver tramitação
+                <ArrowRight size={14} aria-hidden="true" />
+              </Link>
+            )}
           </article>
 
           <article className="rounded-3xl border border-slate-200 bg-white p-5">
@@ -164,6 +175,22 @@ export function VisaoGeralPanel({ profile }: VisaoGeralPanelProps) {
                     </p>
                   </div>
                 </div>
+
+                {/*
+                  Não há página de votação avulsa: o destino natural é a
+                  tramitação da proposição votada, onde a votação aparece com
+                  placar e orientação. Requerimento não tem proposição, e aí
+                  não há para onde mandar.
+                */}
+                {votacaoDestaque.proposicao ? (
+                  <Link
+                    href={`/proposicoes/${votacaoDestaque.proposicao.id}`}
+                    className="inline-flex items-center gap-2 text-sm font-semibold text-brasil-blue hover:underline"
+                  >
+                    Ver {votacaoDestaque.proposicao.titulo}
+                    <ArrowRight size={14} aria-hidden="true" />
+                  </Link>
+                ) : null}
               </div>
             ) : (
               <p className="mt-4 text-sm leading-6 text-slate-500">

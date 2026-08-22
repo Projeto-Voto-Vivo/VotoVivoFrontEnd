@@ -5,6 +5,40 @@
   --color-brasil-green: #009c3b;
   --color-brasil-yellow: #ffdf00;
   --color-neutral-50: #f8fafc;
+
+  /*
+   * Cores de voto — usadas em toda representação de placar e de posição.
+   *
+   * Não são as cores da marca de propósito. Verde e vermelho, o par óbvio para
+   * "sim" e "não", ficam a ΔE 5,1 um do outro na visão deuteranômala: para
+   * cerca de 1 em cada 12 homens, as duas barras são a mesma barra. Este par
+   * (azul ↔ vermelho) passa os seis checks do validador de paleta, com ΔE 23,8
+   * no pior caso de daltonismo.
+   *
+   * Trocar qualquer um destes valores exige rodar o validador de novo.
+   */
+  --color-voto-sim: #2a78d6;
+  --color-voto-nao: #d03b3b;
+  --color-voto-abstencao: #eda100;
+  --color-voto-obstrucao: #64748b;
+  --color-voto-ausencia-justificada: #94a3b8;
+  --color-voto-ausente: #cbd5e1;
+  --color-voto-nao-registrado: #e2e8f0;
+
+  /*
+   * Autoria de proposições. Deliberadamente fora da família de voto: se
+   * usasse o azul de SIM, a barra de "quantas proposições ele assinou" leria
+   * como "quantas vezes votou a favor". A marca (#002776) não serve — reprova
+   * na faixa de luminância do validador, escura demais para preenchimento.
+   */
+  --color-tema-autoria: #4a3aa7;
+
+  /*
+   * Fidelidade à orientação do partido. Quarta cor da família de dados, também
+   * validada contra as outras três: o pior par no teste de daltonismo fica em
+   * ΔE 21,5, bem acima do piso.
+   */
+  --color-fidelidade: #1baf7a;
 }
 
 html {
