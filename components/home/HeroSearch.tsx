@@ -38,7 +38,8 @@ export function HeroSearch() {
           <div className="max-w-2xl space-y-7 text-left">
             <header className="space-y-4">
               <h1 className="text-4xl font-bold leading-[1.05] tracking-tight text-slate-900 md:text-6xl">
-                A casa dos dados abertos do <br />
+                A casa dos dados abertos do
+                <br className="hidden md:block" />{" "}
                 <span className="text-brasil-blue">Poder Legislativo.</span>
               </h1>
 
@@ -50,7 +51,7 @@ export function HeroSearch() {
 
             <form
               onSubmit={handleSearch}
-              className="mt-2 flex max-w-xl overflow-hidden rounded-lg bg-white shadow-xl shadow-blue-900/5 transition-shadow duration-300 hover:shadow-2xl focus-within:ring-2 focus-within:ring-brasil-blue focus-within:ring-offset-2 focus-within:shadow-2xl"
+              className="mt-2 flex w-full max-w-xl flex-col gap-3 rounded-lg transition-shadow duration-300 sm:flex-row sm:gap-0 sm:overflow-hidden sm:bg-white sm:shadow-xl sm:shadow-blue-900/5 sm:hover:shadow-2xl sm:focus-within:ring-2 sm:focus-within:ring-brasil-blue sm:focus-within:ring-offset-2 sm:focus-within:shadow-2xl"
               role="search"
               aria-label="Busca de parlamentares"
             >
@@ -64,12 +65,12 @@ export function HeroSearch() {
                 value={termo}
                 onChange={handleInputChange}
                 placeholder="Busque por nome, partido ou estado"
-                className="h-16 grow bg-transparent pl-6 text-lg text-gray-900 outline-none placeholder:text-gray-400"
+                className="h-14 min-w-0 w-full rounded-lg bg-white px-5 text-base text-gray-900 shadow-xl shadow-blue-900/5 outline-none placeholder:text-gray-400 focus:ring-2 focus:ring-brasil-blue focus:ring-offset-2 sm:h-16 sm:grow sm:rounded-none sm:pl-6 sm:text-lg sm:shadow-none sm:focus:ring-0 sm:focus:ring-offset-0"
               />
 
               <button
                 type="submit"
-                className="flex h-16 items-center gap-2 bg-brasil-blue px-8 text-lg font-bold text-white transition-all duration-300 hover:gap-3 hover:bg-blue-900 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-brasil-blue active:scale-95 md:px-10"
+                className="flex h-14 w-full shrink-0 items-center justify-center gap-2 rounded-lg bg-brasil-blue px-6 text-base font-bold text-white transition-all duration-300 hover:bg-blue-900 focus:outline-none focus:ring-2 focus:ring-brasil-blue focus:ring-offset-2 active:scale-[0.98] sm:h-16 sm:w-auto sm:justify-start sm:rounded-none sm:px-10 sm:text-lg sm:hover:gap-3 sm:focus:ring-white sm:focus:ring-offset-2 sm:focus:ring-offset-brasil-blue sm:active:scale-95"
                 aria-label="Buscar parlamentar"
               >
                 <Search size={22} strokeWidth={3} aria-hidden="true" />
