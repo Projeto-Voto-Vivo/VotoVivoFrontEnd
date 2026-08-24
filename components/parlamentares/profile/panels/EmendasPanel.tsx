@@ -8,6 +8,7 @@ import { getEmendasParlamentar } from '@/services/parlamentares';
 import { MicroInfoCard } from '../shared/MicroInfoCard';
 import { SectionShell } from '../shared/SectionShell';
 import { formatCurrency } from '../shared/formatters';
+import { PanoramaEmendasDashboard } from './PanoramaEmendasDashboard';
 
 interface EmendasPanelProps {
   parlamentarId: number;
@@ -59,6 +60,7 @@ export function EmendasPanel({ parlamentarId, profile }: EmendasPanelProps) {
     : 0;
 
   return (
+    <div className="space-y-6">
     <SectionShell
       icon={<Receipt className="h-6 w-6" />}
       title="Emendas parlamentares"
@@ -176,5 +178,9 @@ export function EmendasPanel({ parlamentarId, profile }: EmendasPanelProps) {
         </div>
       )}
     </SectionShell>
+
+      {/* O panorama fecha o quadro: a lista mostra caso a caso, ele o conjunto. */}
+      <PanoramaEmendasDashboard parlamentarId={parlamentarId} />
+    </div>
   );
 }

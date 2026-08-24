@@ -4,6 +4,7 @@ import { descreveVinculoEmenda } from '@/services/parlamentares';
 import { BackButton } from '@/components/layout/BackButton';
 import { NavLink } from '@/components/layout/NavLink';
 import { VoltarLink } from '@/components/layout/VoltarLink';
+import { FaseEmenda } from './FaseEmenda';
 
 interface EmendaDetailPageProps {
   emenda: EmendaDetalhe;
@@ -192,7 +193,7 @@ export function EmendaDetailPage({ emenda }: EmendaDetailPageProps) {
                               {display(documento.codigoDocumentoResumido)}
                             </p>
                             <p className="mt-0.5 text-sm text-slate-600">
-                              {display(documento.fase)}
+                              <FaseEmenda fase={documento.fase} />
                             </p>
                             <p className="mt-0.5 text-xs text-slate-500">
                               {display(documento.especieTipo)}
@@ -239,7 +240,7 @@ export function EmendaDetailPage({ emenda }: EmendaDetailPageProps) {
                               {formatDate(documento.data)}
                             </td>
                             <td className="whitespace-nowrap px-4 py-4">
-                              {display(documento.fase)}
+                              <FaseEmenda fase={documento.fase} />
                             </td>
                             <td className="whitespace-nowrap px-4 py-4 font-medium text-brasil-blue">
                               {display(documento.codigoDocumentoResumido)}

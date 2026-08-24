@@ -429,6 +429,31 @@ export interface EmendaParlamentarVinculado {
   confiancaVinculo: number | null;
 }
 
+/* ------------------------------------------------------------------ *
+ * Panorama das emendas
+ * ------------------------------------------------------------------ */
+
+/** Uma fatia do panorama: por área de gasto ou por destino. */
+export interface RecorteEmendas {
+  /** Nome da função orçamentária ou da localidade, como vem da fonte. */
+  rotulo: string;
+  quantidade: number;
+  empenhado: number;
+  pago: number;
+}
+
+export interface PanoramaEmendas {
+  /** Função orçamentária: a finalidade declarada do gasto. */
+  porArea: RecorteEmendas[];
+  /** Localidade do gasto: para onde o dinheiro foi destinado. */
+  porLocalidade: RecorteEmendas[];
+  /** Emendas fora de cada recorte, por falta do campo na fonte. */
+  semArea: number;
+  semLocalidade: number;
+  /** `false` enquanto a API não publica os agregados. */
+  disponivel: boolean;
+}
+
 export interface EmendasPerfil {
   quantidade: number;
   totalEmpenhado: number;
