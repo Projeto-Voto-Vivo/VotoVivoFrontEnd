@@ -4,7 +4,8 @@ import { descreveVinculoEmenda } from '@/services/parlamentares';
 import { BackButton } from '@/components/layout/BackButton';
 import { NavLink } from '@/components/layout/NavLink';
 import { VoltarLink } from '@/components/layout/VoltarLink';
-import { FaseEmenda } from './FaseEmenda';
+import { DicaTermo } from '@/components/layout/DicaTermo';
+import { explicarExecucao } from './explicacoesExecucao';
 
 interface EmendaDetailPageProps {
   emenda: EmendaDetalhe;
@@ -193,7 +194,7 @@ export function EmendaDetailPage({ emenda }: EmendaDetailPageProps) {
                               {display(documento.codigoDocumentoResumido)}
                             </p>
                             <p className="mt-0.5 text-sm text-slate-600">
-                              <FaseEmenda fase={documento.fase} />
+                              {display(documento.fase)}
                             </p>
                             <p className="mt-0.5 text-xs text-slate-500">
                               {display(documento.especieTipo)}
@@ -240,7 +241,7 @@ export function EmendaDetailPage({ emenda }: EmendaDetailPageProps) {
                               {formatDate(documento.data)}
                             </td>
                             <td className="whitespace-nowrap px-4 py-4">
-                              <FaseEmenda fase={documento.fase} />
+                              {display(documento.fase)}
                             </td>
                             <td className="whitespace-nowrap px-4 py-4 font-medium text-brasil-blue">
                               {display(documento.codigoDocumentoResumido)}
@@ -308,10 +309,13 @@ interface MetricCardProps {
 }
 
 function MetricCard({ label, value }: MetricCardProps) {
+  const dica = explicarExecucao(label);
+
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-3 md:p-5">
-      <p className="text-[10px] font-semibold uppercase leading-5 tracking-wide text-slate-500 md:text-sm md:font-medium">
+      <p className="flex items-center gap-0.5 text-[10px] font-semibold uppercase leading-5 tracking-wide text-slate-500 md:text-sm md:font-medium">
         {label}
+        {dica ? <DicaTermo termo={label}>{dica}</DicaTermo> : null}
       </p>
       <p className="mt-2 text-lg font-bold text-slate-900 md:mt-3 md:text-xl">
         {value}
