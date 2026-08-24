@@ -92,6 +92,7 @@ function Recorte({
   icone,
   itens,
   semDado,
+  empenhadoSemDado,
   rotuloSemDado,
 }: {
   titulo: string;
@@ -99,6 +100,7 @@ function Recorte({
   icone: React.ReactNode;
   itens: RecorteEmendas[];
   semDado: number;
+  empenhadoSemDado: number;
   rotuloSemDado: string;
 }) {
   const [mostrarTodos, setMostrarTodos] = useState(false);
@@ -136,9 +138,18 @@ function Recorte({
           A barra mede o valor <strong className="font-semibold">empenhado</strong>{' '}
           — o quanto foi reservado, que nem sempre é o quanto saiu do caixa. O
           valor pago aparece ao passar o mouse.
-          {semDado > 0
-            ? ` ${semDado} ${semDado === 1 ? 'emenda não traz' : 'emendas não trazem'} ${rotuloSemDado} na fonte e ${semDado === 1 ? 'ficou' : 'ficaram'} de fora.`
-            : ''}
+          {semDado > 0 ? (
+            <>
+              {' '}
+              Fora das barras: {semDado}{' '}
+              {semDado === 1 ? 'emenda não traz' : 'emendas não trazem'}{' '}
+              {rotuloSemDado} na fonte
+              {empenhadoSemDado > 0
+                ? `, somando ${formatCurrency(empenhadoSemDado)} empenhados — é o que falta para as barras fecharem o total do parlamentar`
+                : ''}
+              .
+            </>
+          ) : null}
         </span>
       </p>
     </SectionShell>
@@ -205,6 +216,7 @@ export function PanoramaEmendasDashboard({
         icone={<Target className="h-6 w-6" />}
         itens={panorama.porArea}
         semDado={panorama.semArea}
+        empenhadoSemDado={panorama.empenhadoSemArea}
         rotuloSemDado="a finalidade"
       />
 
@@ -214,6 +226,7 @@ export function PanoramaEmendasDashboard({
         icone={<MapPin className="h-6 w-6" />}
         itens={panorama.porLocalidade}
         semDado={panorama.semLocalidade}
+        empenhadoSemDado={panorama.empenhadoSemLocalidade}
         rotuloSemDado="a localidade"
       />
     </>

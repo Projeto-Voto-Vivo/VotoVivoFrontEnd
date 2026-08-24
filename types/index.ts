@@ -450,6 +450,15 @@ export interface PanoramaEmendas {
   /** Emendas fora de cada recorte, por falta do campo na fonte. */
   semArea: number;
   semLocalidade: number;
+  /**
+   * Valor empenhado que ficou de fora de cada recorte.
+   *
+   * A contagem sozinha não fecha a conta: 3 emendas de fora podem ser R$ 3 mil
+   * ou R$ 30 milhões. Com o valor, `totalEmpenhado - empenhadoSemArea` é
+   * exatamente a soma das barras, e o painel pode dizer isso na tela.
+   */
+  empenhadoSemArea: number;
+  empenhadoSemLocalidade: number;
   /** `false` enquanto a API não publica os agregados. */
   disponivel: boolean;
 }

@@ -1741,6 +1741,8 @@ const PANORAMA_EMENDAS_VAZIO: PanoramaEmendas = {
   porLocalidade: [],
   semArea: 0,
   semLocalidade: 0,
+  empenhadoSemArea: 0,
+  empenhadoSemLocalidade: 0,
   disponivel: false,
 };
 
@@ -1762,6 +1764,9 @@ export async function getPanoramaEmendas(
     const res = await api.get(`/parlamentares/${parlamentarId}/emendas/resumo`);
     const porArea = res.data?.porFuncao ?? res.data?.porArea;
     const porLocalidade = res.data?.porLocalidade;
+    // Os contadores foram pedidos dentro de `metadata`; aceitar também no topo
+    // custa uma linha e evita depender de onde exatamente eles pousaram.
+    const meta = res.data?.metadata ?? res.data ?? {};
 
     if (!Array.isArray(porArea) && !Array.isArray(porLocalidade)) {
       return { ...PANORAMA_EMENDAS_VAZIO };
@@ -1774,8 +1779,12 @@ export async function getPanoramaEmendas(
       porLocalidade: (Array.isArray(porLocalidade) ? porLocalidade : [])
         .map(mapRecorteEmendas)
         .filter((item) => item.quantidade > 0 || item.empenhado > 0),
-      semArea: Number(res.data?.metadata?.semFuncao ?? 0) || 0,
-      semLocalidade: Number(res.data?.metadata?.semLocalidade ?? 0) || 0,
+      semArea: Number(meta.semFuncao ?? meta.semArea ?? 0) || 0,
+      semLocalidade: Number(meta.semLocalidade ?? 0) || 0,
+      empenhadoSemArea: parseMoney(
+        meta.empenhadoSemFuncao ?? meta.empenhadoSemArea,
+      ),
+      empenhadoSemLocalidade: parseMoney(meta.empenhadoSemLocalidade),
       disponivel: true,
     };
   } catch {
