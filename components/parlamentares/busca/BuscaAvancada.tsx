@@ -199,19 +199,24 @@ export function BuscaAvancada({ filtros, criterios, aberta }: BuscaAvancadaProps
                     autoComplete="off"
                     className={CLASSE_CAMPO}
                   />
+                  {/*
+                    Sem texto dentro do <option>: o que o navegador mostra na
+                    lista é o texto, e o valor fica escondido atrás dele. Com a
+                    contagem ali, a lista virava dez linhas de "1067 emendas"
+                    sem dizer de que município se tratava.
+                  */}
                   <datalist id="destinos-emenda">
                     {filtros.destinosEmenda.map((opcao) => (
-                      <option key={opcao.valor} value={opcao.valor}>
-                        {opcao.total} emendas
-                      </option>
+                      <option key={opcao.valor} value={opcao.valor} />
                     ))}
                   </datalist>
                   {filtros.destinosTruncadosEm > 0 && (
                     <p className="mt-2 text-xs leading-5 text-slate-500">
                       A lista sugere os {filtros.destinosTruncadosEm} destinos
-                      mais frequentes. Outros municípios também funcionam, mas
-                      precisam ser escritos como aparecem na fonte — por
-                      exemplo, <em>SÃO PAULO - SP</em>.
+                      que mais recebem emendas, do maior para o menor. Outros
+                      municípios também funcionam, mas precisam ser escritos
+                      como aparecem na fonte — por exemplo,{' '}
+                      <em>SÃO PAULO - SP</em>.
                     </p>
                   )}
                   {temPeso('destinoEmenda') && (
