@@ -62,6 +62,13 @@ export function EmendasPanel({ parlamentarId, profile }: EmendasPanelProps) {
 
   return (
     <div className="space-y-6">
+      {/*
+        O panorama abre o quadro: primeiro onde o parlamentar atua e para onde
+        o dinheiro foi, depois a lista emenda a emenda. O conjunto antes do
+        caso a caso.
+      */}
+      <PanoramaEmendasDashboard parlamentarId={parlamentarId} />
+
     <SectionShell
       icon={<Receipt className="h-6 w-6" />}
       title="Emendas parlamentares"
@@ -189,9 +196,6 @@ export function EmendasPanel({ parlamentarId, profile }: EmendasPanelProps) {
         </div>
       )}
     </SectionShell>
-
-      {/* O panorama fecha o quadro: a lista mostra caso a caso, ele o conjunto. */}
-      <PanoramaEmendasDashboard parlamentarId={parlamentarId} />
     </div>
   );
 }
