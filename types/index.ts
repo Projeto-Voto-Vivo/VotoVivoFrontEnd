@@ -429,6 +429,92 @@ export interface EmendaParlamentarVinculado {
   confiancaVinculo: number | null;
 }
 
+/** Critérios que pontuam no ranking. Partido, casa e UF só recortam. */
+export type CriterioRanking =
+  | 'tema'
+  | 'funcaoEmenda'
+  | 'destinoEmenda'
+  | 'comissao';
+
+export interface SinalCriterioRanking {
+  /** O valor que o usuário pediu para este critério. */
+  pedido: string;
+  /** Valor bruto do parlamentar: contagem, reais empenhados ou participação. */
+  valor: number;
+  unidade: 'proposicoes' | 'reais_empenhados' | 'participacao' | string;
+  /** `valor / maiorValorNoPool * 100`. */
+  pontuacao: number;
+  /** Só em `comissao`: os cargos exercidos no órgão. */
+  detalhe?: string;
+}
+
+export interface ItemRanking {
+  id: number;
+  nomeParlamentar: string;
+  siglaPartido: string;
+  uf: string;
+  urlFoto: string;
+  cargo?: string;
+  /** Média ponderada dos critérios pedidos, de 0 a 100. */
+  pontuacao: number;
+  /** Em quantos dos critérios pedidos ele tem sinal. */
+  criteriosAtendidos: number;
+  criteriosPedidos: number;
+  criterios: Partial<Record<CriterioRanking, SinalCriterioRanking>>;
+}
+
+export interface CriterioAplicado {
+  criterio: CriterioRanking | string;
+  valorPedido: string;
+  unidade: string;
+  peso: number;
+  /**
+   * Denominador da normalização. Muda com o filtro — é por isso que a nota
+   * não pode ser comparada entre duas buscas diferentes.
+   */
+  maiorValorNoPool: number;
+}
+
+export interface RankingParlamentares {
+  data: ItemRanking[];
+  pagina: number;
+  totalPaginas: number;
+  total: number;
+  criterios: CriterioAplicado[];
+  /** Quantos passaram pelos filtros de partido, casa e UF. */
+  candidatos: number;
+  /** Quantos têm sinal em pelo menos um critério — só esses entram na lista. */
+  comAlgumSinal: number;
+  /** Critérios em que ninguém no conjunto pontuou. */
+  criteriosSemResultado: string[];
+  /** Mensagem para mostrar na tela; `undefined` quando a busca deu certo. */
+  erro?: string;
+}
+
+export interface OpcaoRanking {
+  valor: string;
+  total: number;
+}
+
+export interface ComissaoRanking {
+  sigla: string | null;
+  nome: string | null;
+  casa: string;
+  membros: number;
+}
+
+export interface FiltrosRanking {
+  temas: OpcaoRanking[];
+  funcoesEmenda: OpcaoRanking[];
+  destinosEmenda: OpcaoRanking[];
+  partidos: OpcaoRanking[];
+  comissoes: ComissaoRanking[];
+  /** Há um destino por município atendido; a cauda não cabe num seletor. */
+  destinosTruncadosEm: number;
+  /** `false` quando não deu para carregar os domínios. */
+  disponivel: boolean;
+}
+
 export interface EmendasPerfil {
   quantidade: number;
   totalEmpenhado: number;
