@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useId, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { HelpCircle } from 'lucide-react';
 
 interface DicaTermoProps {
@@ -8,6 +8,9 @@ interface DicaTermoProps {
   termo: string;
   children: React.ReactNode;
 }
+
+/** Respiro entre o balão e o "?", e entre o balão e a borda da tela. */
+const MARGEM = 8;
 
 /**
  * Um "?" que explica um termo.
@@ -19,41 +22,53 @@ interface DicaTermoProps {
  * Fecha com Escape e ao clicar fora, porque um balão preso na tela depois de
  * aberto é pior que não ter balão.
  *
- * O balão reimprime `whitespace`, `text-transform` e `tracking` porque herda o
- * contexto de onde é usado: dentro de uma célula `whitespace-nowrap` o texto
- * saía numa linha só, atravessando a tela, e sob um rótulo em versalete ele
- * saía todo em maiúsculas.
+ * O balão é `fixed`, não `absolute`: os cards e as seções do perfil usam
+ * `overflow-hidden` para arredondar os cantos, e um balão posicionado dentro
+ * deles saía recortado pela metade. `fixed` escapa do recorte, ao custo de
+ * precisar de coordenadas calculadas — daí a medição abaixo.
+ *
+ * Abre para cima e para a direita do "?". Vira para baixo se não couber acima,
+ * e é empurrado para dentro quando encostaria na borda da tela.
  */
 export function DicaTermo({ termo, children }: DicaTermoProps) {
   const [aberta, setAberta] = useState(false);
   const containerRef = useRef<HTMLSpanElement>(null);
+  const botaoRef = useRef<HTMLButtonElement>(null);
   const balaoRef = useRef<HTMLSpanElement>(null);
   const id = useId();
 
-  // O balão nasce centrado no "?". Num card da última coluna, ou num rótulo
-  // longo que empurra o ícone para a direita, isso o joga para fora da tela.
-  // Aqui ele é medido depois de aberto e empurrado de volta para dentro —
-  // escrevendo direto no style, sem estado, para não repintar a árvore.
-  useEffect(() => {
+  const posicionar = useCallback(() => {
+    const botao = botaoRef.current;
     const balao = balaoRef.current;
-    if (!aberta || !balao) return;
+    if (!botao || !balao) return;
 
-    balao.style.transform = 'translateX(-50%)';
-
-    const margem = 8;
+    const alvo = botao.getBoundingClientRect();
     const caixa = balao.getBoundingClientRect();
-    const excedeDireita = caixa.right - (window.innerWidth - margem);
-    const excedeEsquerda = margem - caixa.left;
-    const desloca =
-      excedeDireita > 0 ? -excedeDireita : excedeEsquerda > 0 ? excedeEsquerda : 0;
 
-    if (desloca) {
-      balao.style.transform = `translateX(calc(-50% + ${desloca}px))`;
-    }
-  }, [aberta]);
+    // Para a direita: o balão começa na borda esquerda do "?" e cresce dali.
+    let esquerda = alvo.left;
+    const limiteDireito = window.innerWidth - MARGEM - caixa.width;
+    if (esquerda > limiteDireito) esquerda = limiteDireito;
+    if (esquerda < MARGEM) esquerda = MARGEM;
+
+    // Para cima: encostado acima do "?". Se não couber, vira para baixo — e se
+    // não couber dos dois lados (tela baixa), fica preso dentro da janela.
+    const acima = alvo.top - MARGEM - caixa.height;
+    let topo = acima >= MARGEM ? acima : alvo.bottom + MARGEM;
+    topo = Math.min(topo, window.innerHeight - MARGEM - caixa.height);
+    topo = Math.max(topo, MARGEM);
+
+    balao.style.left = `${Math.round(esquerda)}px`;
+    balao.style.top = `${Math.round(topo)}px`;
+    balao.style.visibility = 'visible';
+  }, []);
 
   useEffect(() => {
     if (!aberta) return;
+
+    // A primeira medição precisa do balão já renderizado — por isso ele nasce
+    // invisível, e só aparece depois de saber para onde ir.
+    posicionar();
 
     function aoTeclar(evento: KeyboardEvent) {
       if (evento.key === 'Escape') setAberta(false);
@@ -67,16 +82,22 @@ export function DicaTermo({ termo, children }: DicaTermoProps) {
 
     document.addEventListener('keydown', aoTeclar);
     document.addEventListener('mousedown', aoClicarFora);
+    // Rolar com o balão aberto o deixaria para trás: ele é `fixed`.
+    window.addEventListener('scroll', posicionar, true);
+    window.addEventListener('resize', posicionar);
 
     return () => {
       document.removeEventListener('keydown', aoTeclar);
       document.removeEventListener('mousedown', aoClicarFora);
+      window.removeEventListener('scroll', posicionar, true);
+      window.removeEventListener('resize', posicionar);
     };
-  }, [aberta]);
+  }, [aberta, posicionar]);
 
   return (
     <span ref={containerRef} className="relative inline-flex align-middle">
       <button
+        ref={botaoRef}
         type="button"
         onClick={() => setAberta((atual) => !atual)}
         onMouseEnter={() => setAberta(true)}
@@ -96,7 +117,8 @@ export function DicaTermo({ termo, children }: DicaTermoProps) {
           ref={balaoRef}
           id={id}
           role="tooltip"
-          className="absolute left-1/2 top-full z-30 mt-1 w-60 max-w-[calc(100vw-2rem)] -translate-x-1/2 whitespace-normal break-words rounded-2xl border border-slate-200 bg-white p-3 text-left text-xs font-normal normal-case leading-5 tracking-normal text-slate-600 shadow-lg"
+          style={{ visibility: 'hidden' }}
+          className="fixed left-0 top-0 z-50 w-60 max-w-[calc(100vw-1rem)] whitespace-normal break-words rounded-2xl border border-slate-200 bg-white p-3 text-left text-xs font-normal normal-case leading-5 tracking-normal text-slate-600 shadow-lg"
         >
           <span className="block font-bold text-slate-900">{termo}</span>
           <span className="mt-1 block">{children}</span>
