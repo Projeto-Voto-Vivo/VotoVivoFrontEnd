@@ -29,6 +29,13 @@ import {
   PresencaPorEscopo,
   ProposicaoDaVotacao,
   ProposicaoPerfil,
+  ComissaoRanking,
+  CriterioRanking,
+  FiltrosRanking,
+  ItemRanking,
+  OpcaoRanking,
+  RankingParlamentares,
+  SinalCriterioRanking,
   UFs,
   VotacaoPerfil,
   VotacoesPerfil,
@@ -2084,5 +2091,214 @@ export async function getEmendaDetalhe(
   } catch {
     console.warn('Não foi possível carregar detalhe da emenda.');
     return null;
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Ranking por afinidade (busca avançada)
+ * ------------------------------------------------------------------ */
+
+export interface ParametrosRanking {
+  tema?: string;
+  funcaoEmenda?: string;
+  destinoEmenda?: string;
+  comissao?: string;
+  partido?: string;
+  casa?: string;
+  uf?: string;
+  /** `"tema:3,destinoEmenda:2"` — ausente vale 1. */
+  pesos?: string;
+  pagina?: number;
+  limite?: number;
+}
+
+const FILTROS_RANKING_VAZIO: FiltrosRanking = {
+  temas: [],
+  funcoesEmenda: [],
+  destinosEmenda: [],
+  partidos: [],
+  comissoes: [],
+  destinosTruncadosEm: 0,
+  disponivel: false,
+};
+
+function mapOpcoesRanking(lista: unknown): OpcaoRanking[] {
+  if (!Array.isArray(lista)) return [];
+
+  return lista
+    .map((item) => ({
+      valor: String(item?.valor ?? '').trim(),
+      total: Number(item?.total ?? 0) || 0,
+    }))
+    .filter((item) => item.valor.length > 0);
+}
+
+/**
+ * Domínios válidos dos critérios.
+ *
+ * Existem porque o ranking compara por igualdade: um valor digitado que não
+ * case devolve lista vazia, e quem pesquisa não teria como distinguir
+ * "ninguém atua nisso" de "escrevi errado".
+ */
+export async function getRankingFiltros(): Promise<FiltrosRanking> {
+  try {
+    const res = await api.get('/parlamentares/ranking/filtros');
+
+    return {
+      temas: mapOpcoesRanking(res.data?.temas),
+      funcoesEmenda: mapOpcoesRanking(res.data?.funcoesEmenda),
+      destinosEmenda: mapOpcoesRanking(res.data?.destinosEmenda),
+      partidos: mapOpcoesRanking(res.data?.partidos),
+      comissoes: Array.isArray(res.data?.comissoes)
+        ? res.data.comissoes.map(
+            (item: Record<string, unknown>): ComissaoRanking => ({
+              sigla: (item?.sigla as string) ?? null,
+              nome: (item?.nome as string) ?? null,
+              casa: String(item?.casa ?? ''),
+              membros: Number(item?.membros ?? 0) || 0,
+            }),
+          )
+        : [],
+      destinosTruncadosEm:
+        Number(res.data?.metadata?.destinosTruncadosEm ?? 0) || 0,
+      disponivel: true,
+    };
+  } catch {
+    console.warn('Não foi possível carregar as opções da busca avançada.');
+    return { ...FILTROS_RANKING_VAZIO };
+  }
+}
+
+function mapSinalCriterio(bruto: unknown): SinalCriterioRanking {
+  const item = (bruto ?? {}) as Record<string, unknown>;
+
+  return {
+    pedido: String(item.pedido ?? ''),
+    // Dinheiro vem como string decimal; contagem e participação, como número.
+    valor: parseMoney(item.valor as string | number | null),
+    unidade: String(item.unidade ?? ''),
+    pontuacao: Number(item.pontuacao ?? 0) || 0,
+    detalhe: item.detalhe ? String(item.detalhe) : undefined,
+  };
+}
+
+function mapItemRanking(bruto: Record<string, unknown>): ItemRanking {
+  const criteriosBrutos = (bruto.criterios ?? {}) as Record<string, unknown>;
+  const criterios: ItemRanking['criterios'] = {};
+
+  for (const [chave, valor] of Object.entries(criteriosBrutos)) {
+    criterios[chave as CriterioRanking] = mapSinalCriterio(valor);
+  }
+
+  return {
+    id: Number(bruto.id ?? 0) || 0,
+    nomeParlamentar: String(bruto.nomeParlamentar ?? ''),
+    siglaPartido: String(bruto.siglaPartido ?? ''),
+    uf: String(bruto.uf ?? ''),
+    urlFoto: String(bruto.urlFoto ?? ''),
+    cargo: bruto.cargo ? String(bruto.cargo) : undefined,
+    pontuacao: Number(bruto.pontuacao ?? 0) || 0,
+    criteriosAtendidos: Number(bruto.criteriosAtendidos ?? 0) || 0,
+    criteriosPedidos: Number(bruto.criteriosPedidos ?? 0) || 0,
+    criterios,
+  };
+}
+
+function rankingVazio(
+  pagina: number,
+  erro?: string,
+): RankingParlamentares {
+  return {
+    data: [],
+    pagina,
+    totalPaginas: 1,
+    total: 0,
+    criterios: [],
+    candidatos: 0,
+    comAlgumSinal: 0,
+    criteriosSemResultado: [],
+    erro,
+  };
+}
+
+/**
+ * Ranking de parlamentares por afinidade de atuação.
+ *
+ * A nota é relativa ao conjunto filtrado: o primeiro colocado de cada critério
+ * marca 100 por construção, então trocar o filtro de partido muda todas as
+ * notas. O `metadata` que vem junto é o que permite dizer isso na tela em vez
+ * de apresentar o número como se fosse absoluto.
+ */
+export async function getRankingParlamentares(
+  parametros: ParametrosRanking,
+): Promise<RankingParlamentares> {
+  const pagina = parametros.pagina && parametros.pagina > 0 ? parametros.pagina : 1;
+
+  try {
+    const query: Record<string, string | number> = { pagina };
+
+    for (const chave of [
+      'tema',
+      'funcaoEmenda',
+      'destinoEmenda',
+      'comissao',
+      'partido',
+      'casa',
+      'uf',
+      'pesos',
+    ] as const) {
+      const valor = parametros[chave]?.trim();
+      if (valor) query[chave] = valor;
+    }
+
+    if (parametros.limite) query.limite = parametros.limite;
+
+    const res = await api.get('/parlamentares/ranking', { params: query });
+    const meta = res.data?.meta ?? {};
+    const metadata = res.data?.metadata ?? {};
+
+    return {
+      data: Array.isArray(res.data?.data) ? res.data.data.map(mapItemRanking) : [],
+      pagina: Number(meta.page ?? pagina) || pagina,
+      totalPaginas: Number(meta.lastPage ?? 1) || 1,
+      total: Number(meta.total ?? 0) || 0,
+      criterios: Array.isArray(metadata.criterios)
+        ? metadata.criterios.map((item: Record<string, unknown>) => ({
+            criterio: String(item?.criterio ?? ''),
+            valorPedido: String(item?.valorPedido ?? ''),
+            unidade: String(item?.unidade ?? ''),
+            peso: Number(item?.peso ?? 1) || 1,
+            maiorValorNoPool: parseMoney(
+              item?.maiorValorNoPool as string | number | null,
+            ),
+          }))
+        : [],
+      candidatos: Number(metadata.candidatos ?? 0) || 0,
+      comAlgumSinal: Number(metadata.comAlgumSinal ?? 0) || 0,
+      criteriosSemResultado: Array.isArray(metadata.criteriosSemResultado)
+        ? metadata.criteriosSemResultado.map(String)
+        : [],
+    };
+  } catch (erro) {
+    // O 400 do backend traz o motivo exato (peso inválido, casa fora do
+    // domínio). Repassá-lo é melhor que uma mensagem genérica: quem pesquisou
+    // consegue corrigir o que escreveu.
+    const resposta = (erro as { response?: { status?: number; data?: { message?: string; erro?: string } } })
+      .response;
+
+    if (resposta?.status === 400) {
+      return rankingVazio(
+        pagina,
+        resposta.data?.message ||
+          resposta.data?.erro ||
+          'Algum valor da busca não foi aceito. Revise os campos e tente de novo.',
+      );
+    }
+
+    console.warn('Não foi possível carregar o ranking de parlamentares.');
+    return rankingVazio(
+      pagina,
+      'Não conseguimos montar o ranking agora. Tente novamente em alguns instantes.',
+    );
   }
 }
