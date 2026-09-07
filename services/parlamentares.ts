@@ -2095,6 +2095,61 @@ export async function getEmendaDetalhe(
 }
 
 /* ------------------------------------------------------------------ *
+ * Stats — endpoints de estatísticas gerais para a home
+ * ------------------------------------------------------------------ */
+
+export interface StatsEmendasTotal {
+  totalPago: number;
+}
+
+export interface RankingParlamentarItem {
+  id: number;
+  nomeParlamentar: string;
+  siglaPartido: string;
+  uf: string;
+  urlFoto: string;
+  cargo: string;
+  totalDespesas?: number;
+  totalEmendas?: number;
+}
+
+export async function getStatsTotalEmendas(): Promise<StatsEmendasTotal> {
+  try {
+    const res = await api.get('/stats/emendas/total');
+    return { totalPago: Number((res.data as StatsEmendasTotal).totalPago ?? 0) };
+  } catch {
+    console.warn('Não foi possível carregar total de emendas.');
+    return { totalPago: 0 };
+  }
+}
+
+export async function getRankingDespesas(
+  limite = 3,
+): Promise<RankingParlamentarItem[]> {
+  try {
+    const res = await api.get(`/stats/despesas/ranking?limite=${limite}`);
+    const data = res.data as RankingParlamentarItem[];
+    return Array.isArray(data) ? data : [];
+  } catch {
+    console.warn('Não foi possível carregar ranking de despesas.');
+    return [];
+  }
+}
+
+export async function getRankingEmendas(
+  limite = 3,
+): Promise<RankingParlamentarItem[]> {
+  try {
+    const res = await api.get(`/stats/emendas/ranking?limite=${limite}`);
+    const data = res.data as RankingParlamentarItem[];
+    return Array.isArray(data) ? data : [];
+  } catch {
+    console.warn('Não foi possível carregar ranking de emendas.');
+    return [];
+  }
+}
+
+/* ------------------------------------------------------------------ *
  * Ranking por afinidade (busca avançada)
  * ------------------------------------------------------------------ */
 

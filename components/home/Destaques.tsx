@@ -8,28 +8,22 @@ export async function Destaques() {
   const parlamentares = data ? data.slice(0, 8) : [];
 
   return (
-    <section id="destaques" className="bg-white py-16">
+    <section id="explore-parlamentares" className="bg-white py-16">
       <div className="container mx-auto px-4">
         <div className="mb-10 flex items-center justify-between">
           <div>
-            {/*
-              Estes não são "destaques" por nenhum critério de relevância:
-              são os primeiros da listagem, em ordem alfabética. O título diz
-              exatamente isso enquanto não existe um ranking real no backend.
-            */}
             <h2 className="text-2xl font-bold text-slate-900">
-              Comece por aqui
+              Explore parlamentares
             </h2>
-            <p className="mt-1 text-slate-500">
-              Uma amostra da lista em ordem alfabética
-              {meta.total > 0 ? ` — ${meta.total} parlamentares no total` : ''}.
-              Use a busca para ir direto a um perfil.
+            <p className="mt-1 max-w-2xl text-slate-500">
+              Consulte perfis, votações, despesas, emendas e outras informações
+              sobre seus representantes.
             </p>
           </div>
 
           <Link
             href="/parlamentares"
-            className="flex items-center gap-1 text-sm font-semibold text-brasil-blue hover:underline"
+            className="hidden items-center gap-1 text-sm font-semibold text-brasil-blue hover:underline sm:flex"
           >
             Ver todos &rarr;
           </Link>
@@ -46,11 +40,20 @@ export async function Destaques() {
             Não conseguimos carregar os parlamentares agora. Verifique sua conexão e tente novamente.
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:gap-6 md:grid-cols-3 lg:grid-cols-4">
             {parlamentares.map((parlamentar: Parlamentar) => (
               <ParlamentarCard key={parlamentar.id} parlamentar={parlamentar} />
             ))}
           </div>
+        )}
+
+        {meta.total > 0 && (
+          <p className="mt-6 text-center text-sm text-slate-400">
+            Mostrando {parlamentares.length} de {meta.total} parlamentares.{' '}
+            <Link href="/parlamentares" className="font-semibold text-brasil-blue hover:underline">
+              Ver lista completa →
+            </Link>
+          </p>
         )}
       </div>
     </section>
