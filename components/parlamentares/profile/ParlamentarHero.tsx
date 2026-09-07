@@ -1,7 +1,7 @@
 import Image from 'next/image';
-import Link from 'next/link';
-import { BadgeCheck, ExternalLink, Mail, MapPin, Phone } from 'lucide-react';
+import { BadgeCheck } from 'lucide-react';
 import { ParlamentarPerfil } from '@/types';
+import { ContatoDropdown } from './ContatoDropdown';
 
 interface ParlamentarHeroProps {
   profile: ParlamentarPerfil;
@@ -10,8 +10,6 @@ interface ParlamentarHeroProps {
 export function ParlamentarHero({ profile }: ParlamentarHeroProps) {
   const { parlamentar } = profile;
 
-  // Situação do mandato vem de `condicao_mandato`. Sem o dado, dizemos isso —
-  // não afirmamos "Em exercício".
   const situacao = parlamentar.situacaoMandato ?? parlamentar.situacao ?? null;
   const situacaoLabel = situacao ?? 'Situação do mandato não informada';
   const situacaoClasses = situacao
@@ -24,12 +22,11 @@ export function ParlamentarHero({ profile }: ParlamentarHeroProps) {
         <div className="h-2 bg-gradient-to-r from-brasil-green via-brasil-yellow to-brasil-blue" />
 
         <div className="p-5 md:p-8">
-          {/* Mobile: foto pequena ao lado do nome. Desktop: foto grande em coluna separada */}
           <div className="flex flex-col gap-6 lg:flex-row">
 
-            {/* Foto — compacta em mobile, larga no desktop */}
+            {/* Foto */}
             <div className="shrink-0 lg:w-[260px]">
-              {/* Mobile: linha com foto circular + badges */}
+              {/* Mobile: foto compacta + badges */}
               <div className="flex items-center gap-4 lg:hidden">
                 <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
                   <Image
@@ -51,7 +48,7 @@ export function ParlamentarHero({ profile }: ParlamentarHeroProps) {
                 </div>
               </div>
 
-              {/* Desktop: foto grande com overlay */}
+              {/* Desktop: foto grande */}
               <div className="relative hidden aspect-[4/5] overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 lg:block">
                 <Image
                   src={parlamentar.urlFoto}
@@ -73,7 +70,7 @@ export function ParlamentarHero({ profile }: ParlamentarHeroProps) {
 
             {/* Conteúdo textual */}
             <div className="flex-1 space-y-4 md:space-y-5">
-              {/* Badges — visíveis só no desktop (no mobile já estão ao lado da foto) */}
+              {/* Badges — só no desktop */}
               <div className="hidden flex-wrap items-center gap-2 lg:flex">
                 <span className="rounded-full bg-brasil-blue/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-brasil-blue">
                   Perfil do parlamentar
@@ -92,15 +89,13 @@ export function ParlamentarHero({ profile }: ParlamentarHeroProps) {
                 </p>
               </div>
 
+              {/* Chips — cargo e partido/UF apenas, sem casa legislativa */}
               <div className="flex flex-wrap gap-2 text-sm">
                 <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 font-medium text-slate-700 md:px-4 md:py-2">
                   {parlamentar.cargo ?? 'Parlamentar'}
                 </span>
                 <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 font-medium text-slate-700 md:px-4 md:py-2">
                   {parlamentar.siglaPartido} · {parlamentar.uf}
-                </span>
-                <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 font-medium text-slate-700 md:px-4 md:py-2">
-                  {parlamentar.casaLegislativa ?? 'Poder Legislativo'}
                 </span>
                 {parlamentar.legislatura ? (
                   <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 font-medium text-slate-700 md:px-4 md:py-2">
@@ -110,74 +105,18 @@ export function ParlamentarHero({ profile }: ParlamentarHeroProps) {
               </div>
 
               {profile.resumo ? (
-                <p className="max-w-3xl text-sm leading-7 text-slate-600 md:text-base">{profile.resumo}</p>
+                <p className="max-w-3xl text-sm leading-7 text-slate-600 md:text-base">
+                  {profile.resumo}
+                </p>
               ) : null}
             </div>
           </div>
         </div>
       </div>
 
+      {/* Sidebar — contato como dropdown em mobile, sempre aberto em desktop */}
       <aside className="space-y-4">
-        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
-          <h2 className="text-lg font-bold text-slate-900">Contato e identificação</h2>
-
-          <div className="mt-4 space-y-4 text-sm text-slate-600 md:mt-5">
-            <div className="flex items-start gap-3">
-              <Mail className="mt-0.5 h-4 w-4 shrink-0 text-brasil-blue" />
-              <div className="min-w-0">
-                <p className="font-semibold text-slate-900">E-mail institucional</p>
-                {parlamentar.email ? (
-                  <a
-                    href={`mailto:${parlamentar.email}`}
-                    className="break-all hover:text-brasil-blue"
-                  >
-                    {parlamentar.email}
-                  </a>
-                ) : (
-                  <p>Não informado</p>
-                )}
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3">
-              <Phone className="mt-0.5 h-4 w-4 shrink-0 text-brasil-blue" />
-              <div>
-                <p className="font-semibold text-slate-900">Telefone do gabinete</p>
-                <p>{parlamentar.gabinete.telefone || 'Não informado'}</p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3">
-              <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-brasil-blue" />
-              <div>
-                <p className="font-semibold text-slate-900">Gabinete</p>
-                <p>
-                  {parlamentar.gabinete.endereco || `${parlamentar.gabinete.predio} · Sala ${parlamentar.gabinete.sala}`}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {parlamentar.redesSociais.length > 0 && (
-            <div className="mt-5 border-t border-slate-200 pt-4 md:mt-6 md:pt-5">
-              <p className="text-sm font-semibold text-slate-900">Canais públicos</p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {parlamentar.redesSociais.map((rede) => (
-                  <Link
-                    key={`${rede.rede}-${rede.url}`}
-                    href={rede.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-brasil-blue hover:text-brasil-blue"
-                  >
-                    {rede.rede}
-                    <ExternalLink size={14} />
-                  </Link>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+        <ContatoDropdown parlamentar={parlamentar} />
       </aside>
     </section>
   );
