@@ -9,8 +9,8 @@ import { getRankingDespesas, getRankingEmendas } from '@/services/parlamentares'
 
 export default async function Home() {
   const [rankingDespesas, rankingEmendas] = await Promise.all([
-    getRankingDespesas(2),
-    getRankingEmendas(2),
+    getRankingDespesas(10),
+    getRankingEmendas(10),
   ]);
 
   const temDados = rankingDespesas.length > 0 || rankingEmendas.length > 0;

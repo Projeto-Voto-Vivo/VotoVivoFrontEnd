@@ -41,13 +41,42 @@ function display(value?: string | null) {
   return value?.trim() || '—';
 }
 
-// Cores de fundo do quadrante da foto por tipo de slide
 const FOTO_BG: Record<'emendas' | 'despesas', string> = {
   emendas: 'bg-emerald-50',
   despesas: 'bg-blue-50',
 };
 
 const AUTOPLAY_INTERVAL = 4500;
+const SLIDES_POR_CICLO = 4;
+
+/**
+ * Monta todos os pares intercalados (emenda, despesa) a partir dos rankings.
+ * Exemplo com top 5 de cada:
+ *   [e0,d0, e1,d1, e2,d2, e3,d3, e4,d4]
+ * O carrossel exibe 4 slides por vez (um "ciclo"), avançando o offset a cada
+ * volta completa para mostrar rostos diferentes.
+ */
+function buildAllSlides(
+  rankingEmendas: RankingParlamentarItem[],
+  rankingDespesas: RankingParlamentarItem[],
+): Slide[] {
+  const maxLen = Math.max(rankingEmendas.length, rankingDespesas.length);
+  const all: Slide[] = [];
+
+  for (let i = 0; i < maxLen; i++) {
+    const e = rankingEmendas[i];
+    const d = rankingDespesas[i];
+
+    if (e && (e.totalEmendas ?? 0) > 0) {
+      all.push({ parlamentar: e, tipo: 'emendas', valor: e.totalEmendas ?? 0 });
+    }
+    if (d && (d.totalDespesas ?? 0) > 0) {
+      all.push({ parlamentar: d, tipo: 'despesas', valor: d.totalDespesas ?? 0 });
+    }
+  }
+
+  return all;
+}
 
 export function CarrosselParlamentar({
   rankingDespesas,
@@ -55,77 +84,87 @@ export function CarrosselParlamentar({
 }: CarrosselParlamentarProps) {
   const router = useRouter();
 
-  const slides: Slide[] = [
-    // Intercalado: emenda 1, despesa 1, emenda 2, despesa 2
-    rankingEmendas[0] && {
-      parlamentar: rankingEmendas[0],
-      tipo: 'emendas' as const,
-      valor: rankingEmendas[0].totalEmendas ?? 0,
-    },
-    rankingDespesas[0] && {
-      parlamentar: rankingDespesas[0],
-      tipo: 'despesas' as const,
-      valor: rankingDespesas[0].totalDespesas ?? 0,
-    },
-    rankingEmendas[1] && {
-      parlamentar: rankingEmendas[1],
-      tipo: 'emendas' as const,
-      valor: rankingEmendas[1].totalEmendas ?? 0,
-    },
-    rankingDespesas[1] && {
-      parlamentar: rankingDespesas[1],
-      tipo: 'despesas' as const,
-      valor: rankingDespesas[1].totalDespesas ?? 0,
-    },
-  ].filter((s): s is Slide => Boolean(s) && s.valor > 0);
+  // Todos os pares disponíveis (até 20 com top 10 de cada)
+  const allSlides = buildAllSlides(rankingEmendas, rankingDespesas);
 
-  const total = slides.length;
+  // offset: início do grupo de 4 atual
+  const [offset, setOffset] = useState(0);
+  // índice dentro do grupo de 4 (0–3)
+  const [posicao, setPosicao] = useState(0);
 
-  const [atual, setAtual] = useState(0);
+  // Slide exibido — separado do "atual" para evitar piscada durante fade
+  const [slideExibido, setSlideExibido] = useState<Slide | null>(
+    allSlides[0] ?? null,
+  );
   const [saindo, setSaindo] = useState(false);
+
   const pausadoRef = useRef(false);
-  // Ref para o índice atual — evita dependência no intervalo
-  const atualRef = useRef(0);
+  const posicaoRef = useRef(0);
+  const offsetRef = useRef(0);
 
-  // Mantém ref sincronizada com state
-  useEffect(() => {
-    atualRef.current = atual;
-  }, [atual]);
+  useEffect(() => { posicaoRef.current = posicao; }, [posicao]);
+  useEffect(() => { offsetRef.current = offset; }, [offset]);
 
-  function irPara(index: number) {
-    if (index === atualRef.current) return;
-    setSaindo(true);
-    setTimeout(() => {
-      setAtual(index);
-      setSaindo(false);
-    }, 180);
-  }
+  // Slides do ciclo atual (grupo de 4)
+  const totalAll = allSlides.length;
+  const cicloSlides: Slide[] = Array.from({ length: SLIDES_POR_CICLO }, (_, i) => {
+    if (totalAll === 0) return null;
+    return allSlides[(offset + i) % totalAll];
+  }).filter((s): s is Slide => s !== null);
 
-  // Autoplay — intervalo fixo, lê índice via ref para não reiniciar
-  useEffect(() => {
-    if (total === 0) return;
-    const id = setInterval(() => {
-      if (pausadoRef.current) return;
-      const proximo = (atualRef.current + 1) % total;
+  function avancar() {
+    const novaPosicao = posicaoRef.current + 1;
+
+    // Completou o ciclo de 4 — avança o offset para o próximo grupo
+    if (novaPosicao >= SLIDES_POR_CICLO) {
+      const novoOffset = (offsetRef.current + SLIDES_POR_CICLO) % totalAll;
       setSaindo(true);
       setTimeout(() => {
-        setAtual(proximo);
+        setOffset(novoOffset);
+        setPosicao(0);
+        setSlideExibido(allSlides[novoOffset % totalAll]);
         setSaindo(false);
-      }, 180);
+      }, 220);
+    } else {
+      const proxSlide = allSlides[(offsetRef.current + novaPosicao) % totalAll];
+      setSaindo(true);
+      setTimeout(() => {
+        setPosicao(novaPosicao);
+        setSlideExibido(proxSlide);
+        setSaindo(false);
+      }, 220);
+    }
+  }
+
+  function irPara(i: number) {
+    if (i === posicaoRef.current) return;
+    const proxSlide = allSlides[(offsetRef.current + i) % totalAll];
+    setSaindo(true);
+    setTimeout(() => {
+      setPosicao(i);
+      setSlideExibido(proxSlide);
+      setSaindo(false);
+    }, 220);
+  }
+
+  // Autoplay — intervalo fixo, sem dependências que reiniciem o timer
+  useEffect(() => {
+    if (totalAll === 0) return;
+    const id = setInterval(() => {
+      if (pausadoRef.current) return;
+      avancar();
     }, AUTOPLAY_INTERVAL);
     return () => clearInterval(id);
-  }, [total]); // só monta uma vez
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [totalAll]);
 
-  if (slides.length === 0) return null;
+  if (!slideExibido || cicloSlides.length === 0) return null;
 
-  const slide = slides[atual];
-  const { parlamentar, tipo, valor } = slide;
-  const labelTipo =
-    tipo === 'emendas' ? 'em emendas pagas' : 'em despesas parlamentares';
-  const tagCor =
-    tipo === 'emendas'
-      ? 'bg-brasil-green/10 text-brasil-green'
-      : 'bg-brasil-blue/10 text-brasil-blue';
+  const { parlamentar, tipo, valor } = slideExibido;
+  const labelTipo = tipo === 'emendas' ? 'em emendas pagas' : 'em despesas parlamentares';
+  const tagCor = tipo === 'emendas'
+    ? 'bg-brasil-green/10 text-brasil-green'
+    : 'bg-brasil-blue/10 text-brasil-blue';
   const tagLabel = tipo === 'emendas' ? 'Emendas' : 'Despesas';
   const fotoBg = FOTO_BG[tipo];
 
@@ -135,6 +174,7 @@ export function CarrosselParlamentar({
       onMouseEnter={() => { pausadoRef.current = true; }}
       onMouseLeave={() => { pausadoRef.current = false; }}
     >
+      {/* O conteúdo não troca até DEPOIS do fade — sem piscada */}
       <div className={`transition-opacity duration-200 ${saindo ? 'opacity-0' : 'opacity-100'}`}>
 
         {/* ── Mobile ── */}
@@ -171,14 +211,14 @@ export function CarrosselParlamentar({
 
             <div className="mt-4 flex items-center justify-between">
               <div className="flex gap-2">
-                {slides.map((_, i) => (
+                {cicloSlides.map((_, i) => (
                   <button
                     key={i}
                     type="button"
                     aria-label={`Ir para slide ${i + 1}`}
                     onClick={() => irPara(i)}
                     className={`h-2 rounded-full transition-all duration-300 ${
-                      i === atual ? 'w-6 bg-brasil-blue' : 'w-2 bg-slate-300'
+                      i === posicao ? 'w-6 bg-brasil-blue' : 'w-2 bg-slate-300'
                     }`}
                   />
                 ))}
@@ -196,11 +236,7 @@ export function CarrosselParlamentar({
 
         {/* ── Desktop 2×2 ── */}
         <div className="hidden grid-cols-2 sm:grid">
-          {/* Superior esquerdo — foto */}
-          <div
-            className={`relative overflow-hidden ${fotoBg}`}
-            style={{ height: 220 }}
-          >
+          <div className={`relative overflow-hidden ${fotoBg}`} style={{ height: 220 }}>
             <Image
               src={normalizePhoto(parlamentar.urlFoto, parlamentar.nomeParlamentar)}
               alt={parlamentar.nomeParlamentar}
@@ -211,11 +247,7 @@ export function CarrosselParlamentar({
             />
           </div>
 
-          {/* Superior direito — big number */}
-          <div
-            className="flex flex-col justify-center gap-3 bg-slate-50 px-6 py-6"
-            style={{ height: 220 }}
-          >
+          <div className="flex flex-col justify-center gap-3 bg-slate-50 px-6 py-6" style={{ height: 220 }}>
             <span className={`w-fit rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wider ${tagCor}`}>
               {tagLabel}
             </span>
@@ -232,7 +264,6 @@ export function CarrosselParlamentar({
             </button>
           </div>
 
-          {/* Inferior esquerdo — nome */}
           <div className="flex flex-col justify-center border-t border-slate-100 bg-white px-5 py-4">
             <p className="line-clamp-1 text-base font-bold text-slate-900">
               {display(parlamentar.nomeParlamentar)}
@@ -242,16 +273,15 @@ export function CarrosselParlamentar({
             </p>
           </div>
 
-          {/* Inferior direito — dots */}
           <div className="flex items-center justify-end gap-2 border-t border-slate-100 bg-slate-50 px-6 py-4">
-            {slides.map((_, i) => (
+            {cicloSlides.map((_, i) => (
               <button
                 key={i}
                 type="button"
                 aria-label={`Ir para slide ${i + 1}`}
                 onClick={() => irPara(i)}
                 className={`h-2 rounded-full transition-all duration-300 ${
-                  i === atual
+                  i === posicao
                     ? 'w-6 bg-brasil-blue'
                     : 'w-2 bg-slate-300 hover:bg-slate-400'
                 }`}

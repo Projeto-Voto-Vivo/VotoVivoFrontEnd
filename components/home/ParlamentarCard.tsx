@@ -59,9 +59,6 @@ export function ParlamentarCard({ parlamentar }: ParlamentarCardProps) {
           <p className="line-clamp-2 text-sm font-bold leading-tight text-white sm:truncate sm:text-lg">
             {parlamentar.nomeParlamentar}
           </p>
-          <p className="mt-0.5 hidden text-xs font-medium uppercase tracking-wider text-slate-300 sm:block">
-            {parlamentar.casaLegislativa ?? parlamentar.cargo ?? 'Poder Legislativo'}
-          </p>
         </div>
       </div>
 
