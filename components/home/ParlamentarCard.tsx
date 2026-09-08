@@ -37,7 +37,7 @@ export function ParlamentarCard({ parlamentar }: ParlamentarCardProps) {
       href={`/parlamentares/${parlamentar.id}`}
       className="group flex h-full flex-col overflow-hidden rounded-xl border border-slate-200 bg-white transition-all duration-300 hover:border-brasil-blue/30 hover:shadow-xl"
     >
-      <div className="relative aspect-[4/3] overflow-hidden bg-slate-100">
+      <div className="relative aspect-[3/4] overflow-hidden bg-slate-100 sm:aspect-[4/3]">
         <div className="absolute inset-0 z-10 bg-gradient-to-t from-slate-900/80 to-transparent" />
 
         <span
