@@ -5,9 +5,11 @@ import Link from 'next/link';
 import { ChevronLeft, ChevronRight, Info, Loader2, Receipt } from 'lucide-react';
 import { EmendaResumoPerfil, ParlamentarPerfil } from '@/types';
 import { getEmendasParlamentar } from '@/services/parlamentares';
+import { explicarExecucao } from '@/components/parlamentares/emendas/explicacoesExecucao';
 import { MicroInfoCard } from '../shared/MicroInfoCard';
 import { SectionShell } from '../shared/SectionShell';
 import { formatCurrency } from '../shared/formatters';
+import { PanoramaEmendasDashboard } from './PanoramaEmendasDashboard';
 
 interface EmendasPanelProps {
   parlamentarId: number;
@@ -59,21 +61,39 @@ export function EmendasPanel({ parlamentarId, profile }: EmendasPanelProps) {
     : 0;
 
   return (
+    <div className="space-y-6">
+      {/*
+        O panorama abre o quadro: primeiro onde o parlamentar atua e para onde
+        o dinheiro foi, depois a lista emenda a emenda. O conjunto antes do
+        caso a caso.
+      */}
+      <PanoramaEmendasDashboard parlamentarId={parlamentarId} />
+
     <SectionShell
       icon={<Receipt className="h-6 w-6" />}
       title="Emendas parlamentares"
     >
+      {/*
+        Cada rótulo explica a si mesmo no "?" ao lado. Antes havia um parágrafo
+        abaixo dizendo o mesmo — com a explicação no card, ele virava repetição.
+      */}
       <div className="grid gap-3 md:grid-cols-3">
-        <MicroInfoCard label="Empenhado" value={formatCurrency(emendas.totalEmpenhado)} />
-        <MicroInfoCard label="Liquidado" value={formatCurrency(emendas.totalLiquidado)} />
-        <MicroInfoCard label="Pago" value={formatCurrency(emendas.totalPago)} />
+        <MicroInfoCard
+          label="Empenhado"
+          value={formatCurrency(emendas.totalEmpenhado)}
+          dica={explicarExecucao('Empenhado')}
+        />
+        <MicroInfoCard
+          label="Liquidado"
+          value={formatCurrency(emendas.totalLiquidado)}
+          dica={explicarExecucao('Liquidado')}
+        />
+        <MicroInfoCard
+          label="Pago"
+          value={formatCurrency(emendas.totalPago)}
+          dica={explicarExecucao('Pago')}
+        />
       </div>
-
-      <p className="mt-3 text-xs leading-5 text-slate-500">
-        Empenhado, liquidado e pago são fases distintas da execução: empenhar é
-        reservar o recurso, pagar é transferi-lo. Só o valor pago saiu dos
-        cofres públicos.
-      </p>
 
       {/*
         Um aviso só, no topo: vale para toda emenda da lista, e repetir a
@@ -176,5 +196,6 @@ export function EmendasPanel({ parlamentarId, profile }: EmendasPanelProps) {
         </div>
       )}
     </SectionShell>
+    </div>
   );
 }

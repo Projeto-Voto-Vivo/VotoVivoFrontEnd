@@ -515,6 +515,40 @@ export interface FiltrosRanking {
   disponivel: boolean;
 }
 
+/* ------------------------------------------------------------------ *
+ * Panorama das emendas
+ * ------------------------------------------------------------------ */
+
+/** Uma fatia do panorama: por área de gasto ou por destino. */
+export interface RecorteEmendas {
+  /** Nome da função orçamentária ou da localidade, como vem da fonte. */
+  rotulo: string;
+  quantidade: number;
+  empenhado: number;
+  pago: number;
+}
+
+export interface PanoramaEmendas {
+  /** Função orçamentária: a finalidade declarada do gasto. */
+  porArea: RecorteEmendas[];
+  /** Localidade do gasto: para onde o dinheiro foi destinado. */
+  porLocalidade: RecorteEmendas[];
+  /** Emendas fora de cada recorte, por falta do campo na fonte. */
+  semArea: number;
+  semLocalidade: number;
+  /**
+   * Valor empenhado que ficou de fora de cada recorte.
+   *
+   * A contagem sozinha não fecha a conta: 3 emendas de fora podem ser R$ 3 mil
+   * ou R$ 30 milhões. Com o valor, `totalEmpenhado - empenhadoSemArea` é
+   * exatamente a soma das barras, e o painel pode dizer isso na tela.
+   */
+  empenhadoSemArea: number;
+  empenhadoSemLocalidade: number;
+  /** `false` enquanto a API não publica os agregados. */
+  disponivel: boolean;
+}
+
 export interface EmendasPerfil {
   quantidade: number;
   totalEmpenhado: number;

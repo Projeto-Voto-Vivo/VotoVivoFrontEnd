@@ -21,12 +21,14 @@ import {
   ObjetoVotacao,
   Parlamentar,
   ParlamentarDetalhe,
+  PanoramaEmendas,
   ParlamentarPerfil,
   PerfilIndicador,
   PerfilTematico,
   PresencaDetalhe,
   PresencaPerfil,
   PresencaPorEscopo,
+  RecorteEmendas,
   ProposicaoDaVotacao,
   ProposicaoPerfil,
   ComissaoRanking,
@@ -1719,6 +1721,82 @@ export async function getProposicoesParlamentar(
       data: [],
       meta: { total: 0, page, lastPage: 1, limit: PROPOSICOES_PAGE_SIZE },
     };
+  }
+}
+
+type BackendRecorteEmendas = {
+  funcao?: string | null;
+  localidade?: string | null;
+  rotulo?: string | null;
+  quantidade?: number | null;
+  empenhado?: string | number | null;
+  pago?: string | number | null;
+};
+
+function mapRecorteEmendas(item: BackendRecorteEmendas): RecorteEmendas {
+  return {
+    rotulo:
+      (item.funcao ?? item.localidade ?? item.rotulo ?? '').trim() || 'Não informado',
+    quantidade: Number(item.quantidade ?? 0) || 0,
+    empenhado: parseMoney(item.empenhado),
+    pago: parseMoney(item.pago),
+  };
+}
+
+const PANORAMA_EMENDAS_VAZIO: PanoramaEmendas = {
+  porArea: [],
+  porLocalidade: [],
+  semArea: 0,
+  semLocalidade: 0,
+  empenhadoSemArea: 0,
+  empenhadoSemLocalidade: 0,
+  disponivel: false,
+};
+
+/**
+ * Panorama das emendas: em que áreas o parlamentar atua e para onde o dinheiro
+ * foi destinado.
+ *
+ * Os dois recortes vêm agregados do servidor, junto do resumo. Somar as páginas
+ * de emendas no navegador daria um número que depende de quantas páginas foram
+ * lidas — e pareceria igualmente correto.
+ *
+ * Enquanto a API não publica os agregados, `disponivel` é `false` e a interface
+ * diz isso, em vez de desenhar um gráfico sobre a amostra que tem em mãos.
+ */
+export async function getPanoramaEmendas(
+  parlamentarId: number,
+): Promise<PanoramaEmendas> {
+  try {
+    const res = await api.get(`/parlamentares/${parlamentarId}/emendas/resumo`);
+    const porArea = res.data?.porFuncao ?? res.data?.porArea;
+    const porLocalidade = res.data?.porLocalidade;
+    // Os contadores foram pedidos dentro de `metadata`; aceitar também no topo
+    // custa uma linha e evita depender de onde exatamente eles pousaram.
+    const meta = res.data?.metadata ?? res.data ?? {};
+
+    if (!Array.isArray(porArea) && !Array.isArray(porLocalidade)) {
+      return { ...PANORAMA_EMENDAS_VAZIO };
+    }
+
+    return {
+      porArea: (Array.isArray(porArea) ? porArea : [])
+        .map(mapRecorteEmendas)
+        .filter((item) => item.quantidade > 0 || item.empenhado > 0),
+      porLocalidade: (Array.isArray(porLocalidade) ? porLocalidade : [])
+        .map(mapRecorteEmendas)
+        .filter((item) => item.quantidade > 0 || item.empenhado > 0),
+      semArea: Number(meta.semFuncao ?? meta.semArea ?? 0) || 0,
+      semLocalidade: Number(meta.semLocalidade ?? 0) || 0,
+      empenhadoSemArea: parseMoney(
+        meta.empenhadoSemFuncao ?? meta.empenhadoSemArea,
+      ),
+      empenhadoSemLocalidade: parseMoney(meta.empenhadoSemLocalidade),
+      disponivel: true,
+    };
+  } catch {
+    console.warn('Não foi possível carregar o panorama de emendas.');
+    return { ...PANORAMA_EMENDAS_VAZIO };
   }
 }
 

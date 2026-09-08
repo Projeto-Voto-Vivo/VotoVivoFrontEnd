@@ -39,6 +39,12 @@
    * ΔE 21,5, bem acima do piso.
    */
   --color-fidelidade: #1baf7a;
+
+  /*
+   * Emendas. Quinta cor da família, validada junto das outras quatro — o pior
+   * par de daltonismo fica em ΔE 9,2, acima do piso de 8.
+   */
+  --color-emenda: #eb6834;
 }
 
 html {
