@@ -126,6 +126,16 @@ export function HeaderMobileDrawer({
 
             <li>
               <Link
+                href="/candidatos"
+                onClick={closeDrawer}
+                className="flex min-h-12 items-center rounded-md px-3 text-lg font-semibold text-slate-800 transition-colors hover:bg-blue-50 hover:text-brasil-blue"
+              >
+                Eleições 2026
+              </Link>
+            </li>
+
+            <li>
+              <Link
                 href="/proposicoes"
                 onClick={closeDrawer}
                 className="flex min-h-12 items-center rounded-md px-3 text-lg font-semibold text-slate-800 transition-colors hover:bg-blue-50 hover:text-brasil-blue"
