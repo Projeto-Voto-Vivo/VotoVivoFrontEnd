@@ -47,6 +47,13 @@ export function HeaderDesktopNav() {
       </div>
 
       <Link
+        href="/candidatos"
+        className="py-2 font-medium text-gray-700 transition-colors hover:text-brasil-blue"
+      >
+        Eleições 2026
+      </Link>
+
+      <Link
         href="/proposicoes"
         className="py-2 font-medium text-gray-700 transition-colors hover:text-brasil-blue"
       >

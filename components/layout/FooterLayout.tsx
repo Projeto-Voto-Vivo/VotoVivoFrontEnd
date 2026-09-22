@@ -3,6 +3,7 @@ import Link from "next/link";
 const navigationLinks = [
   { href: "/", label: "Início" },
   { href: "/parlamentares", label: "Parlamentares" },
+  { href: "/candidatos", label: "Eleições 2026" },
   { href: "/proposicoes", label: "Proposições" },
   { href: "/educacao", label: "Educação" },
 ];
