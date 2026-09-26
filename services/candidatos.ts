@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
+import api from './api';
 
 export interface Candidato {
   idCandidaturaTse: number;
@@ -46,30 +46,19 @@ export async function getCandidatosLista(
   if (partido) params.set('partido', partido);
   if (uf) params.set('uf', uf);
 
-  const res = await fetch(`${API_URL}/candidatos?${params.toString()}`, {
-    cache: 'no-store',
-  });
+  const res = await api.get<CandidatoListaResponse>(
+    `/candidatos?${params.toString()}`
+  );
 
-  if (!res.ok) {
-    throw new Error('Erro ao carregar candidatos');
-  }
-
-  return res.json();
+  return res.data;
 }
 
 export async function getCandidato(
   idCandidaturaTse: number
 ): Promise<Candidato> {
-  const res = await fetch(
-    `${API_URL}/candidatos/${idCandidaturaTse}`,
-    {
-      cache: 'no-store',
-    }
+  const res = await api.get<Candidato>(
+    `/candidatos/${idCandidaturaTse}`
   );
 
-  if (!res.ok) {
-    throw new Error('Candidato não encontrado');
-  }
-
-  return res.json();
+  return res.data;
 }
