@@ -1169,11 +1169,11 @@ async function listarComFiltroEmMemoria(
   };
 }
 
-function buildExpenseQuery(page: number, ano?: number | null) {
+function buildExpenseQuery(page: number, ano?: number | null, limite = DESPESAS_PAGE_SIZE) {
   const params = new URLSearchParams();
   params.append('pagina', String(page));
-  params.append('limit', String(DESPESAS_PAGE_SIZE));
-  params.append('limite', String(DESPESAS_PAGE_SIZE));
+  params.append('limit', String(limite));
+  params.append('limite', String(limite));
 
   if (ano) {
     params.append('ano', String(ano));
@@ -1212,22 +1212,23 @@ export async function getDespesasParlamentar(
   id: number,
   page: number = 1,
   ano?: number | null,
+  limite: number = DESPESAS_PAGE_SIZE,
 ): Promise<ListaDespesasResponse> {
   try {
     const res = await api.get(
-      `/parlamentares/${id}/despesas?${buildExpenseQuery(page, ano)}`,
+      `/parlamentares/${id}/despesas?${buildExpenseQuery(page, ano, limite)}`,
     );
     const { itens, meta } = unwrapList<Despesa>(res.data);
 
     return {
       data: itens,
-      meta: normalizeMeta(meta, page, DESPESAS_PAGE_SIZE, itens.length),
+      meta: normalizeMeta(meta, page, limite, itens.length),
     };
   } catch {
     console.warn('Não foi possível carregar despesas do backend.');
     return {
       data: [],
-      meta: { total: 0, page, lastPage: 1, limit: DESPESAS_PAGE_SIZE },
+      meta: { total: 0, page, lastPage: 1, limit: limite },
     };
   }
 }
@@ -1291,19 +1292,20 @@ function montarDespesasPerfil(
 export async function getDespesasPerfil(
   id: number,
   ano?: number | null,
+  limite: number = DESPESAS_PAGE_SIZE,
 ): Promise<DespesasPerfil> {
   const anoSolicitado = ano ?? null;
 
   if (anoSolicitado) {
     const [resumoDespesas, despesasResponse] = await Promise.all([
       getResumoDespesas(id, anoSolicitado),
-      getDespesasParlamentar(id, 1, anoSolicitado),
+      getDespesasParlamentar(id, 1, anoSolicitado, limite),
     ]);
 
     return montarDespesasPerfil(resumoDespesas, despesasResponse, anoSolicitado);
   }
 
-  const despesasMaisRecentes = await getDespesasParlamentar(id, 1);
+  const despesasMaisRecentes = await getDespesasParlamentar(id, 1, undefined, limite);
   const anoInferido = inferExpenseYear(despesasMaisRecentes.data);
   const resumoDespesas = await getResumoDespesas(id, anoInferido ?? undefined);
   const anoReferencia =
@@ -1312,7 +1314,7 @@ export async function getDespesasPerfil(
       : Number(resumoDespesas.anoReferencia);
 
   const despesasResponse = anoReferencia
-    ? await getDespesasParlamentar(id, 1, anoReferencia)
+    ? await getDespesasParlamentar(id, 1, anoReferencia, limite)
     : despesasMaisRecentes;
 
   return montarDespesasPerfil(resumoDespesas, despesasResponse, anoReferencia);

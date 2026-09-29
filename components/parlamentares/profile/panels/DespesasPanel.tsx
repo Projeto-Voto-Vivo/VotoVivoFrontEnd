@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Building2,
   ChevronLeft,
@@ -20,6 +20,7 @@ import { MicroInfoCard } from '../shared/MicroInfoCard';
 import { PainelComDashboards } from '../shared/PainelComDashboards';
 import { SectionShell } from '../shared/SectionShell';
 import { formatCurrency, formatDate } from '../shared/formatters';
+import { useTamanhoPagina } from '../shared/useTamanhoPagina';
 import { FornecedoresDespesasDashboard } from './FornecedoresDespesasDashboard';
 
 interface DespesasPanelProps {
@@ -64,6 +65,12 @@ export function DespesasPanel({ profile }: DespesasPanelProps) {
     profile.despesas.anoReferencia ? String(profile.despesas.anoReferencia) : '',
   );
   const [carregando, setCarregando] = useState(false);
+  // Em tela larga a lista acompanha a coluna de dashboards (resumo,
+  // categorias e fornecedores), que é alta: 10 registros. No celular, 5.
+  const tamanhoPagina = useTamanhoPagina({ larga: 10, celular: 5 });
+  // Último tamanho pedido ao backend: se ele devolver outro `meta.limit`, não
+  // ficamos pedindo de novo para sempre.
+  const tamanhoPedidoRef = useRef(profile.despesas.itensPorPagina);
 
   useEffect(() => {
     window.dispatchEvent(
@@ -118,7 +125,8 @@ export function DespesasPanel({ profile }: DespesasPanelProps) {
     setCarregando(true);
 
     try {
-      const response = await getDespesasPerfil(parlamentar.id, ano);
+      const response = await getDespesasPerfil(parlamentar.id, ano, tamanhoPagina);
+      tamanhoPedidoRef.current = tamanhoPagina;
       setDespesas(response);
       setItens(response.itensRecentes);
       setPaginaAtual(response.paginaAtual || 1);
@@ -145,7 +153,12 @@ export function DespesasPanel({ profile }: DespesasPanelProps) {
     setCarregando(true);
 
     try {
-      const response = await getDespesasParlamentar(parlamentar.id, novaPagina, anoParaListagem);
+      const response = await getDespesasParlamentar(
+        parlamentar.id,
+        novaPagina,
+        anoParaListagem,
+        tamanhoPagina,
+      );
       const offset = (response.meta.page - 1) * response.meta.limit;
 
       setItens(response.data.map((item, index) => mapDespesaToItem(item, index, offset)));
@@ -161,6 +174,37 @@ export function DespesasPanel({ profile }: DespesasPanelProps) {
       setCarregando(false);
     }
   }
+
+  // O primeiro lote vem do servidor no tamanho do celular; em tela larga (ou
+  // ao cruzar o breakpoint) recarrega a primeira página no tamanho certo.
+  useEffect(() => {
+    if (tamanhoPedidoRef.current === tamanhoPagina) return;
+
+    let cancelado = false;
+
+    getDespesasParlamentar(parlamentar.id, 1, anoParaListagem, tamanhoPagina).then(
+      (response) => {
+        if (cancelado) return;
+
+        // Marca só quando a resposta é aplicada: um efeito cancelado (troca de
+        // ano, modo estrito) não pode deixar o tamanho como "já pedido".
+        tamanhoPedidoRef.current = tamanhoPagina;
+        setItens(response.data.map((item, index) => mapDespesaToItem(item, index, 0)));
+        setPaginaAtual(response.meta.page);
+        setDespesas((current) => ({
+          ...current,
+          totalRegistros: response.meta.total,
+          paginaAtual: response.meta.page,
+          totalPaginas: response.meta.lastPage,
+          itensPorPagina: response.meta.limit,
+        }));
+      },
+    );
+
+    return () => {
+      cancelado = true;
+    };
+  }, [tamanhoPagina, parlamentar.id, anoParaListagem]);
 
   const hasResumo = despesas.totalAno > 0 || despesas.categorias.length > 0;
   const hasItens = itens.length > 0;
