@@ -1,5 +1,10 @@
 import Image from 'next/image';
 import { BadgeCheck } from 'lucide-react';
+import {
+  estiloSituacao,
+  linkTseCandidatura,
+  rotuloSituacao,
+} from './situacaoCandidatura';
 
 interface CandidatoHeroProps {
   candidato: {
@@ -21,56 +26,9 @@ interface CandidatoHeroProps {
 }
 
 export function CandidatoHero({ candidato }: CandidatoHeroProps) {
-  const situacao =
-    candidato.situacaoCandidatura ?? 'Situação não informada';
-
-  const situacaoClasses =
-    situacao.toLowerCase().includes('ativo') ||
-    situacao.toLowerCase().includes('registrada')
-      ? 'border-brasil-green/10 bg-brasil-green/10 text-brasil-green'
-      : 'border-slate-200 bg-slate-100 text-slate-600';
-
-  // Código utilizado pelo DivulgaCandContas do TSE
-  const regioesPorUf: Record<string, string> = {
-    AC: 'NORTE',
-    AP: 'NORTE',
-    AM: 'NORTE',
-    PA: 'NORTE',
-    RO: 'NORTE',
-    RR: 'NORTE',
-    TO: 'NORTE',
-
-    AL: 'NORDESTE',
-    BA: 'NORDESTE',
-    CE: 'NORDESTE',
-    MA: 'NORDESTE',
-    PB: 'NORDESTE',
-    PE: 'NORDESTE',
-    PI: 'NORDESTE',
-    RN: 'NORDESTE',
-    SE: 'NORDESTE',
-
-    DF: 'CENTROOESTE',
-    GO: 'CENTROOESTE',
-    MT: 'CENTROOESTE',
-    MS: 'CENTROOESTE',
-
-    ES: 'SUDESTE',
-    MG: 'SUDESTE',
-    RJ: 'SUDESTE',
-    SP: 'SUDESTE',
-
-    PR: 'SUL',
-    RS: 'SUL',
-    SC: 'SUL',
-  };
-
-  const codigoEleicao = '20322002026';
-
-  const linkTse =
-    candidato.descricaoEleicao?.toLowerCase().includes('federal')
-      ? `https://divulgacandcontas.tse.jus.br/divulga/#/candidato/BR/BR/${codigoEleicao}/${candidato.sqCandidato}/${candidato.anoEleicao}/BR`
-      : `https://divulgacandcontas.tse.jus.br/divulga/#/candidato/${regioesPorUf[candidato.uf ?? '']}/${candidato.uf}/${codigoEleicao}/${candidato.sqCandidato}/${candidato.anoEleicao}/${candidato.uf}`;
+  const situacao = rotuloSituacao(candidato.situacaoCandidatura);
+  const situacaoClasses = estiloSituacao(candidato.situacaoCandidatura).badge;
+  const linkTse = linkTseCandidatura(candidato);
 
   return (
     <section className="grid gap-6 xl:grid-cols-[1.45fr_0.85fr]">
