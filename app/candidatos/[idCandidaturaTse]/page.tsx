@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { redirect, notFound } from 'next/navigation';
 import { VoltarLink } from '@/components/layout/VoltarLink';
 import { CandidatoHero } from '@/components/candidatos/CandidatoHero';
@@ -33,12 +34,12 @@ export default async function CandidatoProfilePage({
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
           <VoltarLink fallbackHref="/candidatos" />
 
-          <a
+          <Link
             href="/candidatos"
             className="text-sm font-medium text-slate-400 transition-colors hover:text-brasil-blue"
           >
             Ver todos os candidatos
-          </a>
+          </Link>
         </div>
 
         <CandidatoHero candidato={candidato} />
