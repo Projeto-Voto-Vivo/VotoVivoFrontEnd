@@ -208,8 +208,9 @@ export function PanoramaEmendasDashboard({
     );
   }
 
+  // Em tela larga os dois recortes ficam lado a lado.
   return (
-    <>
+    <div className="grid items-start gap-6 xl:grid-cols-2">
       <Recorte
         titulo="Em que áreas as emendas atuam"
         descricao="Função orçamentária declarada de cada emenda — a finalidade do gasto."
@@ -229,6 +230,6 @@ export function PanoramaEmendasDashboard({
         empenhadoSemDado={panorama.empenhadoSemLocalidade}
         rotuloSemDado="a localidade"
       />
-    </>
+    </div>
   );
 }
