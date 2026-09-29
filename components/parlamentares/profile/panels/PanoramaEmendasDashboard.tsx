@@ -208,9 +208,10 @@ export function PanoramaEmendasDashboard({
     );
   }
 
-  // Em tela larga os dois recortes ficam lado a lado.
+  // Lado a lado enquanto o painel ocupa a largura toda (tablet); no `xl` ele
+  // vai para a coluna da direita do perfil e os recortes empilham.
   return (
-    <div className="grid items-start gap-6 xl:grid-cols-2">
+    <div className="grid items-start gap-6 md:grid-cols-2 xl:grid-cols-1">
       <Recorte
         titulo="Em que áreas as emendas atuam"
         descricao="Função orçamentária declarada de cada emenda — a finalidade do gasto."
