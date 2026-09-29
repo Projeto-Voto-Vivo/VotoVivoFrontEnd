@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { RankingParlamentarItem } from '@/services/parlamentares';
 
 interface Slide {
@@ -46,15 +47,17 @@ const FOTO_BG: Record<'emendas' | 'despesas', string> = {
   despesas: 'bg-blue-50',
 };
 
-const AUTOPLAY_INTERVAL = 4500;
-const SLIDES_POR_CICLO = 4;
+const AUTOPLAY_INTERVAL = 6000;
+
+/** Largura de um cartão e quantos cabem na trilha visível. */
+function medir(trilha: HTMLDivElement) {
+  const largura = (trilha.firstElementChild as HTMLElement | null)?.offsetWidth || trilha.clientWidth || 1;
+  return { largura, porTela: Math.max(1, Math.round(trilha.clientWidth / largura)) };
+}
 
 /**
- * Monta todos os pares intercalados (emenda, despesa) a partir dos rankings.
- * Exemplo com top 5 de cada:
- *   [e0,d0, e1,d1, e2,d2, e3,d3, e4,d4]
- * O carrossel exibe 4 slides por vez (um "ciclo"), avançando o offset a cada
- * volta completa para mostrar rostos diferentes.
+ * Intercala os rankings (emenda, despesa, emenda, despesa...) para o
+ * carrossel alternar entre os dois assuntos.
  */
 function buildAllSlides(
   rankingEmendas: RankingParlamentarItem[],
@@ -78,219 +81,227 @@ function buildAllSlides(
   return all;
 }
 
-export function CarrosselParlamentar({
-  rankingDespesas,
-  rankingEmendas,
-}: CarrosselParlamentarProps) {
-  const router = useRouter();
-
-  // Todos os pares disponíveis (até 20 com top 10 de cada)
-  const allSlides = buildAllSlides(rankingEmendas, rankingDespesas);
-
-  // offset: início do grupo de 4 atual
-  const [offset, setOffset] = useState(0);
-  // índice dentro do grupo de 4 (0–3)
-  const [posicao, setPosicao] = useState(0);
-
-  // Slide exibido — separado do "atual" para evitar piscada durante fade
-  const [slideExibido, setSlideExibido] = useState<Slide | null>(
-    allSlides[0] ?? null,
-  );
-  const [saindo, setSaindo] = useState(false);
-
-  const pausadoRef = useRef(false);
-  const posicaoRef = useRef(0);
-  const offsetRef = useRef(0);
-
-  useEffect(() => { posicaoRef.current = posicao; }, [posicao]);
-  useEffect(() => { offsetRef.current = offset; }, [offset]);
-
-  // Slides do ciclo atual (grupo de 4)
-  const totalAll = allSlides.length;
-  const cicloSlides: Slide[] = Array.from({ length: SLIDES_POR_CICLO }, (_, i) => {
-    if (totalAll === 0) return null;
-    return allSlides[(offset + i) % totalAll];
-  }).filter((s): s is Slide => s !== null);
-
-  function avancar() {
-    const novaPosicao = posicaoRef.current + 1;
-
-    // Completou o ciclo de 4 — avança o offset para o próximo grupo
-    if (novaPosicao >= SLIDES_POR_CICLO) {
-      const novoOffset = (offsetRef.current + SLIDES_POR_CICLO) % totalAll;
-      setSaindo(true);
-      setTimeout(() => {
-        setOffset(novoOffset);
-        setPosicao(0);
-        setSlideExibido(allSlides[novoOffset % totalAll]);
-        setSaindo(false);
-      }, 220);
-    } else {
-      const proxSlide = allSlides[(offsetRef.current + novaPosicao) % totalAll];
-      setSaindo(true);
-      setTimeout(() => {
-        setPosicao(novaPosicao);
-        setSlideExibido(proxSlide);
-        setSaindo(false);
-      }, 220);
-    }
-  }
-
-  function irPara(i: number) {
-    if (i === posicaoRef.current) return;
-    const proxSlide = allSlides[(offsetRef.current + i) % totalAll];
-    setSaindo(true);
-    setTimeout(() => {
-      setPosicao(i);
-      setSlideExibido(proxSlide);
-      setSaindo(false);
-    }, 220);
-  }
-
-  // Autoplay — intervalo fixo, sem dependências que reiniciem o timer
-  useEffect(() => {
-    if (totalAll === 0) return;
-    const id = setInterval(() => {
-      if (pausadoRef.current) return;
-      avancar();
-    }, AUTOPLAY_INTERVAL);
-    return () => clearInterval(id);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [totalAll]);
-
-  if (!slideExibido || cicloSlides.length === 0) return null;
-
-  const { parlamentar, tipo, valor } = slideExibido;
+function SlideParlamentar({ slide, posicao, total }: { slide: Slide; posicao: number; total: number }) {
+  const { parlamentar, tipo, valor } = slide;
   const labelTipo = tipo === 'emendas' ? 'em emendas pagas' : 'em despesas parlamentares';
   const tagCor = tipo === 'emendas'
     ? 'bg-brasil-green/10 text-brasil-green'
     : 'bg-brasil-blue/10 text-brasil-blue';
   const tagLabel = tipo === 'emendas' ? 'Emendas' : 'Despesas';
   const fotoBg = FOTO_BG[tipo];
+  const foto = normalizePhoto(parlamentar.urlFoto, parlamentar.nomeParlamentar);
+  const href = `/parlamentares/${parlamentar.id}`;
 
   return (
     <div
-      className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm"
-      onMouseEnter={() => { pausadoRef.current = true; }}
-      onMouseLeave={() => { pausadoRef.current = false; }}
+      role="group"
+      aria-roledescription="slide"
+      aria-label={`${posicao} de ${total}: ${display(parlamentar.nomeParlamentar)}`}
+      className="flex w-full shrink-0 snap-start flex-col border-r border-slate-100 last:border-r-0 sm:w-1/2 lg:w-1/3 xl:w-1/4"
     >
-      {/* O conteúdo não troca até DEPOIS do fade — sem piscada */}
-      <div className={`transition-opacity duration-200 ${saindo ? 'opacity-0' : 'opacity-100'}`}>
+      <div className={`relative h-52 w-full overflow-hidden ${fotoBg}`}>
+        <Image
+          src={foto}
+          alt={parlamentar.nomeParlamentar}
+          fill
+          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+          className="object-contain object-top"
+          unoptimized
+          draggable={false}
+        />
+        <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-white/90 to-transparent" />
+      </div>
 
-        {/* ── Mobile ── */}
-        <div className="flex flex-col sm:hidden">
-          <div className={`relative h-52 w-full overflow-hidden ${fotoBg}`}>
-            <Image
-              src={normalizePhoto(parlamentar.urlFoto, parlamentar.nomeParlamentar)}
-              alt={parlamentar.nomeParlamentar}
-              fill
-              sizes="100vw"
-              className="object-contain object-top"
-              unoptimized
-            />
-            <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-white/90 to-transparent" />
-          </div>
+      <div className="flex flex-1 flex-col p-5">
+        <span className={`w-fit rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wider ${tagCor}`}>
+          {tagLabel}
+        </span>
+        <p className="mt-3 text-3xl font-bold leading-none text-slate-900">
+          {formatCurrency(valor)}
+        </p>
+        <p className="mt-1.5 mb-4 text-sm font-medium text-slate-600">{labelTipo}</p>
 
-          <div className="p-5">
-            <span className={`inline-block rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wider ${tagCor}`}>
-              {tagLabel}
-            </span>
-            <p className="mt-3 text-3xl font-bold leading-none text-slate-900">
-              {formatCurrency(valor)}
-            </p>
-            <p className="mt-1.5 text-sm font-medium text-slate-600">{labelTipo}</p>
-
-            <div className="mt-4 border-t border-slate-100 pt-4">
-              <p className="text-base font-bold text-slate-900">
-                {display(parlamentar.nomeParlamentar)}
-              </p>
-              <p className="mt-0.5 text-xs text-slate-500">
-                {display(parlamentar.siglaPartido)} · {display(parlamentar.cargo)}
-              </p>
-            </div>
-
-            <div className="mt-4 flex items-center justify-between">
-              <div className="flex gap-2">
-                {cicloSlides.map((_, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    aria-label={`Ir para slide ${i + 1}`}
-                    onClick={() => irPara(i)}
-                    className={`h-2 rounded-full transition-all duration-300 ${
-                      i === posicao ? 'w-6 bg-brasil-blue' : 'w-2 bg-slate-300'
-                    }`}
-                  />
-                ))}
-              </div>
-              <button
-                type="button"
-                onClick={() => router.push(`/parlamentares/${parlamentar.id}`)}
-                className="rounded-xl bg-brasil-blue px-4 py-2 text-xs font-semibold text-white transition hover:opacity-90"
-              >
-                Ver mais
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* ── Desktop 2×2 ── */}
-        <div className="hidden grid-cols-2 sm:grid">
-          <div className={`relative overflow-hidden ${fotoBg}`} style={{ height: 220 }}>
-            <Image
-              src={normalizePhoto(parlamentar.urlFoto, parlamentar.nomeParlamentar)}
-              alt={parlamentar.nomeParlamentar}
-              fill
-              sizes="(max-width: 1024px) 30vw, 20vw"
-              className="object-contain object-top"
-              unoptimized
-            />
-          </div>
-
-          <div className="flex flex-col justify-center gap-3 bg-slate-50 px-6 py-6" style={{ height: 220 }}>
-            <span className={`w-fit rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wider ${tagCor}`}>
-              {tagLabel}
-            </span>
-            <p className="text-4xl font-bold leading-none text-slate-900 xl:text-5xl">
-              {formatCurrency(valor)}
-            </p>
-            <p className="text-sm font-medium text-slate-600">{labelTipo}</p>
-            <button
-              type="button"
-              onClick={() => router.push(`/parlamentares/${parlamentar.id}`)}
-              className="mt-1 w-fit rounded-xl bg-brasil-blue px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90"
-            >
-              Ver mais
-            </button>
-          </div>
-
-          <div className="flex flex-col justify-center border-t border-slate-100 bg-white px-5 py-4">
-            <p className="line-clamp-1 text-base font-bold text-slate-900">
+        <div className="mt-auto flex items-end justify-between gap-3 border-t border-slate-100 pt-4">
+          <div className="min-w-0">
+            <p className="truncate text-base font-bold text-slate-900">
               {display(parlamentar.nomeParlamentar)}
             </p>
-            <p className="mt-0.5 text-xs text-slate-500">
+            <p className="mt-0.5 truncate text-xs text-slate-500">
               {display(parlamentar.siglaPartido)} · {display(parlamentar.cargo)}
             </p>
           </div>
+          <Link
+            href={href}
+            className="shrink-0 rounded-xl bg-brasil-blue px-4 py-2 text-xs font-semibold text-white transition hover:opacity-90"
+          >
+            Ver mais
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
 
-          <div className="flex items-center justify-end gap-2 border-t border-slate-100 bg-slate-50 px-6 py-4">
-            {cicloSlides.map((_, i) => (
-              <button
-                key={i}
-                type="button"
-                aria-label={`Ir para slide ${i + 1}`}
-                onClick={() => irPara(i)}
-                className={`h-2 rounded-full transition-all duration-300 ${
-                  i === posicao
-                    ? 'w-6 bg-brasil-blue'
-                    : 'w-2 bg-slate-300 hover:bg-slate-400'
-                }`}
-              />
-            ))}
+/**
+ * Carrossel dos maiores valores em emendas e despesas.
+ *
+ * A trilha é uma rolagem horizontal com scroll-snap: no celular dá para
+ * arrastar com o dedo e no desktop há setas (e as setas do teclado). O
+ * autoplay para de vez assim que a pessoa mexe no carrossel — quem está lendo
+ * um slide não quer vê-lo fugir — e também pausa com o mouse em cima ou o
+ * foco dentro.
+ */
+export function CarrosselParlamentar({
+  rankingDespesas,
+  rankingEmendas,
+}: CarrosselParlamentarProps) {
+  const slides = buildAllSlides(rankingEmendas, rankingDespesas);
+  const total = slides.length;
+
+  const trilhaRef = useRef<HTMLDivElement>(null);
+  const [atual, setAtual] = useState(0);
+  // Quantos cartões cabem na tela: 1 no celular, até 4 no desktop.
+  const [porTela, setPorTela] = useState(1);
+  const [interagiu, setInteragiu] = useState(false);
+  const pausadoRef = useRef(false);
+
+  const irPara = useCallback(
+    (indice: number) => {
+      const trilha = trilhaRef.current;
+      if (!trilha || total === 0) return;
+
+      const { largura, porTela } = medir(trilha);
+      const ultimo = Math.max(total - porTela, 0);
+
+      // Dá a volta nas pontas: depois do último vem o primeiro, e vice-versa.
+      const destino = indice > ultimo ? 0 : indice < 0 ? ultimo : indice;
+      trilha.scrollTo({ left: destino * largura, behavior: 'smooth' });
+    },
+    [total],
+  );
+
+  function navegar(indice: number) {
+    setInteragiu(true);
+    irPara(indice);
+  }
+
+  // O slide atual sai da posição da rolagem, então arrastar, clicar na seta e
+  // o autoplay mantêm o contador sempre certo.
+  function aoRolar() {
+    const trilha = trilhaRef.current;
+    if (!trilha) return;
+    const { largura, porTela } = medir(trilha);
+    setAtual(Math.round(trilha.scrollLeft / largura));
+    setPorTela(porTela);
+  }
+
+  // Recalcula quantos cartões cabem quando a largura muda (e na montagem).
+  useEffect(() => {
+    const trilha = trilhaRef.current;
+    if (!trilha) return;
+
+    const observador = new ResizeObserver(() => {
+      const { largura, porTela } = medir(trilha);
+      setPorTela(porTela);
+      setAtual(Math.round(trilha.scrollLeft / largura));
+    });
+
+    observador.observe(trilha);
+    return () => observador.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (total <= 1 || interagiu) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    const id = setInterval(() => {
+      if (pausadoRef.current || document.hidden) return;
+      const trilha = trilhaRef.current;
+      if (!trilha) return;
+      irPara(Math.round(trilha.scrollLeft / medir(trilha).largura) + 1);
+    }, AUTOPLAY_INTERVAL);
+
+    return () => clearInterval(id);
+  }, [total, interagiu, irPara]);
+
+  function aoTeclar(evento: React.KeyboardEvent) {
+    if (evento.key === 'ArrowRight') {
+      evento.preventDefault();
+      navegar(atual + 1);
+    } else if (evento.key === 'ArrowLeft') {
+      evento.preventDefault();
+      navegar(atual - 1);
+    }
+  }
+
+  if (total === 0) return null;
+
+  const botaoSeta =
+    'grid h-10 w-10 place-items-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:border-brasil-blue hover:text-brasil-blue focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brasil-blue';
+
+  return (
+    <section
+      aria-roledescription="carrossel"
+      aria-label="Maiores valores em emendas e despesas"
+      className="relative flex flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm"
+      onMouseEnter={() => { pausadoRef.current = true; }}
+      onMouseLeave={() => { pausadoRef.current = false; }}
+      onFocusCapture={() => { pausadoRef.current = true; }}
+      onBlurCapture={() => { pausadoRef.current = false; }}
+      onKeyDown={aoTeclar}
+    >
+      <div
+        ref={trilhaRef}
+        onScroll={aoRolar}
+        onTouchStart={() => setInteragiu(true)}
+        onWheel={(evento) => { if (evento.deltaX !== 0) setInteragiu(true); }}
+        className="flex snap-x snap-mandatory overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        aria-live={interagiu ? 'polite' : 'off'}
+      >
+        {slides.map((slide, i) => (
+          <SlideParlamentar
+            key={`${slide.tipo}-${slide.parlamentar.id}`}
+            slide={slide}
+            posicao={i + 1}
+            total={total}
+          />
+        ))}
+      </div>
+
+      {/* Controles */}
+      <div className="mt-auto flex items-center justify-between gap-3 border-t border-slate-100 bg-slate-50 px-5 py-3">
+        <button
+          type="button"
+          onClick={() => navegar(atual - 1)}
+          className={botaoSeta}
+          aria-label="Slide anterior"
+        >
+          <ChevronLeft size={20} aria-hidden="true" />
+        </button>
+
+        <div className="flex min-w-0 flex-col items-center gap-1.5">
+          <span className="text-xs font-semibold tabular-nums text-slate-500">
+            {porTela > 1
+              ? `${atual + 1}–${Math.min(atual + porTela, total)} de ${total}`
+              : `${atual + 1} de ${total}`}
+          </span>
+          <div className="h-1 w-28 overflow-hidden rounded-full bg-slate-200" aria-hidden="true">
+            <div
+              className="h-full rounded-full bg-brasil-blue transition-all duration-300"
+              style={{ width: `${(Math.min(atual + porTela, total) / total) * 100}%` }}
+            />
           </div>
         </div>
 
+        <button
+          type="button"
+          onClick={() => navegar(atual + 1)}
+          className={botaoSeta}
+          aria-label="Próximo slide"
+        >
+          <ChevronRight size={20} aria-hidden="true" />
+        </button>
       </div>
-    </div>
+    </section>
   );
 }
