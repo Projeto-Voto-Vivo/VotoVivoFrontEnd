@@ -70,7 +70,7 @@ export function TemasAutoriaDashboard({ parlamentarId }: TemasAutoriaDashboardPr
 
   if (!perfil) {
     return (
-      <SectionShell icon={<PenLine className="h-6 w-6" />} title="Temas das proposições">
+      <SectionShell recolhivelNoMobile icon={<PenLine className="h-6 w-6" />} title="Temas das proposições">
         <div className="inline-flex items-center gap-2 text-sm font-semibold text-brasil-blue">
           <Loader2 className="h-4 w-4 animate-spin" />
           Carregando temas
@@ -81,7 +81,7 @@ export function TemasAutoriaDashboard({ parlamentarId }: TemasAutoriaDashboardPr
 
   if (!perfil.disponivel || perfil.temasAutoria.length === 0) {
     return (
-      <SectionShell icon={<PenLine className="h-6 w-6" />} title="Temas das proposições">
+      <SectionShell recolhivelNoMobile icon={<PenLine className="h-6 w-6" />} title="Temas das proposições">
         <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-6 text-sm leading-6 text-slate-500">
           {!perfil.disponivel
             ? 'Não conseguimos carregar os temas agora. Tente novamente em alguns instantes.'
@@ -99,6 +99,7 @@ export function TemasAutoriaDashboard({ parlamentarId }: TemasAutoriaDashboardPr
 
   return (
     <SectionShell
+      recolhivelNoMobile
       icon={<PenLine className="h-6 w-6" />}
       title="Temas das proposições"
       description="Em quais assuntos o parlamentar mais assina proposições."

@@ -131,7 +131,7 @@ export function TemasVotacaoDashboard({ parlamentarId }: TemasVotacaoDashboardPr
 
   if (!dados) {
     return (
-      <SectionShell icon={<Tags className="h-6 w-6" />} title="Fidelidade por tema">
+      <SectionShell recolhivelNoMobile icon={<Tags className="h-6 w-6" />} title="Fidelidade por tema">
         <div className="inline-flex items-center gap-2 text-sm font-semibold text-brasil-blue">
           <Loader2 className="h-4 w-4 animate-spin" />
           Calculando
@@ -142,7 +142,7 @@ export function TemasVotacaoDashboard({ parlamentarId }: TemasVotacaoDashboardPr
 
   if (!dados.carregado || !dados.disponivel || dados.temas.length === 0) {
     return (
-      <SectionShell icon={<Tags className="h-6 w-6" />} title="Fidelidade por tema">
+      <SectionShell recolhivelNoMobile icon={<Tags className="h-6 w-6" />} title="Fidelidade por tema">
         <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-6 text-sm leading-6 text-slate-500">
           {!dados.carregado
             ? 'Não conseguimos calcular agora. Tente novamente em alguns instantes.'
@@ -176,6 +176,7 @@ export function TemasVotacaoDashboard({ parlamentarId }: TemasVotacaoDashboardPr
 
   return (
     <SectionShell
+      recolhivelNoMobile
       icon={<Tags className="h-6 w-6" />}
       title="Fidelidade por tema"
       description="Com que frequência o parlamentar seguiu a orientação do partido em cada assunto."

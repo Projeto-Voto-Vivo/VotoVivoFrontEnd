@@ -113,7 +113,7 @@ function Recorte({
   const excedente = ordenados.length - LINHAS_VISIVEIS;
 
   return (
-    <SectionShell icon={icone} title={titulo} description={descricao}>
+    <SectionShell recolhivelNoMobile icon={icone} title={titulo} description={descricao}>
       <ul className="divide-y divide-slate-100">
         {visiveis.map((item) => (
           <LinhaRecorte key={item.rotulo} item={item} escala={escala} />
@@ -175,7 +175,7 @@ export function PanoramaEmendasDashboard({
 
   if (!panorama) {
     return (
-      <SectionShell icon={<Target className="h-6 w-6" />} title="Panorama das emendas">
+      <SectionShell recolhivelNoMobile icon={<Target className="h-6 w-6" />} title="Panorama das emendas">
         <div className="inline-flex items-center gap-2 text-sm font-semibold text-brasil-blue">
           <Loader2 className="h-4 w-4 animate-spin" />
           Carregando
@@ -189,7 +189,7 @@ export function PanoramaEmendasDashboard({
 
   if (!panorama.disponivel || !temAlgo) {
     return (
-      <SectionShell icon={<Target className="h-6 w-6" />} title="Panorama das emendas">
+      <SectionShell recolhivelNoMobile icon={<Target className="h-6 w-6" />} title="Panorama das emendas">
         <div className="flex items-start gap-3 rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-6 text-sm leading-6 text-slate-600">
           <Info className="mt-0.5 h-5 w-5 shrink-0 text-slate-400" aria-hidden="true" />
           <div>
