@@ -1,6 +1,10 @@
 import Link from 'next/link';
 import { getCandidatosLista } from '@/services/candidatos';
 import { CandidatoCard } from '@/components/candidatos/CandidatoCard';
+import {
+  estiloSituacao,
+  situacoesCandidatura,
+} from '@/components/candidatos/situacaoCandidatura';
 
 type CandidatosPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -54,6 +58,15 @@ const estados = [
   'TO',
 ];
 
+const legendaSituacoes = [
+  { rotulo: 'Deferido', situacao: 'DEFERIDO' },
+  { rotulo: 'Deferido com recurso', situacao: 'DEFERIDO EM PRAZO RECURSAL OU COM RECURSO' },
+  { rotulo: 'Pendente de julgamento', situacao: 'PENDENTE DE JULGAMENTO' },
+  { rotulo: 'Indeferido com recurso', situacao: 'INDEFERIDO EM PRAZO RECURSAL OU COM RECURSO' },
+  { rotulo: 'Indeferido', situacao: 'INDEFERIDO' },
+  { rotulo: 'Renúncia, cancelado ou outros', situacao: 'RENÚNCIA' },
+];
+
 export default async function CandidatosPage({
   searchParams,
 }: CandidatosPageProps) {
@@ -63,6 +76,7 @@ export default async function CandidatosPage({
   const cargo = texto(params.cargo);
   const partido = texto(params.partido);
   const uf = texto(params.uf);
+  const situacao = texto(params.situacao);
 
   const pageParam = Number(texto(params.page) || '1');
   const page =
@@ -75,7 +89,8 @@ export default async function CandidatosPage({
     busca,
     cargo,
     partido,
-    uf
+    uf,
+    situacao
   );
 
   const buildPageHref = (nextPage: number) => {
@@ -85,6 +100,7 @@ export default async function CandidatosPage({
     if (cargo) query.set('cargo', cargo);
     if (partido) query.set('partido', partido);
     if (uf) query.set('uf', uf);
+    if (situacao) query.set('situacao', situacao);
 
     query.set('page', String(nextPage));
 
@@ -112,7 +128,7 @@ export default async function CandidatosPage({
 
         {/* Barra de filtros */}
         <section className="mb-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <form className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <form className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
             {/* Busca */}
             <input
               type="text"
@@ -161,6 +177,21 @@ export default async function CandidatosPage({
               ))}
             </select>
 
+            {/* Situação */}
+            <select
+              name="situacao"
+              defaultValue={situacao ?? ''}
+              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-700 outline-none focus:border-brasil-blue"
+            >
+              <option value="">Todas as situações</option>
+
+              {situacoesCandidatura.map((opcao) => (
+                <option key={opcao} value={opcao}>
+                  {opcao}
+                </option>
+              ))}
+            </select>
+
             {/* Botão */}
             <button
               type="submit"
@@ -169,6 +200,18 @@ export default async function CandidatosPage({
               Filtrar
             </button>
           </form>
+
+          {/* Legenda das cores por situação */}
+          <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-4 text-xs">
+            {legendaSituacoes.map((item) => (
+              <span
+                key={item.rotulo}
+                className={`rounded-full border px-2 py-1 font-medium ${estiloSituacao(item.situacao).badge}`}
+              >
+                {item.rotulo}
+              </span>
+            ))}
+          </div>
         </section>
 
         {/* Resultados */}

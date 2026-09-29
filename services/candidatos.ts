@@ -34,7 +34,8 @@ export async function getCandidatosLista(
   busca?: string,
   cargo?: string,
   partido?: string,
-  uf?: string
+  uf?: string,
+  situacao?: string
 ): Promise<CandidatoListaResponse> {
   const params = new URLSearchParams();
 
@@ -45,6 +46,7 @@ export async function getCandidatosLista(
   if (cargo) params.set('cargo', cargo);
   if (partido) params.set('partido', partido);
   if (uf) params.set('uf', uf);
+  if (situacao) params.set('situacao', situacao);
 
   const res = await api.get<CandidatoListaResponse>(
     `/candidatos?${params.toString()}`
