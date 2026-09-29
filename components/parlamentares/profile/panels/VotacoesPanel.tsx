@@ -5,8 +5,6 @@ import Link from 'next/link';
 import {
   ArrowRight,
   BadgeCheck,
-  ChevronLeft,
-  ChevronRight,
   FileText,
   Search,
   Info,
@@ -29,6 +27,7 @@ import { carregarOpcoesFiltroProposicoes } from '@/services/proposicoes';
 import { DicaTermo } from '@/components/layout/DicaTermo';
 import { MicroInfoCard } from '../shared/MicroInfoCard';
 import { PainelComDashboards } from '../shared/PainelComDashboards';
+import { Paginacao } from '../shared/Paginacao';
 import { SectionShell } from '../shared/SectionShell';
 import { formatDate } from '../shared/formatters';
 import { TemasVotacaoDashboard } from './TemasVotacaoDashboard';
@@ -457,8 +456,20 @@ export function VotacoesPanel({ profile }: VotacoesPanelProps) {
             </div>
           )}
 
+          {totalRegistros > 0 && (
+            <Paginacao
+              posicao="topo"
+              resumo={`${inicioPagina}–${fimPagina} de ${totalRegistros} votações`}
+              mostrarBotoes={totalPaginas > 1}
+              podeVoltar={paginaAtual > 1 && !carregando}
+              podeAvancar={paginaAtual < totalPaginas && !carregando}
+              onAnterior={() => carregarPagina(paginaAtual - 1)}
+              onProxima={() => carregarPagina(paginaAtual + 1)}
+            />
+          )}
+
           {votacoes.length > 0 ? (
-            <div className="space-y-4">
+            <div className="mt-4 space-y-4">
               {votacoes.map((votacao) => (
                 <article
                   key={votacao.id}
@@ -586,34 +597,15 @@ export function VotacoesPanel({ profile }: VotacoesPanelProps) {
           )}
 
           {totalRegistros > 0 && (
-            <div className="mt-5 flex flex-col gap-3 border-t border-slate-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm text-slate-500">
-                {inicioPagina}–{fimPagina} de {totalRegistros} votações
-              </p>
-
-              {totalPaginas > 1 && (
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => carregarPagina(paginaAtual - 1)}
-                    disabled={paginaAtual <= 1 || carregando}
-                    className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-brasil-blue hover:text-brasil-blue disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <ChevronLeft size={16} />
-                    Anterior
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => carregarPagina(paginaAtual + 1)}
-                    disabled={paginaAtual >= totalPaginas || carregando}
-                    className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-brasil-blue hover:text-brasil-blue disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    Próxima
-                    <ChevronRight size={16} />
-                  </button>
-                </div>
-              )}
-            </div>
+            <Paginacao
+              posicao="rodape"
+              resumo={`${inicioPagina}–${fimPagina} de ${totalRegistros} votações`}
+              mostrarBotoes={totalPaginas > 1}
+              podeVoltar={paginaAtual > 1 && !carregando}
+              podeAvancar={paginaAtual < totalPaginas && !carregando}
+              onAnterior={() => carregarPagina(paginaAtual - 1)}
+              onProxima={() => carregarPagina(paginaAtual + 1)}
+            />
           )}
         </SectionShell>
       }

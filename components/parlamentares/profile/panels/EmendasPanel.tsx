@@ -2,12 +2,13 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { ChevronLeft, ChevronRight, Info, Loader2, Receipt } from 'lucide-react';
+import { Info, Loader2, Receipt } from 'lucide-react';
 import { EmendaResumoPerfil, ParlamentarPerfil } from '@/types';
 import { getEmendasParlamentar } from '@/services/parlamentares';
 import { explicarExecucao } from '@/components/parlamentares/emendas/explicacoesExecucao';
 import { MicroInfoCard } from '../shared/MicroInfoCard';
 import { PainelComDashboards } from '../shared/PainelComDashboards';
+import { Paginacao } from '../shared/Paginacao';
 import { SectionShell } from '../shared/SectionShell';
 import { formatCurrency } from '../shared/formatters';
 import { PanoramaEmendasDashboard } from './PanoramaEmendasDashboard';
@@ -114,6 +115,18 @@ export function EmendasPanel({ parlamentarId, profile }: EmendasPanelProps) {
             </div>
           )}
 
+          {totalRegistros > 0 && (
+            <Paginacao
+              posicao="topo"
+              resumo={`${inicioPagina}–${fimPagina} de ${totalRegistros} emendas`}
+              mostrarBotoes={totalPaginas > 1}
+              podeVoltar={paginaAtual > 1 && !carregando}
+              podeAvancar={paginaAtual < totalPaginas && !carregando}
+              onAnterior={() => carregarPagina(paginaAtual - 1)}
+              onProxima={() => carregarPagina(paginaAtual + 1)}
+            />
+          )}
+
           <div className="mt-6 space-y-4">
             {itens.length === 0 ? (
               <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-6 text-sm leading-6 text-slate-500">
@@ -166,34 +179,15 @@ export function EmendasPanel({ parlamentarId, profile }: EmendasPanelProps) {
           </div>
 
           {totalRegistros > 0 && (
-            <div className="mt-5 flex flex-col gap-3 border-t border-slate-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm text-slate-500">
-                {inicioPagina}–{fimPagina} de {totalRegistros} emendas
-              </p>
-
-              {totalPaginas > 1 && (
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => carregarPagina(paginaAtual - 1)}
-                    disabled={paginaAtual <= 1 || carregando}
-                    className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-brasil-blue hover:text-brasil-blue disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <ChevronLeft size={16} />
-                    Anterior
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => carregarPagina(paginaAtual + 1)}
-                    disabled={paginaAtual >= totalPaginas || carregando}
-                    className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-brasil-blue hover:text-brasil-blue disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    Próxima
-                    <ChevronRight size={16} />
-                  </button>
-                </div>
-              )}
-            </div>
+            <Paginacao
+              posicao="rodape"
+              resumo={`${inicioPagina}–${fimPagina} de ${totalRegistros} emendas`}
+              mostrarBotoes={totalPaginas > 1}
+              podeVoltar={paginaAtual > 1 && !carregando}
+              podeAvancar={paginaAtual < totalPaginas && !carregando}
+              onAnterior={() => carregarPagina(paginaAtual - 1)}
+              onProxima={() => carregarPagina(paginaAtual + 1)}
+            />
           )}
         </SectionShell>
       }

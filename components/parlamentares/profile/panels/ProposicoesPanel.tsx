@@ -4,8 +4,6 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
   ArrowRight,
-  ChevronLeft,
-  ChevronRight,
   FileText,
   Loader2,
   Search,
@@ -23,6 +21,7 @@ import {
 } from '@/services/proposicoes';
 import { MicroInfoCard } from '../shared/MicroInfoCard';
 import { PainelComDashboards } from '../shared/PainelComDashboards';
+import { Paginacao } from '../shared/Paginacao';
 import { SectionShell } from '../shared/SectionShell';
 import { formatDate } from '../shared/formatters';
 import { useTamanhoPagina } from '../shared/useTamanhoPagina';
@@ -301,6 +300,18 @@ export function ProposicoesPanel({ profile }: ProposicoesPanelProps) {
             </div>
           )}
 
+          {proposicoes.length > 0 && (
+            <Paginacao
+              posicao="topo"
+              resumo={`${inicio}–${fim}${total === null ? '' : ` de ${total.toLocaleString('pt-BR')}`} proposições`}
+              mostrarBotoes={pagina > 1 || temProximaPagina}
+              podeVoltar={pagina > 1 && !carregando}
+              podeAvancar={temProximaPagina && !carregando}
+              onAnterior={() => irParaPagina(pagina - 1)}
+              onProxima={() => irParaPagina(pagina + 1)}
+            />
+          )}
+
           <div className="mt-5">
             {carregando && proposicoes.length === 0 ? (
               <div className="rounded-3xl border border-slate-200 bg-slate-50 p-8 text-center text-sm text-slate-500">
@@ -384,36 +395,15 @@ export function ProposicoesPanel({ profile }: ProposicoesPanelProps) {
           </div>
 
           {proposicoes.length > 0 && (
-            <div className="mt-5 flex flex-col gap-3 border-t border-slate-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm text-slate-500">
-                {inicio}–{fim}
-                {total === null ? '' : ` de ${total.toLocaleString('pt-BR')}`} proposições
-              </p>
-
-              {(pagina > 1 || temProximaPagina) && (
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => irParaPagina(pagina - 1)}
-                    disabled={pagina <= 1 || carregando}
-                    className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-brasil-blue hover:text-brasil-blue disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <ChevronLeft size={16} />
-                    Anterior
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => irParaPagina(pagina + 1)}
-                    disabled={!temProximaPagina || carregando}
-                    className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-brasil-blue hover:text-brasil-blue disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    Próxima
-                    <ChevronRight size={16} />
-                  </button>
-                </div>
-              )}
-            </div>
+            <Paginacao
+              posicao="rodape"
+              resumo={`${inicio}–${fim}${total === null ? '' : ` de ${total.toLocaleString('pt-BR')}`} proposições`}
+              mostrarBotoes={pagina > 1 || temProximaPagina}
+              podeVoltar={pagina > 1 && !carregando}
+              podeAvancar={temProximaPagina && !carregando}
+              onAnterior={() => irParaPagina(pagina - 1)}
+              onProxima={() => irParaPagina(pagina + 1)}
+            />
           )}
         </SectionShell>
       }

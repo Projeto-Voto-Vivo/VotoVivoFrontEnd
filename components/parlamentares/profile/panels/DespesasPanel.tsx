@@ -3,8 +3,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Building2,
-  ChevronLeft,
-  ChevronRight,
   ExternalLink,
   Loader2,
   Receipt,
@@ -18,6 +16,7 @@ import {
 } from '@/services/parlamentares';
 import { MicroInfoCard } from '../shared/MicroInfoCard';
 import { PainelComDashboards } from '../shared/PainelComDashboards';
+import { Paginacao } from '../shared/Paginacao';
 import { SectionShell } from '../shared/SectionShell';
 import { formatCurrency, formatDate } from '../shared/formatters';
 import { useTamanhoPagina } from '../shared/useTamanhoPagina';
@@ -351,8 +350,21 @@ export function DespesasPanel({ profile }: DespesasPanelProps) {
           icon={<Receipt className="h-6 w-6" />}
           title={anoParaListagem ? `Registros de ${anoParaListagem}` : 'Registros de despesas'}
         >
+          {despesas.totalRegistros > 0 && (
+            <Paginacao
+              posicao="topo"
+              margemTopo="mt-0"
+              resumo={`${inicioPagina}–${fimPagina} de ${despesas.totalRegistros} registros`}
+              mostrarBotoes={despesas.totalPaginas > 1}
+              podeVoltar={paginaAtual > 1 && !carregando}
+              podeAvancar={paginaAtual < despesas.totalPaginas && !carregando}
+              onAnterior={() => carregarPagina(paginaAtual - 1)}
+              onProxima={() => carregarPagina(paginaAtual + 1)}
+            />
+          )}
+
           {hasItens ? (
-            <div className="grid gap-3">
+            <div className="mt-4 grid gap-3">
               {itens.map((item, index) => (
                 <div
                   key={`${item.data}-${item.fornecedor}-${item.valor}-${index}`}
@@ -397,33 +409,15 @@ export function DespesasPanel({ profile }: DespesasPanelProps) {
           )}
 
           {despesas.totalRegistros > 0 && (
-            <div className="mt-5 flex flex-col gap-3 border-t border-slate-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm text-slate-500">
-                {inicioPagina}–{fimPagina} de {despesas.totalRegistros} registros
-              </p>
-              {despesas.totalPaginas > 1 && (
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => carregarPagina(paginaAtual - 1)}
-                    disabled={paginaAtual <= 1 || carregando}
-                    className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-brasil-blue hover:text-brasil-blue disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <ChevronLeft size={16} />
-                    Anterior
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => carregarPagina(paginaAtual + 1)}
-                    disabled={paginaAtual >= despesas.totalPaginas || carregando}
-                    className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-brasil-blue hover:text-brasil-blue disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    Próxima
-                    <ChevronRight size={16} />
-                  </button>
-                </div>
-              )}
-            </div>
+            <Paginacao
+              posicao="rodape"
+              resumo={`${inicioPagina}–${fimPagina} de ${despesas.totalRegistros} registros`}
+              mostrarBotoes={despesas.totalPaginas > 1}
+              podeVoltar={paginaAtual > 1 && !carregando}
+              podeAvancar={paginaAtual < despesas.totalPaginas && !carregando}
+              onAnterior={() => carregarPagina(paginaAtual - 1)}
+              onProxima={() => carregarPagina(paginaAtual + 1)}
+            />
           )}
         </SectionShell>
       }
