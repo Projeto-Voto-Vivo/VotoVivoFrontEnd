@@ -1,4 +1,5 @@
 import { ParlamentarPerfil } from '@/types';
+import { Candidato } from '@/services/candidatos';
 import { BackButton } from '@/components/layout/BackButton';
 import { NavLink } from '@/components/layout/NavLink';
 import { VoltarLink } from '@/components/layout/VoltarLink';
@@ -7,9 +8,13 @@ import { ParlamentarPanels } from './ParlamentarPanels';
 
 interface ParlamentarProfilePageProps {
   profile: ParlamentarPerfil;
+  candidatura?: Candidato | null;
 }
 
-export function ParlamentarProfilePage({ profile }: ParlamentarProfilePageProps) {
+export function ParlamentarProfilePage({
+  profile,
+  candidatura,
+}: ParlamentarProfilePageProps) {
   return (
     <div className="container mx-auto space-y-8 px-4 py-8">
       {/*
@@ -28,7 +33,7 @@ export function ParlamentarProfilePage({ profile }: ParlamentarProfilePageProps)
         </NavLink>
       </div>
 
-      <ParlamentarHero profile={profile} />
+      <ParlamentarHero profile={profile} candidatura={candidatura} />
 
       <ParlamentarPanels profile={profile} />
 

@@ -64,3 +64,22 @@ export async function getCandidato(
 
   return res.data;
 }
+
+// Candidatura (mais recente) vinculada a um parlamentar em exercício
+export async function getCandidaturaDoParlamentar(
+  idParlamentar: number
+): Promise<Candidato | null> {
+  try {
+    const res = await api.get<CandidatoListaResponse>(
+      `/candidatos?parlamentar=${idParlamentar}&limite=10`
+    );
+
+    const [maisRecente] = [...res.data.data].sort(
+      (a, b) => b.anoEleicao - a.anoEleicao
+    );
+
+    return maisRecente ?? null;
+  } catch {
+    return null;
+  }
+}

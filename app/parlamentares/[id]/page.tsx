@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic';
 import { notFound } from 'next/navigation';
 import { ParlamentarProfilePage } from '@/components/parlamentares/profile/ParlamentarProfilePage';
 import { getParlamentarProfile } from '@/services/parlamentares';
+import { getCandidaturaDoParlamentar } from '@/services/candidatos';
 
 export default async function PerfilParlamentar({
   params,
@@ -17,7 +18,10 @@ export default async function PerfilParlamentar({
     notFound();
   }
 
-  const profile = await getParlamentarProfile(parlamentarId);
+  const [profile, candidatura] = await Promise.all([
+    getParlamentarProfile(parlamentarId),
+    getCandidaturaDoParlamentar(parlamentarId),
+  ]);
 
   if (!profile) {
     notFound();
@@ -25,7 +29,7 @@ export default async function PerfilParlamentar({
 
   return (
     <main className="min-h-screen bg-slate-50 pb-20">
-      <ParlamentarProfilePage profile={profile} />
+      <ParlamentarProfilePage profile={profile} candidatura={candidatura} />
     </main>
   );
 }

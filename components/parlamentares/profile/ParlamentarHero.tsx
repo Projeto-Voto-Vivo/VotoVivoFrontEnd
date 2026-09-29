@@ -1,13 +1,16 @@
 import Image from 'next/image';
 import { BadgeCheck } from 'lucide-react';
 import { ParlamentarPerfil } from '@/types';
+import { Candidato } from '@/services/candidatos';
+import { CandidaturaParlamentarCard } from '@/components/candidatos/CandidaturaParlamentarCard';
 import { ContatoDropdown } from './ContatoDropdown';
 
 interface ParlamentarHeroProps {
   profile: ParlamentarPerfil;
+  candidatura?: Candidato | null;
 }
 
-export function ParlamentarHero({ profile }: ParlamentarHeroProps) {
+export function ParlamentarHero({ profile, candidatura }: ParlamentarHeroProps) {
   const { parlamentar } = profile;
 
   const situacao = parlamentar.situacaoMandato ?? parlamentar.situacao ?? null;
@@ -117,6 +120,10 @@ export function ParlamentarHero({ profile }: ParlamentarHeroProps) {
       {/* Sidebar — contato como dropdown em mobile, sempre aberto em desktop */}
       <aside className="space-y-4">
         <ContatoDropdown parlamentar={parlamentar} />
+
+        {candidatura && (
+          <CandidaturaParlamentarCard candidatura={candidatura} />
+        )}
       </aside>
     </section>
   );
