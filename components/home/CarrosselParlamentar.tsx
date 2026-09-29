@@ -10,6 +10,8 @@ interface Slide {
   parlamentar: RankingParlamentarItem;
   tipo: 'despesas' | 'emendas';
   valor: number;
+  /** Posição no ranking do próprio tipo (1 = quem mais gastou/recebeu). */
+  posicaoRanking: number;
 }
 
 interface CarrosselParlamentarProps {
@@ -71,10 +73,10 @@ function buildAllSlides(
     const d = rankingDespesas[i];
 
     if (e && (e.totalEmendas ?? 0) > 0) {
-      all.push({ parlamentar: e, tipo: 'emendas', valor: e.totalEmendas ?? 0 });
+      all.push({ parlamentar: e, tipo: 'emendas', valor: e.totalEmendas ?? 0, posicaoRanking: i + 1 });
     }
     if (d && (d.totalDespesas ?? 0) > 0) {
-      all.push({ parlamentar: d, tipo: 'despesas', valor: d.totalDespesas ?? 0 });
+      all.push({ parlamentar: d, tipo: 'despesas', valor: d.totalDespesas ?? 0, posicaoRanking: i + 1 });
     }
   }
 
@@ -82,12 +84,11 @@ function buildAllSlides(
 }
 
 function SlideParlamentar({ slide, posicao, total }: { slide: Slide; posicao: number; total: number }) {
-  const { parlamentar, tipo, valor } = slide;
+  const { parlamentar, tipo, valor, posicaoRanking } = slide;
   const labelTipo = tipo === 'emendas' ? 'em emendas pagas' : 'em despesas parlamentares';
   const tagCor = tipo === 'emendas'
     ? 'bg-brasil-green/10 text-brasil-green'
     : 'bg-brasil-blue/10 text-brasil-blue';
-  const tagLabel = tipo === 'emendas' ? 'Emendas' : 'Despesas';
   const fotoBg = FOTO_BG[tipo];
   const foto = normalizePhoto(parlamentar.urlFoto, parlamentar.nomeParlamentar);
   const href = `/parlamentares/${parlamentar.id}`;
@@ -96,7 +97,7 @@ function SlideParlamentar({ slide, posicao, total }: { slide: Slide; posicao: nu
     <div
       role="group"
       aria-roledescription="slide"
-      aria-label={`${posicao} de ${total}: ${display(parlamentar.nomeParlamentar)}`}
+      aria-label={`${posicao} de ${total}: ${display(parlamentar.nomeParlamentar)}, ${posicaoRanking}º no ranking de ${tipo}`}
       className="flex w-full shrink-0 snap-start flex-col border-r border-slate-100 last:border-r-0 sm:w-1/2 lg:w-1/3 xl:w-1/4"
     >
       <div className={`relative h-52 w-full overflow-hidden ${fotoBg}`}>
@@ -113,9 +114,14 @@ function SlideParlamentar({ slide, posicao, total }: { slide: Slide; posicao: nu
       </div>
 
       <div className="flex flex-1 flex-col p-5">
-        <span className={`w-fit rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wider ${tagCor}`}>
-          {tagLabel}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="grid h-7 min-w-7 place-items-center rounded-full bg-brasil-yellow px-2 text-xs font-extrabold text-brasil-blue">
+            {posicaoRanking}º
+          </span>
+          <span className={`w-fit rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wider ${tagCor}`}>
+            {tipo === 'emendas' ? 'Ranking de emendas' : 'Ranking de despesas'}
+          </span>
+        </div>
         <p className="mt-3 text-3xl font-bold leading-none text-slate-900">
           {formatCurrency(valor)}
         </p>
@@ -242,7 +248,7 @@ export function CarrosselParlamentar({
   return (
     <section
       aria-roledescription="carrossel"
-      aria-label="Maiores valores em emendas e despesas"
+      aria-label="Ranking dos parlamentares com mais despesas e emendas pagas"
       className="relative flex flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm"
       onMouseEnter={() => { pausadoRef.current = true; }}
       onMouseLeave={() => { pausadoRef.current = false; }}
@@ -250,6 +256,26 @@ export function CarrosselParlamentar({
       onBlurCapture={() => { pausadoRef.current = false; }}
       onKeyDown={aoTeclar}
     >
+      {/* O que o carrossel mostra — sem isso os valores ficam soltos */}
+      <header className="flex flex-col gap-1 border-b border-slate-100 px-5 py-4 md:flex-row md:items-end md:justify-between md:gap-6">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brasil-blue">
+            Ranking
+          </p>
+          <h2 className="mt-1 text-lg font-bold text-slate-900">
+            Quem mais usa a cota e recebe emendas
+          </h2>
+        </div>
+        <p className="max-w-xl text-xs leading-5 text-slate-500 md:text-right">
+          Os 10 parlamentares com mais{' '}
+          <strong className="font-semibold text-brasil-blue">despesas da cota parlamentar</strong>{' '}
+          e os 10 com mais{' '}
+          <strong className="font-semibold text-brasil-green">emendas pagas</strong>,
+          somando todo o período com dados disponíveis. Os dois rankings se
+          alternam.
+        </p>
+      </header>
+
       <div
         ref={trilhaRef}
         onScroll={aoRolar}
