@@ -13,6 +13,13 @@ export function HeaderDesktopNav() {
       aria-label="Navegação principal"
     >
       <Link
+        href="/candidatos"
+        className="rounded-full border-2 border-brasil-yellow bg-gradient-to-r from-brasil-green to-brasil-blue px-4 py-1.5 font-semibold text-white shadow-sm transition hover:shadow-md hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brasil-blue"
+      >
+        Eleições <span className="text-brasil-yellow">2026</span>
+      </Link>
+
+      <Link
         href="/"
         className="py-2 font-medium text-gray-700 transition-colors hover:text-brasil-blue"
       >
@@ -45,13 +52,6 @@ export function HeaderDesktopNav() {
           ))}
         </div>
       </div>
-
-      <Link
-        href="/candidatos"
-        className="py-2 font-medium text-gray-700 transition-colors hover:text-brasil-blue"
-      >
-        Eleições 2026
-      </Link>
 
       <Link
         href="/proposicoes"

@@ -75,6 +75,16 @@ export function HeaderMobileDrawer({
           <ul className="space-y-2">
             <li>
               <Link
+                href="/candidatos"
+                onClick={closeDrawer}
+                className="mb-2 flex min-h-12 items-center rounded-md border-2 border-brasil-yellow bg-gradient-to-r from-brasil-green to-brasil-blue px-3 text-lg font-semibold text-white shadow-sm transition hover:brightness-110"
+              >
+                Eleições&nbsp;<span className="text-brasil-yellow">2026</span>
+              </Link>
+            </li>
+
+            <li>
+              <Link
                 href="/"
                 onClick={closeDrawer}
                 className="flex min-h-12 items-center rounded-md px-3 text-lg font-semibold text-slate-800 transition-colors hover:bg-blue-50 hover:text-brasil-blue"
@@ -122,16 +132,6 @@ export function HeaderMobileDrawer({
                   ))}
                 </ul>
               )}
-            </li>
-
-            <li>
-              <Link
-                href="/candidatos"
-                onClick={closeDrawer}
-                className="flex min-h-12 items-center rounded-md px-3 text-lg font-semibold text-slate-800 transition-colors hover:bg-blue-50 hover:text-brasil-blue"
-              >
-                Eleições 2026
-              </Link>
             </li>
 
             <li>
