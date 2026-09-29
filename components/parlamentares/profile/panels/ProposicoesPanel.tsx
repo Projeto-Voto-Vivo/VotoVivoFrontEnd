@@ -25,6 +25,7 @@ import { MicroInfoCard } from '../shared/MicroInfoCard';
 import { PainelComDashboards } from '../shared/PainelComDashboards';
 import { SectionShell } from '../shared/SectionShell';
 import { formatDate } from '../shared/formatters';
+import { useTamanhoPagina } from '../shared/useTamanhoPagina';
 import { TemasAutoriaDashboard } from './TemasAutoriaDashboard';
 
 interface ProposicoesPanelProps {
@@ -40,6 +41,8 @@ function encurtar(texto: string, limite = 60) {
 
 export function ProposicoesPanel({ profile }: ProposicoesPanelProps) {
   const parlamentarId = profile.parlamentar.id;
+  // Em tela larga a lista acompanha a coluna de dashboards: 3 proposições.
+  const tamanhoPagina = useTamanhoPagina({ larga: 3, celular: 5 });
 
   const [proposicoes, setProposicoes] = useState<ProposicaoResultado[]>([]);
   // Aqui a contagem vale a pena: filtrada por autor, ela é barata e o número
@@ -80,7 +83,9 @@ export function ProposicoesPanel({ profile }: ProposicoesPanelProps) {
 
     // O `autor` cruza a autoria com os demais filtros no banco: a lista vem
     // inteira e filtrada de lá, sem recorte no navegador.
-    buscarProposicoes({ ...filtros, autor: parlamentarId }, pagina).then(
+    buscarProposicoes({ ...filtros, autor: parlamentarId }, pagina, {
+      limite: tamanhoPagina,
+    }).then(
       (resultado) => {
         if (cancelado) return;
 
@@ -97,7 +102,7 @@ export function ProposicoesPanel({ profile }: ProposicoesPanelProps) {
     return () => {
       cancelado = true;
     };
-  }, [filtros, pagina, parlamentarId]);
+  }, [filtros, pagina, parlamentarId, tamanhoPagina]);
 
   function aplicarFiltros(evento: React.FormEvent) {
     evento.preventDefault();
@@ -302,7 +307,7 @@ export function ProposicoesPanel({ profile }: ProposicoesPanelProps) {
                 Carregando proposições…
               </div>
             ) : proposicoes.length > 0 ? (
-              <div className="grid gap-4 lg:grid-cols-2">
+              <div className="grid gap-4">
                 {proposicoes.map((proposicao) => (
                   <article
                     key={proposicao.id}

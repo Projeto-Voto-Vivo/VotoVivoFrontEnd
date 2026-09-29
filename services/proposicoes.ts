@@ -548,6 +548,8 @@ export type OpcoesBusca = {
    * principal.
    */
   contarTotal?: boolean;
+  /** Itens por página; sem ele vale o padrão da busca. */
+  limite?: number;
 };
 
 function montarQueryBusca(
@@ -558,7 +560,7 @@ function montarQueryBusca(
   const params = new URLSearchParams();
 
   params.set('pagina', String(pagina));
-  params.set('limite', String(PROPOSICOES_POR_PAGINA));
+  params.set('limite', String(opcoes.limite ?? PROPOSICOES_POR_PAGINA));
   if (opcoes.contarTotal === false) params.set('contarTotal', 'false');
 
   if (filtros.busca) params.set('busca', filtros.busca);
