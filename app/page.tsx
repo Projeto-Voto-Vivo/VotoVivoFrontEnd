@@ -23,20 +23,22 @@ export default async function Home() {
       {/* 2. KPI contextualizado */}
       <StatsKPI />
 
-      {/* 3. EstadoCard + Carrossel lado a lado */}
+      {/* 3. EstadoCard (só no celular) + Carrossel */}
       {temDados && (
         <section className="bg-slate-50 py-10 md:py-14">
-          <div className="container mx-auto px-4">
-            <div className="grid items-stretch gap-6 md:grid-cols-[1fr_1.6fr]">
-              {/* Esquerda — Qual parlamentar te representa */}
+          <div className="container mx-auto grid gap-6 px-4">
+            {/*
+              A partir do md o mapa do hero já faz a escolha do estado, então
+              o seletor só aparece no celular, onde o mapa fica escondido.
+            */}
+            <div className="md:hidden">
               <EstadoCard />
-
-              {/* Direita — Carrossel dinâmico */}
-              <CarrosselParlamentar
-                rankingDespesas={rankingDespesas}
-                rankingEmendas={rankingEmendas}
-              />
             </div>
+
+            <CarrosselParlamentar
+              rankingDespesas={rankingDespesas}
+              rankingEmendas={rankingEmendas}
+            />
           </div>
         </section>
       )}
