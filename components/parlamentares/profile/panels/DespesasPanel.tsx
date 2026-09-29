@@ -20,6 +20,7 @@ import { MicroInfoCard } from '../shared/MicroInfoCard';
 import { PainelComDashboards } from '../shared/PainelComDashboards';
 import { SectionShell } from '../shared/SectionShell';
 import { formatCurrency, formatDate } from '../shared/formatters';
+import { FornecedoresDespesasDashboard } from './FornecedoresDespesasDashboard';
 
 interface DespesasPanelProps {
   profile: ParlamentarPerfil;
@@ -171,7 +172,8 @@ export function DespesasPanel({ profile }: DespesasPanelProps) {
   return (
     <PainelComDashboards
       /*
-        Resumo do período (com o filtro de ano) e categorias ficam na coluna dos dashboards; os registros, um a um, na lista.
+        Resumo do período (com o filtro de ano), categorias e fornecedores
+        ficam na coluna dos dashboards; os registros, um a um, na lista.
       */
       dashboards={
         <>
@@ -292,6 +294,12 @@ export function DespesasPanel({ profile }: DespesasPanelProps) {
               </div>
             </SectionShell>
           )}
+
+          <FornecedoresDespesasDashboard
+            fornecedores={despesas.fornecedores}
+            totalPeriodo={despesas.totalAno}
+            rotuloPeriodo={rotuloPeriodo}
+          />
         </>
       }
       principal={

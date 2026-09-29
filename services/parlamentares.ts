@@ -4,6 +4,7 @@ import {
   AlinhamentoPorTema,
   CasaLegislativaFiltro,
   CategoriaDespesaPerfil,
+  FornecedorDespesaPerfil,
   ComissaoPerfil,
   Despesa,
   DespesasPerfil,
@@ -114,6 +115,13 @@ type BackendDespesaCategoria = {
   total?: string | number | null;
 };
 
+type BackendDespesaFornecedor = {
+  nome?: string | null;
+  documento?: string | null;
+  total?: string | number | null;
+  quantidade?: string | number | null;
+};
+
 type BackendDespesaResumo = {
   totalAno?: string | number | null;
   mediaMensal?: string | number | null;
@@ -123,6 +131,7 @@ type BackendDespesaResumo = {
   mesesComDados?: string | number | null;
   mesesConsiderados?: string | number | null;
   categorias?: BackendDespesaCategoria[] | null;
+  fornecedores?: BackendDespesaFornecedor[] | null;
 };
 
 type BackendVotacaoResumo = {
@@ -761,6 +770,20 @@ function buildCategoriasFromBackend(
     .sort((a, b) => b.valor - a.valor);
 }
 
+function buildFornecedoresFromBackend(
+  fornecedores: BackendDespesaFornecedor[] | undefined | null,
+): FornecedorDespesaPerfil[] {
+  return (fornecedores ?? [])
+    .map((item) => ({
+      nome: item.nome?.trim() || 'Fornecedor não informado',
+      documento: item.documento?.trim() || null,
+      valor: parseMoney(item.total),
+      quantidade: Number(item.quantidade ?? 0) || 0,
+    }))
+    .filter((item) => item.valor > 0)
+    .sort((a, b) => b.valor - a.valor);
+}
+
 function buildItensFromBackend(
   items: Despesa[],
   offset: number = 0,
@@ -1252,6 +1275,7 @@ function montarDespesasPerfil(
     mesesConsiderados,
     maiorReembolso: parseMoney(resumo.maiorReembolso),
     categorias,
+    fornecedores: buildFornecedoresFromBackend(resumo.fornecedores),
     itensRecentes: buildItensFromBackend(
       lista.data,
       (lista.meta.page - 1) * lista.meta.limit,

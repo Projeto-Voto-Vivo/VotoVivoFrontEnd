@@ -156,6 +156,15 @@ export interface CategoriaDespesaPerfil {
   descricao: string;
 }
 
+/** Para onde o dinheiro vai: um fornecedor e quanto recebeu no período. */
+export interface FornecedorDespesaPerfil {
+  nome: string;
+  /** CNPJ ou CPF como veio da fonte; `null` quando não informado. */
+  documento: string | null;
+  valor: number;
+  quantidade: number;
+}
+
 export interface ItemDespesaPerfil {
   data: string;
   tipo: string;
@@ -172,6 +181,8 @@ export interface DespesasPerfil {
   mesesConsiderados: number | null;
   maiorReembolso: number;
   categorias: CategoriaDespesaPerfil[];
+  /** Maiores fornecedores do período, do maior para o menor. */
+  fornecedores: FornecedorDespesaPerfil[];
   itensRecentes: ItemDespesaPerfil[];
   totalRegistros: number;
   paginaAtual: number;
