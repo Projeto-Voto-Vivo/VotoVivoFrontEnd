@@ -26,10 +26,10 @@ import {
   VOTO_EXPLICACOES,
 } from '@/services/parlamentares';
 import { carregarOpcoesFiltroProposicoes } from '@/services/proposicoes';
+import { DicaTermo } from '@/components/layout/DicaTermo';
 import { MicroInfoCard } from '../shared/MicroInfoCard';
 import { SectionShell } from '../shared/SectionShell';
 import { formatDate } from '../shared/formatters';
-import { AderenciaPartidaria } from './AderenciaPartidaria';
 import { TemasVotacaoDashboard } from './TemasVotacaoDashboard';
 
 interface VotacoesPanelProps {
@@ -43,9 +43,46 @@ function BarraPresenca({ detalhe, titulo }: { detalhe: PresencaDetalhe; titulo: 
 
   return (
     <div>
-      <div className="mb-2 flex items-center justify-between text-sm font-medium text-slate-600">
-        <span>{titulo}</span>
-        <span className={semDados ? 'text-slate-400' : undefined}>
+      <div className="mb-2 flex items-center justify-between gap-3 text-sm font-medium text-slate-600">
+        <span className="flex items-center gap-0.5">
+          {titulo}
+          {/*
+            Os números por trás da taxa ficam no "?", como nas fases da
+            execução financeira das emendas: quem quer o detalhe abre, e a
+            barra continua limpa para quem só quer a leitura rápida.
+          */}
+          <DicaTermo termo={titulo}>
+            {semDados ? (
+              <>
+                Ainda não temos os registros de presença desta medida. Falta de
+                dado não quer dizer que o parlamentar faltou.
+              </>
+            ) : (
+              <>
+                <span className="block">Eventos considerados: {detalhe.totalEventos}</span>
+                <span className="block">Presenças: {detalhe.presentes}</span>
+                {detalhe.justificadas > 0 ? (
+                  <span className="block text-amber-700">
+                    Faltas justificadas: {detalhe.justificadas}
+                  </span>
+                ) : null}
+                <span className="block text-red-600">Faltas: {detalhe.faltas}</span>
+                {/*
+                  A taxa abona a falta justificada — licença médica e missão
+                  oficial não são o mesmo que sumir. Quem quiser a régua dura
+                  tem a estrita.
+                */}
+                {detalhe.justificadas > 0 && detalhe.taxaEstrita !== null ? (
+                  <span className="mt-1 block text-slate-500">
+                    As faltas justificadas contam como presença. Sem elas, a
+                    taxa é de {detalhe.taxaEstrita}%.
+                  </span>
+                ) : null}
+              </>
+            )}
+          </DicaTermo>
+        </span>
+        <span className={`shrink-0 ${semDados ? 'text-slate-400' : ''}`}>
           {semDados ? 'Sem dados' : `${detalhe.taxa}%`}
         </span>
       </div>
@@ -60,43 +97,6 @@ function BarraPresenca({ detalhe, titulo }: { detalhe: PresencaDetalhe; titulo: 
           />
         )}
       </div>
-
-      {semDados ? (
-        <p className="mt-2 text-xs leading-5 text-slate-500">
-          Ainda não temos os registros de presença desta medida. Falta de dado
-          não quer dizer que o parlamentar faltou.
-        </p>
-      ) : (
-        <>
-          <div className="mt-2 flex flex-wrap gap-2 text-xs font-medium text-slate-500">
-            <span className="rounded-full bg-slate-100 px-3 py-1">
-              Eventos considerados: {detalhe.totalEventos}
-            </span>
-            <span className="rounded-full bg-slate-100 px-3 py-1">
-              Presenças: {detalhe.presentes}
-            </span>
-            {detalhe.justificadas > 0 ? (
-              <span className="rounded-full bg-amber-50 px-3 py-1 text-amber-700">
-                Faltas justificadas: {detalhe.justificadas}
-              </span>
-            ) : null}
-            <span className="rounded-full bg-red-50 px-3 py-1 text-red-600">
-              Faltas: {detalhe.faltas}
-            </span>
-          </div>
-
-          {/*
-            A taxa abona a falta justificada — licença médica e missão oficial
-            não são o mesmo que sumir. Quem quiser a régua dura tem a estrita.
-          */}
-          {detalhe.justificadas > 0 && detalhe.taxaEstrita !== null ? (
-            <p className="mt-2 text-xs leading-5 text-slate-400">
-              As faltas justificadas contam como presença. Sem elas, a taxa é de{' '}
-              {detalhe.taxaEstrita}%.
-            </p>
-          ) : null}
-        </>
-      )}
     </div>
   );
 }
@@ -520,14 +520,15 @@ export function VotacoesPanel({ profile }: VotacoesPanelProps) {
         largura inteira, quebrando o pareamento das colunas.
       */}
       <div className="space-y-6">
-      <SectionShell icon={<BadgeCheck className="h-6 w-6" />} title="Presença e alinhamento">
-        <div className="grid gap-3">
-          <MicroInfoCard
-            label="Votações registradas"
-            value={String(totalRegistros)}
-          />
-          <AderenciaPartidaria parlamentarId={parlamentar.id} />
-        </div>
+      <SectionShell
+        recolhivelNoMobile
+        icon={<BadgeCheck className="h-6 w-6" />}
+        title="Presença"
+      >
+        <MicroInfoCard
+          label="Votações registradas"
+          value={String(totalRegistros)}
+        />
 
         {/*
           Quatro medidas distintas, nunca somadas: onde o evento aconteceu
@@ -559,51 +560,56 @@ export function VotacoesPanel({ profile }: VotacoesPanelProps) {
           ) : null}
         </div>
 
-        <div className="mt-6 space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-600">
+        <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-600">
           <p>{votacoesPerfil.leituraRapida}</p>
 
-          <p className="text-xs leading-5 text-slate-500">
-            Sessão deliberativa é onde se vota; solene e audiência pública não
-            decidem nada. Por isso as taxas aparecem separadas — e por isso
-            plenário e comissão não se somam.
+          <p className="mt-2 flex items-center gap-0.5 text-xs font-semibold text-slate-500">
+            Como a presença é calculada
+            <DicaTermo termo="Como a presença é calculada">
+              <span className="block">
+                Sessão deliberativa é onde se vota; solene e audiência pública não
+                decidem nada. Por isso as taxas aparecem separadas — e por isso
+                plenário e comissão não se somam.
+              </span>
+
+              {presenca.metodologias.length > 0 ? (
+                <span className="mt-2 block">
+                  <span className="block font-semibold text-slate-700">
+                    De onde vem cada taxa
+                    {presenca.metodologias.length > 1
+                      ? ' — não compare entre casas'
+                      : ''}
+                    :
+                  </span>
+                  <span className="mt-1 block space-y-1">
+                    {presenca.metodologias.map((metodologia) => (
+                      <span key={metodologia.casa} className="block">
+                        <strong className="font-semibold">{metodologia.casa}</strong>:{' '}
+                        {metodologia.fonte}
+                        {metodologia.observacao ? ` ${metodologia.observacao}` : ''}
+                      </span>
+                    ))}
+                  </span>
+                </span>
+              ) : null}
+
+              {!presenca.restritaAoExercicio ? (
+                <span className="mt-2 block">
+                  Não temos os períodos de mandato deste parlamentar, então a conta
+                  considera todo o intervalo disponível. Quem assumiu no meio do
+                  mandato pode aparecer com taxa menor do que a real.
+                </span>
+              ) : null}
+
+              {presenca.excluidos.semClassificacao + presenca.excluidos.semOrgao > 0 ? (
+                <span className="mt-2 block">
+                  {presenca.excluidos.semClassificacao + presenca.excluidos.semOrgao}{' '}
+                  eventos ficaram fora das taxas por não ter tipo ou órgão
+                  identificado — preferimos deixá-los de fora a chutar a categoria.
+                </span>
+              ) : null}
+            </DicaTermo>
           </p>
-
-          {presenca.metodologias.length > 0 ? (
-            <div className="text-xs leading-5 text-slate-500">
-              <p className="font-semibold text-slate-600">
-                De onde vem cada taxa
-                {presenca.metodologias.length > 1
-                  ? ' — não compare entre casas'
-                  : ''}
-                :
-              </p>
-              <ul className="mt-1 space-y-1">
-                {presenca.metodologias.map((metodologia) => (
-                  <li key={metodologia.casa}>
-                    <strong className="font-semibold">{metodologia.casa}</strong>:{' '}
-                    {metodologia.fonte}
-                    {metodologia.observacao ? ` ${metodologia.observacao}` : ''}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-
-          {!presenca.restritaAoExercicio ? (
-            <p className="text-xs leading-5 text-slate-500">
-              Não temos os períodos de mandato deste parlamentar, então a conta
-              considera todo o intervalo disponível. Quem assumiu no meio do
-              mandato pode aparecer com taxa menor do que a real.
-            </p>
-          ) : null}
-
-          {presenca.excluidos.semClassificacao + presenca.excluidos.semOrgao > 0 ? (
-            <p className="text-xs leading-5 text-slate-500">
-              {presenca.excluidos.semClassificacao + presenca.excluidos.semOrgao}{' '}
-              eventos ficaram fora das taxas por não ter tipo ou órgão
-              identificado — preferimos deixá-los de fora a chutar a categoria.
-            </p>
-          ) : null}
         </div>
       </SectionShell>
 
