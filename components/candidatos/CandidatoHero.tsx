@@ -1,5 +1,7 @@
 import Image from 'next/image';
 import { BadgeCheck } from 'lucide-react';
+import { ResultadoCandidatura as Resultado } from '@/services/candidatos';
+import { ResultadoCandidatura } from './ResultadoCandidatura';
 import {
   estiloSituacao,
   linkTseCandidatura,
@@ -22,6 +24,7 @@ interface CandidatoHeroProps {
     resultadoEleicao: string | null;
     fotoUrl?: string | null;
     idParlamentar?: number | null;
+    resultados?: Resultado[];
   };
 }
 
@@ -137,6 +140,13 @@ export function CandidatoHero({ candidato }: CandidatoHeroProps) {
                   </span>
                 </div>
               </div>
+
+              {/* RESULTADO */}
+              {candidato.resultados && candidato.resultados.length > 0 && (
+                <div className="mt-7 border-t border-slate-200 pt-6">
+                  <ResultadoCandidatura resultados={candidato.resultados} />
+                </div>
+              )}
             </div>
           </div>
         </div>

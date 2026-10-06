@@ -1,5 +1,20 @@
 import api from './api';
 
+// Desempenho da candidatura em um turno. Só vem em `/candidatos/:id`.
+export interface ResultadoCandidatura {
+  idEleicaoResultado: number;
+  turno: number;
+  uf: string;
+  posicao: number | null;
+  votos: number | null;
+  // Sobre os votos válidos
+  percentualVotos: number | null;
+  situacao: string | null;
+  // Conquistou a vaga. Quem só passou ao 2º turno fica false
+  eleito: boolean;
+  segundoTurno: boolean;
+}
+
 export interface Candidato {
   idCandidaturaTse: number;
   sqCandidato: string;
@@ -16,6 +31,7 @@ export interface Candidato {
   idParlamentar: number | null;
   fotoUrl: string | null;
   nomeParlamentar: string | null;
+  resultados?: ResultadoCandidatura[];
 }
 
 export interface CandidatoListaResponse {
@@ -78,7 +94,14 @@ export async function getCandidaturaDoParlamentar(
       (a, b) => b.anoEleicao - a.anoEleicao
     );
 
-    return maisRecente ?? null;
+    if (!maisRecente) return null;
+
+    // A listagem não traz a votação; o detalhe traz.
+    try {
+      return await getCandidato(maisRecente.idCandidaturaTse);
+    } catch {
+      return maisRecente;
+    }
   } catch {
     return null;
   }

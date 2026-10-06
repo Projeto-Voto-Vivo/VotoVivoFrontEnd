@@ -45,6 +45,25 @@
    * par de daltonismo fica em ΔE 9,2, acima do piso de 8.
    */
   --color-emenda: #eb6834;
+
+  /*
+   * Partidos no gráfico de cadeiras. São os sete primeiros slots da mesma
+   * paleta categórica das cores acima, nesta ordem — a ordem é o que garante a
+   * separação entre vizinhos (pior par adjacente: ΔE 9,1 no daltonismo, 19,6
+   * na visão normal, validados sobre o branco). Do oitavo partido em diante
+   * tudo vira "Outros": gerar mais matizes só criaria cores indistinguíveis.
+   *
+   * Três delas (3, 4 e 5) ficam abaixo de 3:1 de contraste com o fundo; por
+   * isso o gráfico sempre vem com legenda numérica e tabela.
+   */
+  --color-partido-1: #2a78d6;
+  --color-partido-2: #eb6834;
+  --color-partido-3: #1baf7a;
+  --color-partido-4: #eda100;
+  --color-partido-5: #e87ba4;
+  --color-partido-6: #008300;
+  --color-partido-7: #4a3aa7;
+  --color-partido-outros: #94a3b8;
 }
 
 html {
