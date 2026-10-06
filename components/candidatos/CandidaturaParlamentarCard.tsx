@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { BadgeCheck, Vote } from 'lucide-react';
 import { Candidato } from '@/services/candidatos';
+import { ResultadoCandidatura } from './ResultadoCandidatura';
 import {
   estiloSituacao,
   linkTseCandidatura,
@@ -71,6 +72,12 @@ export function CandidaturaParlamentarCard({
           </span>
         </div>
 
+        {candidatura.resultados && candidatura.resultados.length > 0 && (
+          <div className="mt-4">
+            <ResultadoCandidatura resultados={candidatura.resultados} />
+          </div>
+        )}
+
         <a
           href={linkTseCandidatura(candidatura)}
           target="_blank"
@@ -85,7 +92,7 @@ export function CandidaturaParlamentarCard({
           href="/candidatos"
           className="mt-3 inline-block text-sm font-semibold text-brasil-blue hover:underline"
         >
-          Ver todos os candidatos →
+          Ver resultados e candidatos →
         </Link>
       </div>
     </div>

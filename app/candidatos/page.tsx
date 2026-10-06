@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { getCandidatosLista } from '@/services/candidatos';
 import { CandidatoCard } from '@/components/candidatos/CandidatoCard';
+import { ResultadosEleicao } from '@/components/eleicoes/ResultadosEleicao';
 import {
   estiloSituacao,
   situacoesCandidatura,
@@ -104,7 +105,7 @@ export default async function CandidatosPage({
 
     query.set('page', String(nextPage));
 
-    return `/candidatos?${query.toString()}`;
+    return `/candidatos?${query.toString()}#candidatos`;
   };
 
   return (
@@ -116,19 +117,52 @@ export default async function CandidatosPage({
           </p>
 
           <h1 className="mt-2 text-3xl font-bold text-slate-900">
-            Candidatos
+            Resultados e candidatos
           </h1>
 
           <p className="mt-2 max-w-2xl text-slate-600">
-            Acompanhe todos os candidatos registrados. Clique no card para
-            ver detalhes ou acesse o perfil completo se for parlamentar
-            em exercício.
+            Veja como ficou a divisão das cadeiras, o comparecimento e a
+            votação de cada disputa, e consulte todos os candidatos
+            registrados.
           </p>
+
+          <nav
+            className="mt-4 flex flex-wrap gap-2 text-sm"
+            aria-label="Seções da página"
+          >
+            <a
+              href="#resultados"
+              className="rounded-full border border-slate-300 bg-white px-3.5 py-1.5 font-semibold text-slate-700 transition hover:bg-slate-100"
+            >
+              Resultados
+            </a>
+            <a
+              href="#candidatos"
+              className="rounded-full border border-slate-300 bg-white px-3.5 py-1.5 font-semibold text-slate-700 transition hover:bg-slate-100"
+            >
+              Candidatos
+            </a>
+          </nav>
         </header>
+
+        <section id="resultados" className="mb-12 scroll-mt-32">
+          <h2 className="mb-4 text-2xl font-bold text-slate-900">Resultados</h2>
+
+          <ResultadosEleicao />
+        </section>
+
+        <div id="candidatos" className="mb-4 scroll-mt-32">
+          <h2 className="text-2xl font-bold text-slate-900">Candidatos</h2>
+
+          <p className="mt-1 max-w-2xl text-sm text-slate-600">
+            Clique no card para ver detalhes e a votação, ou acesse o perfil
+            completo se for parlamentar em exercício.
+          </p>
+        </div>
 
         {/* Barra de filtros */}
         <section className="mb-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <form className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+          <form action="/candidatos#candidatos" className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
             {/* Busca */}
             <input
               type="text"

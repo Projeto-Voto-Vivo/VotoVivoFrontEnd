@@ -9,6 +9,8 @@ interface CandidatoCardProps {
 
 export function CandidatoCard({ candidato }: CandidatoCardProps) {
   const situacao = estiloSituacao(candidato.situacaoCandidatura);
+  // O TSE preenche com '#NULO#' enquanto não há resultado
+  const resultado = candidato.resultadoEleicao?.trim().replace(/^#.*#$/, '');
 
   return (
     <Link
@@ -70,6 +72,12 @@ export function CandidatoCard({ candidato }: CandidatoCardProps) {
               </span>
             )}
           </div>
+
+          {resultado && (
+            <p className="break-words text-xs font-semibold text-slate-700">
+              Resultado: <span className="font-bold">{resultado}</span>
+            </p>
+          )}
 
           {candidato.idParlamentar && (
             <span className="inline-block text-xs font-semibold text-brasil-blue">
